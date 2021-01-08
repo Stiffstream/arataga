@@ -13,7 +13,7 @@ RUN mkdir /tmp/arataga-build
 COPY arataga /tmp/arataga-build/arataga
 COPY *.rb /tmp/arataga-build/
 
-RUN echo "*** Building Bi-Proxy ***" \
+RUN echo "*** Building arataga ***" \
     && cd /tmp/arataga-build \
 	 && mxxruexternals \
 	 && MXX_RU_CPP_TOOLSET="gcc_linux cpp_compiler_name=g++-10 c_compiler_name=gcc-10 linker_name=g++-10" ruby build.rb --mxx-cpp-release \
