@@ -18,26 +18,11 @@ namespace handlers::data_transfer
 //
 // data_transfer_handler_t
 //
+//FIXME: описать новую процедуру работы с вводом-выводом.
 /*!
  * @brief Реализация connection-handler-а для случая, когда
  * соединение уже установлено и нужно только передавать данные
  * туда-обратно.
- *
- * В текущей реализации используется простая схема с единственным
- * входящим буфером по каждому направлению. Сперва из сокета
- * читается N байт во входящий буфер. Затем эти N байт записываются
- * в во второй сокет. Как только запись завершилась, опять читается
- * N байт в этот входящий буфер из первого сокета.
- *
- * Такая же ситуация происходит и со вторым сокетом. Сперва читается
- * N байт во входящий буфер второго сокета. Затем прочитанные данные
- * записываются в первый сокет. После записи вновь возвращаемся к
- * чтению из второго сокета.
- *
- * Т.е. не может быть ситуации, когда мы из сокета вычитали N байт
- * во входящий буфер, инициировали их запись во второй сокет, а
- * сами инициировали следующее чтение из первого сокета (но уже в
- * другой буфер).
  *
  * Соответственно, на ограничение трафика влияет количество данных,
  * прочитанных из того или иного сокета. Так, если данные прочитаны
@@ -73,14 +58,38 @@ class data_transfer_handler_t final : public connection_handler_t
 		 */
 		const std::string_view m_name;
 
-		//! Данные, которые были прочитаны из этого направления и
-		//! должны быть переданы в противоположное.
-		std::unique_ptr< std::byte[] > m_data_read;
-		//! Количество данных, которое находится сейчас в data_read.
-		/*!
-		 * Обновляется после каждого удачного чтения из m_channel.
-		 */
-		std::size_t m_data_size{ 0u };
+		//! Тип одного буфера для операций ввода/вывода.
+		struct io_buffer_t
+		{
+			//! Данные, которые были прочитаны из этого направления и
+			//! должны быть переданы в противоположное.
+			std::unique_ptr< std::byte[] > m_data_read;
+			//! Количество данных, которое находится сейчас в data_read.
+			/*!
+			 * Обновляется после каждого удачного чтения.
+			 */
+			std::size_t m_data_size{ 0u };
+
+			//! Конструктор сразу же создает буфер для данных.
+			io_buffer_t( std::size_t io_chunk_size )
+				:	m_data_read( std::make_unique<std::byte[]>(io_chunk_size) )
+			{}
+		};
+
+		//! Набор буферов для выполнения операций ввода-вывода.
+		std::vector< io_buffer_t > m_in_buffers;
+
+		//! Индекс буфера, в который нужно читать следующую порцию.
+		std::size_t m_read_index{ 0u };
+		//! Количество буферов, доступных чтения данных.
+		std::size_t m_available_for_read_buffers;
+
+		//! Индекс буфера, из которого нужно брать данные для следующей
+		//! записи в противоположном направлении.
+		std::size_t m_write_index{ 0u };
+		//! Количество буферов, доступных для записи данных в
+		//! противоположном направлении.
+		std::size_t m_available_for_write_buffers{ 0u };
 
 		//! Тип этого направления для учета в traffic_limiter.
 		traffic_limiter_t::direction_t m_traffic_direction;
@@ -91,6 +100,11 @@ class data_transfer_handler_t final : public connection_handler_t
 		//! Превышен ли лимит трафика по этому направлению?
 		bool m_is_traffic_limit_exceeded{ false };
 
+		//! Активна ли сейчас операция чтения данных.
+		bool m_active_read{ false };
+		//! Активна ли сейчас операция записи данных.
+		bool m_active_write{ false };
+
 		direction_state_t(
 			asio::ip::tcp::socket & channel,
 			// Предполагается, что это string_view для строкового литерала.
@@ -99,9 +113,18 @@ class data_transfer_handler_t final : public connection_handler_t
 			traffic_limiter_t::direction_t traffic_direction )
 			:	m_channel{ channel }
 			,	m_name{ name }
-			,	m_data_read{ std::make_unique<std::byte[]>(io_chunk_size) }
+			//FIXME: пока это значение жестко зафиксировано в коде,
+			//а должно задаваться в конфигурации.
+			,	m_available_for_read_buffers{ 8 }
 			,	m_traffic_direction{ traffic_direction }
-		{}
+		{
+			// Буфера для входящих данных нужно создать вручную.
+			m_in_buffers.reserve( m_available_for_read_buffers );
+			for( std::size_t i = 0u; i != m_available_for_read_buffers; ++i )
+			{
+				m_in_buffers.emplace_back( io_chunk_size );
+			}
+		}
 	};
 
 	//! Направление от клиента к удаленному узлу.
@@ -261,6 +284,16 @@ private:
 		// Куда затем данные нужно записывать.
 		direction_state_t & dest_dir )
 	{
+		// Нельзя начинать новую операцию чтения, если предыдущая начатая
+		// операция еще не завершена.
+		if( src_dir.m_active_read )
+			return;
+
+		// Нельзя начинать новую операцию чтения, если нет свободных буферов
+		// для приема данных.
+		if( !src_dir.m_available_for_read_buffers )
+			return;
+
 		// Нужно определить, сколько мы можем прочитать на этом шаге.
 		const auto reserved_capacity = m_traffic_limiter->reserve_read_portion(
 				src_dir.m_traffic_direction, m_io_chunk_size );
@@ -272,12 +305,17 @@ private:
 			// Читать данные нельзя, нужно ждать наступления следующего такта.
 			return;
 
+		// Определяем номер буфера, в который будет выполняться чтение.
+		const auto selected_buffer = src_dir.m_read_index;
+		src_dir.m_read_index = (src_dir.m_read_index + 1u) %
+				src_dir.m_in_buffers.size();
+
 		src_dir.m_channel.async_read_some(
 				asio::buffer(
-						src_dir.m_data_read.get(),
+						src_dir.m_in_buffers[selected_buffer].m_data_read.get(),
 						reserved_capacity.m_capacity),
 				with<const asio::error_code &, std::size_t>().make_handler(
-					[this, &src_dir, &dest_dir, reserved_capacity](
+					[this, &src_dir, &dest_dir, reserved_capacity, selected_buffer](
 						delete_protector_t delete_protector,
 						can_throw_t can_throw,
 						const asio::error_code & ec,
@@ -292,11 +330,17 @@ private:
 						on_read_result(
 								delete_protector,
 								can_throw,
-								src_dir, dest_dir,
+								src_dir, dest_dir, selected_buffer,
 								ec,
 								bytes );
 					} )
 			);
+
+		// Здесь не должно быть исключений.
+		NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
+			src_dir.m_active_read = true );
+		NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
+			src_dir.m_available_for_read_buffers -= 1u );
 	}
 
 	void
@@ -307,12 +351,30 @@ private:
 		// Откуда данные нужно брать.
 		direction_state_t & src_dir )
 	{
+		// Начинать новую запись можно только если нет уже начатой операции.
+		if( dest_dir.m_active_write )
+			return;
+
+		// Начинать новую запись можно только если есть доступные для записи
+		// буфера.
+		if( !src_dir.m_available_for_write_buffers )
+			return;
+
+		// Определяемся с тем, из какого буфера будет вестись запись.
+		const auto selected_buffer = src_dir.m_write_index;
+		src_dir.m_write_index = (src_dir.m_write_index + 1u) %
+				src_dir.m_in_buffers.size();
+
+		const auto & buffer = src_dir.m_in_buffers[ selected_buffer ];
+
 		// Просим Asio записать все, что у нас есть в буфере.
 		asio::async_write(
 				dest_dir.m_channel,
-				asio::buffer(src_dir.m_data_read.get(), src_dir.m_data_size),
+				asio::buffer(
+						buffer.m_data_read.get(),
+						buffer.m_data_size),
 				with<const asio::error_code &, std::size_t>().make_handler(
-					[this, &dest_dir, &src_dir](
+					[this, &dest_dir, &src_dir, selected_buffer](
 						delete_protector_t delete_protector,
 						can_throw_t can_throw,
 						const asio::error_code & ec,
@@ -321,10 +383,16 @@ private:
 						on_write_result(
 								delete_protector,
 								can_throw,
-								dest_dir, src_dir,
+								dest_dir, src_dir, selected_buffer,
 								ec, bytes );
 					} )
 			);
+
+		// Здесь не должно быть исключений.
+		NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
+			dest_dir.m_active_write = true );
+		NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
+			src_dir.m_available_for_write_buffers -= 1u );
 	}
 
 	void
@@ -335,17 +403,32 @@ private:
 		direction_state_t & src_dir,
 		// Куда данные должны быть записаны.
 		direction_state_t & dest_dir,
+		// Номер буфера, который использовался для чтения данных.
+		std::size_t selected_buffer,
 		const asio::error_code & ec,
 		std::size_t bytes_transferred )
 	{
 		// Этот код оставлен под комментарием для того, чтобы проще было
 		// вернуть его при необрходимости отладки.
 #if 0
-		log( can_throw, spdlog::level::trace,
-				fmt::format( "on_read_result {}, ec: {}, bytes: {}",
-						src_dir.m_name, ec.message(), bytes_transferred) );
+		::arataga::logging::wrap_logging(
+				proxy_logging_mode,
+				spdlog::level::trace,
+				[&]( auto level ) {
+					log_message_for_connection(
+							can_throw,
+							level,
+							fmt::format( "on_read_result {}, selected_buffer: {}, "
+									"ec: {}, bytes: {}",
+									src_dir.m_name,
+									selected_buffer,
+									ec.message(), bytes_transferred) );
+				} );
 #endif
 
+		// Как бы операция чтения не завершилась, нужно сбросить флаг
+		// наличия активной операции чтения.
+		src_dir.m_active_read = false;
 
 		// Если это значение по итогу окажется не пустым, значит нужно
 		// прекращать работу соединения.
@@ -409,13 +492,19 @@ private:
 		else
 		{
 			// Т.к. нет ошибок, то доверяем значению bytes_transferred.
-			src_dir.m_data_size = bytes_transferred;
+			src_dir.m_in_buffers[selected_buffer].m_data_size = bytes_transferred;
+
+			// Обозначаем, что есть еще один буфер для записи.
+			src_dir.m_available_for_write_buffers += 1u;
 
 			// Должны зафиксировать время последней активности.
 			m_last_read_at = std::chrono::steady_clock::now();
 
 			// И теперь уже можно отсылать прочитанные данные в другую сторону.
 			initiate_async_write_for_direction( can_throw, dest_dir, src_dir );
+
+			// А так же можно попробовать начать новое чтение.
+			initiate_async_read_for_direction( can_throw, src_dir, dest_dir );
 		}
 	}
 
@@ -427,9 +516,33 @@ private:
 		direction_state_t & dest_dir,
 		// Откуда данные были прочитаны.
 		direction_state_t & src_dir,
+		// Какой буфер использовался для записи.
+		std::size_t selected_buffer,
 		const asio::error_code & ec,
 		std::size_t bytes_transferred )
 	{
+		// Этот код оставлен под комментарием для того, чтобы проще было
+		// вернуть его при необрходимости отладки.
+#if 0
+		::arataga::logging::wrap_logging(
+				proxy_logging_mode,
+				spdlog::level::trace,
+				[&]( auto level ) {
+					log_message_for_connection(
+							can_throw,
+							level,
+							fmt::format( "on_write_result {}, selected_buffer: {}, "
+									"ec: {}, bytes: {}",
+									dest_dir.m_name,
+									selected_buffer,
+									ec.message(), bytes_transferred) );
+				} );
+#endif
+
+		// Как бы не завершилась операция записи, нужно сбросить флаг
+		// ее наличия.
+		dest_dir.m_active_write = false;
+
 		// При диагностировании ошибок записи просто прекращаем работу.
 		if( ec )
 		{
@@ -444,7 +557,9 @@ private:
 			// src_dir.m_data_size. Но если это не так, то продолжать
 			// работу нельзя, т.к. это нарушение обещаний, на которые
 			// мы расчитываем.
-			if( src_dir.m_data_size != bytes_transferred )
+			const auto expected_data_size =
+					src_dir.m_in_buffers[selected_buffer].m_data_size;
+			if( expected_data_size != bytes_transferred )
 			{
 				log_and_remove_connection(
 						delete_protector,
@@ -454,15 +569,23 @@ private:
 						fmt::format( "unexpected write result: {} data_size {} != "
 								"bytes_transferred {}",
 								dest_dir.m_name,
-								src_dir.m_data_size,
+								expected_data_size,
 								bytes_transferred ) );
 			}
 			else
 			{
+				// Явно обозначаем, что количество буферов для чтения
+				// увеличилось.
+				src_dir.m_available_for_read_buffers += 1u;
+
 				// Т.к. мы записали очередную порцию данных
 				// от клиента к целевому узлу, то нужно инициировать
 				// чтение очередной порции данных.
 				initiate_async_read_for_direction( can_throw, src_dir, dest_dir );
+
+				// Так же мы можем попробовать записать другие данные из
+				// src_dir, если они были прочитаны ранее.
+				initiate_async_write_for_direction( can_throw, dest_dir, src_dir );
 			}
 		}
 	}
