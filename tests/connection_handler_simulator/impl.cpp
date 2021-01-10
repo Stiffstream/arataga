@@ -51,6 +51,12 @@ public:
 		return m_values.m_io_chunk_size;
 	}
 
+	std::size_t
+	io_chunk_count() const noexcept override
+	{
+		return m_values.m_io_chunk_count;
+	}
+
 	std::chrono::milliseconds
 	protocol_detection_timeout() const noexcept override
 	{

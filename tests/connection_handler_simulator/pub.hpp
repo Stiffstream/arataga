@@ -19,6 +19,7 @@ struct handler_config_values_t
 		};
 	asio::ip::address m_out_addr{ asio::ip::make_address( "127.0.0.1" ) };
 	std::size_t m_io_chunk_size{ 1024u };
+	std::size_t m_io_chunk_count{ 3u };
 	std::chrono::milliseconds m_protocol_detection_timeout{ 500 };
 	std::chrono::milliseconds m_socks_handshake_phase_timeout{ 1'000 };
 	std::chrono::milliseconds m_dns_resolving_timeout{ 500 };

@@ -26,6 +26,8 @@ log_level debug
 
 		REQUIRE( spdlog::level::debug == cfg.m_log_level );
 		REQUIRE( 100u == cfg.m_common_acl_params.m_maxconn );
+		REQUIRE( 8u*1024u == cfg.m_common_acl_params.m_io_chunk_size );
+		REQUIRE( 4u == cfg.m_common_acl_params.m_io_chunk_count );
 
 		REQUIRE( bandlim_config_t::is_unlimited(
 				cfg.m_common_acl_params.m_client_bandlim.m_in ) );
@@ -308,6 +310,60 @@ acl.io.chunk_size 0
 		const auto what = 
 R"(
 acl.io.chunk_size -120
+)"sv;
+
+		config_t cfg;
+		REQUIRE_THROWS_AS(
+				cfg = parser.parse( what ),
+				arataga::config_parser_t::parser_exception_t );
+	}
+}
+
+TEST_CASE("io_chunk_count") {
+	using namespace arataga;
+
+	config_parser_t parser;
+
+	{
+		const auto what = 
+R"(
+acl.io.chunk_count 128
+)"sv;
+
+		config_t cfg;
+		REQUIRE_NOTHROW( cfg = parser.parse( what ) );
+
+		REQUIRE( 128u == cfg.m_common_acl_params.m_io_chunk_count );
+	}
+
+	{
+		const auto what = 
+R"(
+acl.io.chunk_count off
+)"sv;
+
+		config_t cfg;
+		REQUIRE_THROWS_AS(
+				cfg = parser.parse( what ),
+				arataga::config_parser_t::parser_exception_t );
+	}
+
+	{
+		const auto what = 
+R"(
+acl.io.chunk_count 0
+)"sv;
+
+		config_t cfg;
+		REQUIRE_THROWS_AS(
+				cfg = parser.parse( what ),
+				arataga::config_parser_t::parser_exception_t );
+	}
+
+	{
+		const auto what = 
+R"(
+acl.io.chunk_count -120
 )"sv;
 
 		config_t cfg;

@@ -17,6 +17,7 @@
 /*.log
 /local-build.rb
 /LOG
+/LOG.*
 /__locals
 /*.sublime-project
 /*.sublime-workspace

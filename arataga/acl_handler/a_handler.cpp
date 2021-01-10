@@ -50,6 +50,12 @@ actual_config_t::io_chunk_size() const noexcept
 	return m_common_acl_params.m_io_chunk_size;
 }
 
+std::size_t
+actual_config_t::io_chunk_count() const noexcept
+{
+	return m_common_acl_params.m_io_chunk_count;
+}
+
 std::chrono::milliseconds
 actual_config_t::protocol_detection_timeout() const noexcept
 {

@@ -454,6 +454,35 @@ public:
 	}
 };
 
+//
+// io_chunk_count_handler_t
+//
+/*!
+ * @brief Обработчик команды acl.io.chunk_count.
+ */
+class io_chunk_count_handler_t : public command_handler_t
+{
+public:
+	command_handling_result_t
+	try_handle(
+		std::string_view content,
+		config_t & current_cfg ) const override
+	{
+		using namespace restinio::http_field_parsers;
+
+		return perform_parsing(
+			content,
+			non_negative_decimal_number_p< std::size_t >(),
+			[&]( std::size_t v ) -> command_handling_result_t {
+				if( 0u == v )
+					return failure_t{ "acl.io.chunk_count can't be 0" };
+
+				current_cfg.m_common_acl_params.m_io_chunk_count = v;
+
+				return success_t{};
+			} );
+	}
+};
 namespace acl_handler_details
 {
 
@@ -921,6 +950,9 @@ config_parser_t::config_parser_t()
 	m_impl->m_commands.emplace(
 			"acl.io.chunk_size"s,
 			std::make_unique< io_chunk_size_handler_t >() );
+	m_impl->m_commands.emplace(
+			"acl.io.chunk_count"s,
+			std::make_unique< io_chunk_count_handler_t >() );
 
 	m_impl->m_commands.emplace(
 			"http.limits.request_target"s,

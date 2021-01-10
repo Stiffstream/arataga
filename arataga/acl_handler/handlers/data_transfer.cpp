@@ -18,13 +18,27 @@ namespace handlers::data_transfer
 //
 // data_transfer_handler_t
 //
-//FIXME: описать новую процедуру работы с вводом-выводом.
 /*!
  * @brief Реализация connection-handler-а для случая, когда
  * соединение уже установлено и нужно только передавать данные
  * туда-обратно.
  *
- * Соответственно, на ограничение трафика влияет количество данных,
+ * Начиная с версии 0.2.0 используется схема с несколькими буферами
+ * ввода вывода для каждого из направлений.
+ *
+ * Сперва данные читаются в первый буфер. Затем, если не превышено
+ * ограничение на объем, сразу же инициируется чтение во второй буфер.
+ * Параллельно выполняется запись данных из первого буфера в противоположном
+ * направлении.
+ *
+ * Чтение приостанавливается только если:
+ *
+ * - не осталось больше свободных буферов для чтения очередной порции
+ *   входящих данных. Т.е. запись ранее прочитанных данных отстает от
+ *   чтения;
+ * - превышено ограничение на объем трафика.
+ *
+ * На ограничение трафика влияет количество данных,
  * прочитанных из того или иного сокета. Так, если данные прочитаны
  * из user-end, то их объем учитывается при ограничениях на исходящий
  * от клиента трафик. А если данные прочитаны из target-end, то их
@@ -110,12 +124,11 @@ class data_transfer_handler_t final : public connection_handler_t
 			// Предполагается, что это string_view для строкового литерала.
 			std::string_view name,
 			std::size_t io_chunk_size,
+			std::size_t io_chunk_count,
 			traffic_limiter_t::direction_t traffic_direction )
 			:	m_channel{ channel }
 			,	m_name{ name }
-			//FIXME: пока это значение жестко зафиксировано в коде,
-			//а должно задаваться в конфигурации.
-			,	m_available_for_read_buffers{ 8 }
+			,	m_available_for_read_buffers{ io_chunk_count }
 			,	m_traffic_direction{ traffic_direction }
 		{
 			// Буфера для входящих данных нужно создать вручную.
@@ -165,11 +178,15 @@ public:
 			}
 		,	m_io_chunk_size{ context().config().io_chunk_size() }
 		,	m_user_end{
-				m_connection, "user-end", m_io_chunk_size,
+				m_connection, "user-end",
+				m_io_chunk_size,
+				context().config().io_chunk_count(),
 				traffic_limiter_t::direction_t::from_user
 			}
 		,	m_target_end{
-				m_out_connection, "target-end", m_io_chunk_size,
+				m_out_connection, "target-end",
+				m_io_chunk_size,
+				context().config().io_chunk_count(),
 				traffic_limiter_t::direction_t::from_target
 			}
 	{

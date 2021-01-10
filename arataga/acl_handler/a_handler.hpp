@@ -55,6 +55,10 @@ public:
 	io_chunk_size() const noexcept override;
 
 	[[nodiscard]]
+	std::size_t
+	io_chunk_count() const noexcept override;
+
+	[[nodiscard]]
 	std::chrono::milliseconds
 	protocol_detection_timeout() const noexcept override;
 
