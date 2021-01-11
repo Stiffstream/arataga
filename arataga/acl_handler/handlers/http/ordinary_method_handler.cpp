@@ -30,7 +30,8 @@ namespace handlers::http
 // ordinary_method_handler_t
 //
 /*!
- * @brief Обработчик соединения, который обрабатывает метод CONNECT.
+ * @brief Обработчик соединения, который обрабатывает HTTP-методы,
+ * отличные от CONNECT (вроде GET, POST, DELETE и т.д.).
  */
 class ordinary_method_handler_t final : public handler_with_out_connection_t
 {
