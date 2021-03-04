@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Описание данных, которые содержатся в user-list.
+ * @brief Description of data in a user-list.
  */
 
 #include <arataga/user_list_auth_data.hpp>
@@ -32,13 +32,13 @@ domain_name_t::domain_name_t()
 domain_name_t::domain_name_t( std::string value )
 	: m_value{ std::move(value) }
 {
-	// Имя должно быть преобразовано в нижний регистр.
+	// Name should be converted into the lower case.
 	std::transform(
 			m_value.begin(), m_value.end(),
 			m_value.begin(),
 			[](unsigned char ch) { return std::tolower(ch); });
 
-	// Если в имени есть лидирующие '.', то они должны быть изъяты.
+	// If there are leading '.' they should be removed.
 	if( const auto pos = m_value.find_first_not_of('.');
 			std::string::npos != pos )
 	{
@@ -70,12 +70,6 @@ operator<<(std::ostream & to, const domain_name_t & name)
 //
 // is_subdomain_of
 //
-/*!
- * @brief Вспомогательная функция, которая позволяет определить
- * является ли один домен поддоменом другого домена.
- *
- * @return true если @a full_name является поддоменом @a domain_name.
- */
 [[nodiscard]]
 bool
 is_subdomain_of(
@@ -105,26 +99,26 @@ site_limits_data_t::try_find_limits_for( domain_name_t host ) const
 {
 	std::optional< one_limit_t > result;
 
-	// Поскольку на практике список лимитов не очень длинный,
-	// а данные поднимаются из list-файла в неотсортированном виде,
-	// то используем простой последовательный перебор.
+	// Because limit's list is not a big one and that list isn't ordered
+	// a simple sequential search is used.
 	const one_limit_t * last_found{ nullptr };
 	for( const auto & l : m_limits )
 	{
 		if( is_subdomain_of( host, l.m_domain ) )
 		{
-			// Нашли ограничение. Но самое ли оно лучшее?
+			// Find a limit. Is it the best one?
 			if( !last_found )
 			{
-				// Других вариантов нет, так что лучшее пока.
+				// There is no other limits yet so this is the best one.
 				last_found = &l;
 			}
 			else
 			{
-				// Наш вариант будет лучше, если он является поддоменом
-				// для ранее найденого варианта.
-				// Т.е. если сперва нашли "vk.com", а текущий вариант
-				// "api.vk.com", то тогда новый вариант лучше старого.
+				// The current limit will be better if it is for a subdomain
+				// for the previous case.
+				// For example if the previous case "vk.com" and the current
+				// is "api.vk.com" then the current case is better than
+				// the previous.
 				if( is_subdomain_of( l.m_domain, last_found->m_domain ) )
 					last_found = &l;
 			}
@@ -144,8 +138,7 @@ namespace
 // is_nonspace_char_predicate_t
 //
 /*!
- * @brief Предикат для easy_parser-а, который распознает непробельные
- * символы.
+ * @brief A predicate for easy_parser that detects non-space symbols.
  */
 struct is_nonspace_char_predicate_t
 {
@@ -161,8 +154,7 @@ struct is_nonspace_char_predicate_t
 // nonspace_char_p
 //
 /*!
- * @brief Продюсер для easy_parser-а, который извлекает непробельные
- * символы.
+ * @brief A producer for easy_parser that extracts non-space symbols.
  */
 [[nodiscard]]
 inline auto
@@ -176,10 +168,10 @@ nonspace_char_p() noexcept
 // nonspace_char_seq_p
 //
 /*!
- * @brief Продюсер для easy_parser-а, который извлекает последовательность
- * непробельных символов.
+ * @brief A producer for easy_parser that extracts sequences of non-space
+ * symbols.
  *
- * Этот продюсер производит экземпляр std::string.
+ * That producer makes instances of std::string.
  */
 [[nodiscard]]
 inline auto
@@ -192,8 +184,7 @@ nonspace_char_seq_p() noexcept
 		);
 }
 
-// Вспомогательная функция для выражения последовательности из
-// одного или более пробелов.
+// Helper function for expressing a sequences of spaces.
 [[nodiscard]]
 auto
 mandatory_space()
@@ -207,7 +198,7 @@ mandatory_space()
 // bandlim_p
 //
 /*!
- * @brief Продюсер для значения bandlim_config.
+ * @brief A producer for bandlim_config values.
  */
 [[nodiscard]]
 auto
@@ -228,11 +219,10 @@ bandlim_p()
 // ipv4_address_p
 //
 /*!
- * @brief Продюсер для значения IPv4 адреса.
+ * @brief A producer for IPv4 addresses.
  *
- * Значение IPv4 адреса может быть задано как в виде одного целого числа,
- * так и в традиционном виде (последовательность из четырех групп цифр,
- * разделенных точками).
+ * An IPv4 address can be expressed either as a single integer value or
+ * as traditional four groups of digits separated by '.'.
  */
 [[nodiscard]]
 inline auto
@@ -260,7 +250,7 @@ ipv4_address_p()
 // ip_port_p
 //
 /*!
- * @brief Продюсер для значения IP-порта.
+ * @brief A producer for IP-port value.
  */
 [[nodiscard]]
 auto
@@ -271,6 +261,12 @@ ip_port_p()
 	return non_negative_decimal_number_p< ip_port_t >();
 }
 
+//
+// user_data_p
+//
+/*!
+ * @brief A producer for user_data value.
+ */
 [[nodiscard]]
 auto
 user_data_p()
@@ -288,6 +284,12 @@ user_data_p()
 		);
 }
 
+//
+// auth_by_ip_p
+//
+/*!
+ * @brief A producer for auth_by_ip_key_t value.
+ */
 [[nodiscard]]
 auto
 auth_by_ip_p()
@@ -303,6 +305,12 @@ auth_by_ip_p()
 		);
 }
 
+//
+// auth_by_login_p
+//
+/*!
+ * @brief A producer for auth_by_login_key_t value.
+ */
 [[nodiscard]]
 auto
 auth_by_login_p()
@@ -320,6 +328,12 @@ auth_by_login_p()
 		);
 }
 
+//
+// site_limits_key_p
+//
+/*!
+ * @brief A producer for site_limits_key_t value.
+ */
 [[nodiscard]]
 auto
 site_limits_key_p()
@@ -332,6 +346,12 @@ site_limits_key_p()
 		);
 }
 
+//
+// one_site_limit_p
+//
+/*!
+ * @brief A producer for site_limits_data_t::one_limit_t value.
+ */
 [[nodiscard]]
 auto
 one_site_limit_p()
@@ -351,6 +371,12 @@ one_site_limit_p()
 		);
 }
 
+//
+// site_limits_data_p
+//
+/*!
+ * @brief A producer for site_limits_data_t value.
+ */
 [[nodiscard]]
 auto
 site_limits_data_p()
@@ -371,7 +397,7 @@ site_limits_data_p()
 // by_ip_data_t
 //
 /*
- * Значение, которое должно быть получено в результате разбора правила:
+ * A value that has to be produced as the result of the parsing of the rule:
  *
  * auth_by_ip_key = user_data
  *
@@ -400,7 +426,7 @@ struct by_ip_data_t
 // by_login_data_t
 //
 /*
- * Значение, которое должно быть получено в результате разбора правила:
+ * A value that has to be produced as the result of the parsing of the rule:
  *
  * auth_by_login = user_data
  *
@@ -429,7 +455,7 @@ struct by_login_data_t
 // limits_data_t
 //
 /*
- * Значение, которое должно быть получено в результате разбора правила:
+ * A value that has to be produced as the result of the parsing of the rule:
  *
  * site_limits_id = site_limits_data
  *
@@ -458,8 +484,7 @@ struct limits_data_t
 // line_content_t
 //
 /*
- * Тип, который должен получиться в результате разбора одной строки
- * файла со списком пользователей.
+ * A type for holding the result of parsing a single line of user-list file.
  */
 using line_content_t = std::variant<
 	by_ip_data_t,
@@ -469,7 +494,9 @@ using line_content_t = std::variant<
 //
 // make_line_parser
 //
-//! Создает продюсера, который извлекает из строки значение line_content.
+/*!
+ * @brief Makes a producer for line_content_t values.
+ */
 [[nodiscard]]
 auto
 make_line_parser()
@@ -535,7 +562,7 @@ parse_auth_data(
 {
 	auth_data_t result;
 
-	// Парсер для строк из списка пользователей.
+	// A parser for lines from user-list file.
 	auto parser = make_line_parser();
 
 	::arataga::utils::line_reader_t content_reader{ user_list_content };
@@ -556,10 +583,10 @@ load_auth_data(
 {
 	auth_data_t result;
 
-	// Читаем файл. При возникновении ошибок будет исключение.
+	// Load the file. There will be a exception in the case of errors.
 	const auto buffer = ::arataga::utils::load_file_into_memory( file_name );
 
-	// Осталось разобрать то, что прочитали.
+	// Parse the loaded content.
 	result = parse_auth_data(
 			std::string_view{ buffer.data(), buffer.size() } );
 

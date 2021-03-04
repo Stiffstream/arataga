@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Базовый класс для исключений.
+ * @brief The base class for exceptions.
  */
 
 #pragma once
@@ -11,13 +11,12 @@ namespace arataga
 {
 
 /*!
- * @brief Базовый класс для всех исключений, которые будут порождаться
- * кодом самого arataga.
+ * @brief The base class for all exceptions thrown by arataga's code.
  */
 class exception_t : public std::runtime_error
 {
 public:
-	// Наследуем конструкторы из базового класса.
+	// Inherit constructors from the base class.
 	using std::runtime_error::runtime_error;
 };
 

@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Параметры ограничения пропускной способности.
+ * @brief Parameters for band-limits.
  */
 
 #pragma once
@@ -15,35 +15,31 @@ namespace arataga
 // bandlim_config_t
 //
 /*!
- * @brief Ограничения на пропускную способность для клиента.
+ * @brief Band-limits for a client.
  */
 struct bandlim_config_t
 {
-	//! Тип для хранения одного значения.
+	//! Type for holding one value.
 	using value_t = std::uint_fast64_t;
 
-	//! Специальное значение, которое указывает, что лимит не задан.
+	//! A special value for the case when limit is not set.
 	static constexpr value_t unlimited{ 0u };
 
-	//! Ограничение на поток трафика от целевого хоста к клиенту.
+	//! The limit for incoming (from target host to client) traffic.
 	/*!
-	 * Для клиента это входящий трафик.
-	 *
-	 * Задается в байтах.
+	 * In bytes.
 	 */
 	value_t m_in{ unlimited };
 
-	//! Ограничение на поток трафика от клиента к целевому хосту.
+	//! The limit for outgoing (from client to target host) traffic. 
 	/*!
-	 * Для клиента это входящий трафик.
-	 *
-	 * Задается в байтах.
+	 * In bytes.
 	 */
 	value_t m_out{ unlimited };
 
-	//! Вспомогательный метод для определения того, что лимит не задан.
+	//! A helper method for checking that limit isn't set.
 	/*!
-	 * Пример использования:
+	 * The usage example:
 	 * @code
 	 * if( bandlim_config_t::is_unlimited(my_limits.m_in) ) {...}
 	 * @endcode

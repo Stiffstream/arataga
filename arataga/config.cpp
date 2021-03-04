@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Средства для работы с конфигурацией.
+ * @brief Stuff for working with configuration.
  */
 
 #include <arataga/config.hpp>
@@ -85,7 +85,7 @@ public:
 
 using command_handler_unique_ptr_t = std::unique_ptr< command_handler_t >;
 
-//! Тип для хранения номеров строк.
+//! Type for storing number of file line.
 using line_number_t = ::arataga::utils::line_extractor_t::line_number_t;
 
 namespace parsers
@@ -95,8 +95,8 @@ namespace parsers
 // timeout_value_p
 //
 /*!
- * @brief Продюсер для easy_parser-а, который извлекает значение
- * тайм-аута с возможными суффиксами (ms, s, min).
+ * @brief A producer for easy_parser that extracts time-out values
+ * with possible suffixes (ms, s, min).
  */
 [[nodiscard]]
 static auto
@@ -136,10 +136,10 @@ timeout_value_p()
 // byte_count_p
 //
 /*!
- * @brief Продюсер для easy_parser-а, который извлекает значение
- * количества байт с возможными суффиксами (b, kib, mib, gib).
+ * @brief A producer for easy_parser that extracts count of bytes
+ * with possible suffixes (b, kib, mib, gib).
  *
- * Продюсер производит значение типа bandlim_config_t::value_t.
+ * The producer makes values of type bandlim_config_t::value_t.
  */
 [[nodiscard]]
 static auto
@@ -187,7 +187,7 @@ byte_count_p()
 // log_level_handler_t
 //
 /*!
- * @brief Обработчик команды log_level.
+ * @brief Handler for `log_level` command.
  */
 class log_level_handler_t : public command_handler_t
 {
@@ -221,7 +221,7 @@ public:
 // dns_cache_cleanup_period_handler_t
 //
 /*!
- * @brief Обработчик команды dns_cache_cleanup_period.
+ * @brief Handler for `dns_cache_cleanup_period` command.
  */
 class dns_cache_cleanup_period_handler_t : public command_handler_t
 {
@@ -253,7 +253,7 @@ public:
 // maxconn_handler_t
 //
 /*!
- * @brief Обработчик команды acl.max.conn.
+ * @brief Handler for `acl.max.conn` command.
  */
 class maxconn_handler_t : public command_handler_t
 {
@@ -283,15 +283,15 @@ public:
 // denied_ports_handler_t
 //
 /*!
- * @brief Обработчик команды denied_ports.
+ * @brief Handler for `denied_ports` command.
  */
 class denied_ports_handler_t : public command_handler_t
 {
 	using dp = denied_ports_config_t;
 
-	//! Проверяет, все ли диапазоны портов заданы правильно.
+	//! Checks for validity of all ranges.
 	/*!
-	 * В диапазоне левая граница должна быть не больше правой границы.
+	 * The left border of a range should be no greater than the right border.
 	 */
 	[[nodiscard]]
 	static std::optional< failure_t >
@@ -353,7 +353,7 @@ public:
 			content,
 			all_cases_p,
 			[&]( auto & container ) -> command_handling_result_t {
-				// Если есть диапазоны, то они должны быть указаны правильно.
+				// If there are ranges they should be valid.
 				auto check_result = check_range_validity( container );
 				if( check_result )
 					return std::move( *check_result );
@@ -371,7 +371,7 @@ public:
 // timeout_handler_t
 //
 /*!
- * @brief Обработчик команды failed_auth_reply_timeout.
+ * @brief Handler for `failed_auth_reply_timeout` command.
  */
 template< std::chrono::milliseconds common_acl_params_t::*Field >
 class timeout_handler_t : public command_handler_t
@@ -399,7 +399,7 @@ public:
 // bandlim_single_value_handler_t
 //
 /*!
- * @brief Обработчик команд bandlimin.in, bandlim.out.
+ * @brief Handler for `bandlimin.in`, `bandlim.out` commands.
  */
 template< bandlim_config_t::value_t bandlim_config_t::*Field >
 class bandlim_single_value_handler_t : public command_handler_t
@@ -426,7 +426,7 @@ public:
 // io_chunk_size_t
 //
 /*!
- * @brief Обработчик команды io_chunk_size.
+ * @brief Handler for `io_chunk_size` command.
  */
 class io_chunk_size_handler_t : public command_handler_t
 {
@@ -458,7 +458,7 @@ public:
 // io_chunk_count_handler_t
 //
 /*!
- * @brief Обработчик команды acl.io.chunk_count.
+ * @brief Handler for `acl.io.chunk_count` command.
  */
 class io_chunk_count_handler_t : public command_handler_t
 {
@@ -579,16 +579,16 @@ make_parser()
 // acl_handler_t
 //
 /*!
- * @brief Обработчик команды acl.
+ * @brief Handler for `acl` command.
  */
 class acl_handler_t : public command_handler_t
 {
 	using parser_t = decltype(acl_handler_details::make_parser());
 
-	//! Реальный парсер параметров ACL.
+	//! The actual parser of ACL parameters.
 	/*!
-	 * Создается сразу как член класса для того, чтобы не пересоздавать
-	 * его при обработке каждой команды acl.
+	 * It's created as a class member to avoid recreation of it for
+	 * every 'acl' command in a file.
 	 */
 	const parser_t m_parser = acl_handler_details::make_parser();
 
@@ -642,9 +642,9 @@ public:
 			m_parser,
 			[&]( const hd::parsed_description_t & desc ) -> command_handling_result_t
 			{
-				// Проверяем корректность заданных параметров.
-				// Заодно преобразуем IP-адреса из текстового представления
-				// в экземпляры asio::ip::address.
+				// Check the validity of parameters.
+				// Convert IP-addresses from textual form into instances
+				// of asio::ip::address.
 				parameters_handler_t params_handler;
 				for( const auto & p : desc.m_parameters )
 				{
@@ -653,7 +653,7 @@ public:
 						return std::move(*f);
 				}
 
-				// Все обязательные параметры должны быть заданы.
+				// All mandatory parameters should be specified.
 				if( !params_handler.m_port )
 					return failure_t{ "port is not specified" };
 				if( !params_handler.m_in_ip )
@@ -661,7 +661,7 @@ public:
 				if( !params_handler.m_out_ip )
 					return failure_t{ "out_ip is not specified" };
 
-				// Теперь можно сформировать описание очередного ACL.
+				// Now we can make the description of a new ACL.
 				current_cfg.m_acls.emplace_back(
 						desc.m_protocol,
 						*(params_handler.m_port),
@@ -677,8 +677,7 @@ public:
 // http_msg_limits_single_value_handler_t
 //
 /*!
- * @brief Обработчик команд с органичениями на размеры отдельных
- * составляющих HTTP-сообщения.
+ * @brief Command handler for HTTP-related constraints.
  */
 template< std::size_t http_message_value_limits_t::*Field >
 class http_msg_limits_single_value_handler_t : public command_handler_t
@@ -711,7 +710,7 @@ public:
 //
 // spaces
 //
-//! Набор символов, которые считаются пробельными.
+//! Set of space symbols.
 [[nodiscard]]
 inline constexpr std::string_view
 spaces() noexcept { return { " \t\x0b" }; }
@@ -727,15 +726,14 @@ using line_extractor_t = ::arataga::utils::line_extractor_t;
 using line_reader_t = ::arataga::utils::line_reader_t;
 
 /*!
- * @brief Операция разделения строки на команду и необязательную
- * часть с аргументами команды.
+ * @brief Splits specified line into the command and optional part
+ * with arguments.
  *
  * @attention
- * Ожидается, что в @a line есть еще что-то кроме пробельных символов.
+ * It's expected that @a line contains something other than spaces.
  *
- * @return Тупл, в котором первое значение -- это имя команды, а
- * второе -- необязательная часть с аргументами (это значение может
- * быть пустым).
+ * @return A tuple where the first item is the command name, and the second
+ * is the optional part with arguments (the second item can be empty).
  */
 [[nodiscard]]
 std::tuple< std::string_view, std::string_view >
