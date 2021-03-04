@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Сигнал, который отсылается раз в секунду.
+ * @brief A one-second signal.
  */
 
 #pragma once
@@ -10,7 +10,7 @@
 namespace arataga
 {
 
-//! Тип сигнала, который рассылается раз в секунду.
+//! Type of one-second signal.
 struct one_second_timer_t final : public so_5::signal_t {};
 
 } /* namespace arataga */

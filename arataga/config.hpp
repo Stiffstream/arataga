@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Средства для работы с конфигурацией.
+ * @brief Stuff for working with configuration.
  */
 
 #pragma once
@@ -28,20 +28,19 @@ namespace arataga
 // denied_ports_config_t
 //
 /*!
- * @brief Конфигурация TCP-портов, обращения по которым для клиентов
- * запрещены.
+ * @brief Config for denied TCP-ports.
  */
 struct denied_ports_config_t
 {
-	//! Тип для представления номера порта.
+	//! Type for holding port number.
 	using port_t = std::uint16_t;
 
-	//! Случай, когда блокируется единственный порт.
+	//! A case when a single port is blocked.
 	struct single_port_case_t
 	{
 		port_t m_port;
 
-		// Для отладочных целей.
+		// For debugging purposes only.
 		[[nodiscard]]
 		bool
 		operator==( const single_port_case_t & b ) const noexcept
@@ -50,16 +49,16 @@ struct denied_ports_config_t
 		}
 	};
 
-	//! Случай, когда блокируется диапазон портов.
+	//! A case when a range of ports is blocked.
 	/*!
-	 * Хранит диапазон вида [low, high].
+	 * Holds a range in the form [low, high].
 	 */
 	struct ports_range_case_t
 	{
 		port_t m_low;
 		port_t m_high;
 
-		// Для отладочных целей.
+		// For debugging purposes only.
 		[[nodiscard]]
 		bool
 		operator==( const ports_range_case_t & b ) const noexcept
@@ -68,21 +67,21 @@ struct denied_ports_config_t
 		}
 	};
 
-	//! Описание одной блокировки.
+	//! Description of a single case.
 	using denied_case_t = std::variant<
 			single_port_case_t, ports_range_case_t >;
 
-	//! Тип хранилища описаний блокировок.
+	//! Type of storage for several cases.
 	using case_container_t = std::vector< denied_case_t >;
 
-	//! Заданные блокировки.
+	//! Description of denied ports.
 	/*!
-	 * Список блокировок может быть пустым, в этом случае клиент
-	 * может обращаться по любым портам.
+	 * This container can be empty. It means that client can connect
+	 * to any port.
 	 */
 	case_container_t m_cases;
 
-	//! Вспомогательная функция для проверки того, что порт заблокирован.
+	//! Helper function for checking is specified port denied or not.
 	[[nodiscard]]
 	bool
 	is_denied( port_t port ) const noexcept
@@ -114,19 +113,19 @@ struct denied_ports_config_t
 // acl_protocol_t
 //
 /*!
- * @brief Тип протокола, который должен обслуживать ACL (http, socks и пр.).
+ * @brief Type of protocol to be used by an ACL (http, socks, etc).
  */
 enum class acl_protocol_t
 {
-	//! ACL должен автоматически определить тип протокола.
+	//! ACL should detect the protocol automatically.
 	autodetect,
-	//! ACL должен использовать протокол SOCKS.
+	//! ACL should use SOCKS only.
 	socks,
-	//! ACL должен использовать протокол HTTP.
+	//! ACL should use HTTP only.
 	http
 };
 
-// Для отладочных целей.
+// For debugging purposes only.
 std::ostream &
 operator<<( std::ostream & to, acl_protocol_t proto );
 
@@ -134,39 +133,40 @@ operator<<( std::ostream & to, acl_protocol_t proto );
 // acl_config_t
 //
 /*!
- * @brief Конфигурация для одного ACL.
+ * @brief Config for a single ACL.
  */
 struct acl_config_t
 {
-	//! Тип для представления номера порта.
+	//! Type for TCP-port.
 	using port_t = std::uint16_t;
 
-	//! Тип протокола, который должен обслуживать ACL.
+	//! The protocol for that ACL.
 	acl_protocol_t m_protocol;
 
-	//! TCP-порт для входа в ACL.
+	//! TCP-port for that ACL.
 	/*!
-	 * Этот TCP-порт будет открыт ACL и на него ACL будет принимать
-	 * входящие подключения от клиентов.
+	 * The ACL opens an incoming socket on that port and accepts new
+	 * connections from clients on that port.
 	 */
 	port_t m_port;
 
-	//! IP-адрес для подключения к ACL.
+	//! IP-address for incoming connections to that ACL.
 	/*!
-	 * На этот IP-адрес будут подключаться клиенты.
+	 * The ACL opens an incoming socket on that address.
+	 * Clients will use that address to connect to arataga.
 	 *
-	 * Пока на входе поддерживаются только IPv4 адреса.
+	 * Only IPv4 addresses are supported now.
 	 */
 	asio::ip::address_v4 m_in_addr;
 
-	//! IP-адрес, с которого ACL будет подключаться к удаленным хостам.
+	//! IP-address for outgoing connections by that ACL.
 	/*!
-	 * Этот IP-адрес ACL будет использовать для того, чтобы подключаться
-	 * к удаленным хостам для обслуживания запросов клиентов.
+	 * The ACL will use this address for outgoing connections to target
+	 * hosts during serving client's requests.
 	 */
 	asio::ip::address m_out_addr;
 
-	//! Инициализирующий конструктор.
+	//! Initializing constructor.
 	acl_config_t(
 		acl_protocol_t protocol,
 		port_t port,
@@ -178,7 +178,7 @@ struct acl_config_t
 		,	m_out_addr{ std::move(out_addr) }
 	{}
 
-	// Для отладочных целей.
+	// For debugging purposes only.
 	[[nodiscard]]
 	bool
 	operator==( const acl_config_t & b ) const noexcept
@@ -191,7 +191,7 @@ struct acl_config_t
 	}
 };
 
-// Для отладочных целей.
+// For debugging purposes only.
 std::ostream &
 operator<<( std::ostream & to, const acl_config_t & acl );
 
@@ -199,19 +199,19 @@ operator<<( std::ostream & to, const acl_config_t & acl );
 // http_message_value_limits_t
 //
 /*!
- * @brief Набор ограничений для сообщений в HTTP-протоколе.
+ * @brief Set of constraints for elements of HTTP protocol.
  */
 struct http_message_value_limits_t
 {
-	//! Длина значения request-target в start-line HTTP-запроса.
+	//! Length of request-target in start-line of HTTP-request.
 	std::size_t m_max_request_target_length{ 8u*1024u };
-	//! Длина имени HTTP-заголовка.
+	//! Length of HTTP-field name.
 	std::size_t m_max_field_name_length{ 2u*1024u };
-	//! Длина значения HTTP-заголовка.
+	//! Length of HTTP-field value.
 	std::size_t m_max_field_value_length{ 10u*1024u };
-	//! Общий размер всех HTTP-заголовков.
+	//! Total size of all HTTP-fields.
 	std::size_t m_max_total_headers_size{ 80u*1024u };
-	//! Длина status-line HTTP-ответа.
+	//! Length of status-line of HTTP-response.
 	std::size_t m_max_status_line_length{ 1u*1024u };
 };
 
@@ -219,31 +219,30 @@ struct http_message_value_limits_t
 // common_acl_params_t
 //
 /*!
- * @brief Набор общих для всех ACL параметров.
+ * @brief Set of common for all ACL parameters.
  */
 struct common_acl_params_t
 {
 	/*!
-	 * @brief Максимальное количество одновременных подключений
-	 * к одному ACL.
+	 * @brief The max count of parallel active connections to one ACL.
 	 */
 	unsigned int m_maxconn{ 100u };
 
 	/*!
-	 * @brief Ограничения на трафик клиента по умолчанию.
+	 * @brief The default band-limits for a client.
 	 *
-	 * Эти органичения применяются, если для клиента не задано
-	 * индивидуальных лимитов.
+	 * Those constraits are applied if there is no personal limits
+	 * for a client.
 	 */
 	bandlim_config_t m_client_bandlim;
 
 	/*!
-	 * @brief Тайм-аут перед отдачей ответа о неудачной аутентификации.
+	 * @brief Time-out before sending negative authentification response.
 	 */
 	std::chrono::milliseconds m_failed_auth_reply_timeout{ 750 };
 
 	/*!
-	 * @name Различные тайм-ауты при обработке подключений клиентов.
+	 * @name Various time-outs used during handling of client connections.
 	 * @{
 	 */
 	std::chrono::milliseconds m_protocol_detection_timeout{ 3'000 };
@@ -260,80 +259,79 @@ struct common_acl_params_t
 	 */
 
 	/*!
-	 * @brief Размер одного буфера для выполнения операций ввода-вывода.
+	 * @brief The size of one buffer for I/O ops.
 	 *
-	 * Этот размер учитывается для соединений, которые уже полностью
-	 * прошли стадию handshake и аутентификации пользователя. В процессе
-	 * handshaking-а могут использоваться буфера другого размера.
+	 * This size is used for accepted connections for those handshaking
+	 * and authentification are completed. During the handshaking
+	 * buffers of different sizes could be used.
 	 */
 	std::size_t m_io_chunk_size{ 8u * 1024u };
 
 	/*!
+	 * @brief Max count of buffers for I/O ops on single connection.
 	 * @brief Максимальное количество буферов ввода-вывода на одном соединении.
 	 *
-	 * Начиная с версии 0.2.0 при выполнении операций передачи данных
-	 * между клиентом и целевым узлом может использоваться несколько
-	 * буферов ввода-вывода. Пока в один из них происходит операция чтения,
-	 * из другого может выполняться операция записи.
+	 * Since v.0.2.0 several buffers can be used for I/O operations
+	 * for data transfer. While one buffer is used for reading another
+	 * buffer can be used for writting.
 	 *
-	 * Данный параметр определяет сколько буферов будет создано для
-	 * одного соединения.
+	 * This parameters sets number of buffers to be used for a single
+	 * connection.
 	 *
-	 * Нужно принимать во внимание, что когда установлено одно соединение
-	 * от клиента к arataga и одно соединение от arataga к целевому узлу,
-	 * то количество буферов будет в два раза больше (потому что у каждого
-	 * соединения будет свой набор буферов).
+	 * Please note that arataga uses one connection from a client to an ACL
+	 * and another connection from the ACL to the target host. It means
+	 * that there will be 2*m_io_chunk_count buffers (becasue every
+	 * connection uses own set of buffers).
 	 *
 	 * @since v.0.2.0
 	 */
 	std::size_t m_io_chunk_count{ 4u };
 
 	/*!
-	 * @brief Различные ограничения на размеры сущностей в HTTP-протоколе.
+	 * @brief Constraints for values of HTTP-protocols.
 	 */
 	http_message_value_limits_t m_http_message_limits{};
 };
 
 /*!
- * @brief Конфигурация всего arataga.
+ * @brief Configuration for the whole arataga.
  */
 struct config_t
 {
 	/*!
-	 * @brief Уровень логирования, который должен использоваться.
+	 * @brief Log level to be used for logging.
 	 *
-	 * Значение spdlog::level::off означает, что логирование
-	 * должно быть отключено.
+	 * The value spdlog::level::off means that logging should
+	 * be disabled.
 	 */
 	spdlog::level::level_enum m_log_level{ spdlog::level::info };
 
 	/*!
-	 * @brief Период очистки кэша DNS.
+	 * @brief Clearing period for DNS cache.
 	 */
 	std::chrono::milliseconds m_dns_cache_cleanup_period{ 30*1000 };
 
 	/*!
-	 * @brief Заблокированные для клиента TCP-порты.
+	 * @brief Denied TCP-ports.
 	 *
-	 * Клиент не может подключаться на эти порты на целевых хостах.
+	 * Clients can't use those ports on target hosts.
 	 */
 	denied_ports_config_t m_denied_ports;
 
 	/*!
-	 * @brief Набор общих для всех ACL параметров.
+	 * @brief Common parameters for all ACL.
 	 */
 	common_acl_params_t m_common_acl_params;
 
 	/*!
-	 * @brief Тип хранилища описаний ACL.
+	 * @brief Type of storage for ACL configs.
 	 */
 	using acl_container_t = std::vector< acl_config_t >;
 
 	/*!
-	 * @brief Список ACL.
+	 * @brief List of ACL.
 	 *
-	 * Может быть пустым. В этом случае ни один ACL не будет работать
-	 * внутри arataga.
+	 * Can be empty.
 	 */
 	acl_container_t m_acls;
 };
@@ -342,15 +340,15 @@ struct config_t
 // config_parser_t
 //
 /*!
- * @brief Класс для разбора содержимого конфига arataga.
+ * @brief A class for parsing arataga's config.
  *
- * Предполагается, что экземпляр этого класса создается один раз
- * в начале работы программы, а затем переиспользуется.
+ * It's supposed that an instance of that class is created just
+ * once and then reused.
  */
 class config_parser_t
 {
 public:
-	//! Тип исключения, которое может выбрасывать парсер конфига.
+	//! Type of exception for parsing errors.
 	struct parser_exception_t : public exception_t
 	{
 	public:
@@ -360,9 +358,9 @@ public:
 	config_parser_t();
 	~config_parser_t();
 
-	//! Разобрать содержимое конфига.
+	//! Parse the content of the config.
 	/*!
-	 * @throw parser_exception_t в случае возникновения ошибки.
+	 * @throw parser_exception_t in the case of an error.
 	 */
 	[[nodiscard]]
 	config_t
