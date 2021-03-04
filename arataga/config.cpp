@@ -744,8 +744,8 @@ split_line( std::string_view line )
 		throw config_parser_t::parser_exception_t(
 				"split_line: only spaces in the input" );
 
-	// Отстаток строки после выделения команды.
-	// Может оказаться пустым.
+	// The second part of line after extraction the command name.
+	// Maybe empty.
 	std::string_view args;
 
 	const auto line_size = line.size();
@@ -754,8 +754,8 @@ split_line( std::string_view line )
 			line_size );
 	if( line_size != command_end )
 	{
-		// Кроме команды есть еще что-то. Из этого что-то нужно
-		// удалить лидирующие пробелы.
+		// There is something other than command.
+		// Leading spaces should be removed.
 		if( const auto spaces_end = std::min(
 				line.find_first_not_of( spaces(), command_end ),
 				line_size );
@@ -824,7 +824,7 @@ struct config_parser_t::impl_t
 	command_map_t m_commands;
 
 	/*!
-	 * @return nullptr, если найти обработчик для команды не удалось.
+	 * @return nullptr, if command handler isn't found.
 	 */
 	[[nodiscard]]
 	const parse_config_impl::command_handler_t *
@@ -997,10 +997,9 @@ config_parser_t::parse( std::string_view content )
 {
 	config_t result;
 
-	// Счетчик команд, которые были обработаны.
-	// Если этот счетчик останется нулевым, значит нам подсунули
-	// пустой конфиг, а это неправильно и может свидетельствовать
-	// об ошибке.
+	// Counter for processed commands.
+	// If it is zero after processing then we've got an empty config and
+	// that is an error.
 	std::size_t commands_processed{};
 
 	using namespace parse_config_impl;
