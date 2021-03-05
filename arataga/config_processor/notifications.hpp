@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Описания нотификаций, которые может рассылать агент config_processor.
+ * @brief Notifications to be sent by config_processor agent.
  */
 
 #pragma once
@@ -16,7 +16,7 @@ namespace arataga::config_processor
 // started_t
 //
 /*!
- * @brief Уведомление о том, что config_processor успешно стартовал.
+ * @brief Notification about the successful start.
  */
 struct started_t final : public so_5::signal_t {};
 
@@ -24,7 +24,7 @@ struct started_t final : public so_5::signal_t {};
 // updated_dns_params_t
 //
 /*!
- * @brief Сообщение с обновлением конфигурации для DNS-resolver-а.
+ * @brief Notification about updates for DNS-resolver.
  */
 struct updated_dns_params_t final : public so_5::message_t
 {
@@ -40,7 +40,7 @@ struct updated_dns_params_t final : public so_5::message_t
 // updated_common_acl_params_t
 //
 /*!
- * @brief Сообщение с новыми значениями общих параметров для всех ACL.
+ * @brief Notification about updates for common parameters for all ACL.
  */
 struct updated_common_acl_params_t final : public so_5::message_t
 {
@@ -57,18 +57,17 @@ struct updated_common_acl_params_t final : public so_5::message_t
 // updated_auth_params_t
 //
 /*!
- * @brief Сообщение об изменении параметров аутентификации клиентов.
+ * @brief Notification about new authentification parameters.
  */
 struct updated_auth_params_t final : public so_5::message_t
 {
 	/*!
-	 * @brief Заблокированные для клиента TCP-порты.
+	 * @brief Denied TCP-ports.
 	 */
 	denied_ports_config_t m_denied_ports;
 
 	/*!
-	 * @brief Величина тайм-аута перед отдачей результата
-	 * неудачной аутентификации клиента.
+	 * @brief A time-out before sending the negative response.
 	 */
 	std::chrono::milliseconds m_failed_auth_reply_timeout;
 

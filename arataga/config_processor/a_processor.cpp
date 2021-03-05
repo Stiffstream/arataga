@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Агент для обработки конфигурации.
+ * @brief Agent for handling arataga's configuration.
  */
 
 #include <arataga/config_processor/a_processor.hpp>
@@ -34,7 +34,7 @@ namespace arataga::config_processor
 //
 // config_processor_ex_t
 //
-//! Тип исключения, которое может выбрасывать config_processor.
+//! Type for an exception for config_processor agent.
 struct config_processor_ex_t : public exception_t
 {
 public:
@@ -76,7 +76,7 @@ make_full_acl_identity_tuple( const acl_config_t & v ) noexcept
 	return std::tie( v.m_port, v.m_in_addr, v.m_out_addr, v.m_protocol );
 }
 
-// Выбрасывает исключение, если найдена пара ACL с одинаковыми (port, in_ip).
+// Throws an exception if there is a pair of ACL with the same (port, in_ip).
 void
 sort_acl_list_and_ensure_uniqueness(
 	config_t::acl_container_t & acls )
@@ -94,8 +94,7 @@ sort_acl_list_and_ensure_uniqueness(
 			};
 }
 
-// Поскольку нам нужно будет сравнивать running_acl_info_t с
-// acl_config_t, то для этого придется сделать хитрый компаратор.
+// A tricky comparator for comparing running_acl_info_t with acl_config_t.
 struct tricky_acl_comparator_t
 {
 	[[nodiscard]] bool
@@ -142,8 +141,8 @@ a_processor_t::so_define_agent()
 		.event( &a_processor_t::on_debug_auth )
 		.event( &a_processor_t::on_debug_dns_resolve );
 
-	// Ответы на попытки тестовой аутентификации мы получаем
-	// на собственный mbox.
+	// Replies for test authentification and doman name resolution
+	// will go to the direct mbox.
 	so_subscribe_self()
 		.event( &a_processor_t::on_auth_reply )
 		.event( &a_processor_t::on_resolve_reply );
@@ -154,7 +153,7 @@ a_processor_t::so_evt_start()
 {
 	try_load_local_config_first_time();
 
-	// Уведомляем, что стартовали.
+	// Notify about successful start.
 	so_5::send< started_t >( m_params.m_startup_notify_mbox );
 }
 
@@ -172,7 +171,7 @@ a_processor_t::on_new_config(
 			{
 				try_handle_new_config_from_post_request( cmd->m_content );
 
-				// Если оказались здесь, значит все прошло нормально.
+				// If we are here then everything is OK.
 				return http_entry::replier_t::reply_params_t{
 						http_entry::status_ok,
 						"New config accepted\r\n"
@@ -203,7 +202,7 @@ a_processor_t::on_get_acl_list(
 							racl.m_config );
 				}
 
-				// Если оказались здесь, значит все прошло нормально.
+				// If we are here then everything is OK.
 				return http_entry::replier_t::reply_params_t{
 						http_entry::status_ok,
 						std::move(reply)
@@ -313,16 +312,15 @@ a_processor_t::try_load_local_config_first_time()
 						m_local_config_file_name );
 			} );
 
-	// Исключения, которые возникают при попытке загрузить локальный
-	// файл с конфигом можно игнорировать, т.к. даже в случае неудачи
-	// нам должны будут прислать новый конфиг через HTTP-вход.
+	// Exceptions thrown during config loading will be ignored because
+	// even in the case of a failure we will receive the new config
+	// from HTTP-entry sooner or later.
 	try
 	{
-		// Используем здесь лямбду для того, чтобы content
-		// был автоматически удален сразу после парсинга, т.к.
-		// больше содержимое конфига нам не нужно.
+		// Use lambda to destroy `content` as soon as possible.
+		// It's because the content of `content` isn't needed anymore.
 		auto config = [this] {
-			// Содержимое файла нужно поднять в память...
+			// Load the content into the RAM...
 			auto content = ::arataga::utils::load_file_into_memory(
 					m_local_config_file_name );
 			::arataga::logging::wrap_logging(
@@ -337,7 +335,7 @@ a_processor_t::try_load_local_config_first_time()
 								content.size() );
 					} );
 
-			// ...и попробовать разобрать его.
+			// ...then try to parse it.
 			return m_parser.parse( std::string_view{
 					content.data(), content.size() } );
 		}();
@@ -376,10 +374,10 @@ a_processor_t::try_handle_new_config_from_post_request(
 						content.size() );
 			} );
 
-	// Пытаемся разобрать конфиг.
+	// Try to parse the config...
 	auto config = m_parser.parse( content );
 
-	// И если уж успешно разобрали, то отдаем его на обработку.
+	// ...then process it.
 	try_handle_just_parsed_config( std::move(config) );
 
 	store_new_config_to_file( content );
@@ -399,10 +397,10 @@ void
 a_processor_t::try_handle_just_parsed_config(
 	config_t config )
 {
-	// Нужно убедится в том, что конфиг содержит корректную конфигурацию.
+	// New acl-list should be sorted and should not contain duplicates.
 	sort_acl_list_and_ensure_uniqueness( config.m_acls );
 
-	// Новый конфиг должен быть применен для всего arataga.
+	// New the new config has to be applied to the whole app.
 	accept_new_config( std::move(config) );
 }
 
@@ -411,13 +409,12 @@ a_processor_t::accept_new_config( config_t config ) noexcept
 {
 	bool needs_terminate = false;
 
-	// Поскульку на данный момент конфигурация может считаться
-	// корректной, можно увеличить счетчик версий.
+	// Version number can be incremented because config is valid at this point.
 	m_config_update_counter += 1u;
 
 	try
 	{
-		// Параметры логирования могли изменится, применяем новое значение.
+		// Logging parameters may have been changed.
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,
 				spdlog::level::trace,
@@ -430,12 +427,12 @@ a_processor_t::accept_new_config( config_t config ) noexcept
 				} );
 		::arataga::logging::impl::logger().set_level( config.m_log_level );
 
-		// Нужно отослать сообщения с обновленной информацией из конфига,
-		// для того, чтобы ее могли использовать агенты authentificator
-		// и dns_resolver.
+		// Spread the new info from config.
+		// The new config info will be accepted by authentificators and
+		// dns_resolvers.
 		send_updated_config_messages( config );
 
-		// Если список ACL изменился, то мы должны это обработать.
+		// If the ACL list have been changed we should handle it.
 		handle_upcoming_acl_list( config );
 	}
 	catch( const std::exception & x )
@@ -487,24 +484,18 @@ a_processor_t::accept_new_config( config_t config ) noexcept
 	}
 }
 
-// Этот метод помечен как noexcept потому, что если из него
-// вылетает какое-нибудь исключение, то смысла продолжать работу нет.
 void
 a_processor_t::send_updated_config_messages(
 	const config_t & config )
 {
-	// Параметры DNS-резолвера могли изменится.
 	so_5::send< updated_dns_params_t >(
 			m_app_ctx.m_config_updates_mbox,
 			config.m_dns_cache_cleanup_period );
 
-	// Общие параметры для ACL могли изменится.
 	so_5::send< updated_common_acl_params_t >(
 			m_app_ctx.m_config_updates_mbox,
 			config.m_common_acl_params );
 
-	// Могли изменится параметры, которые используются для
-	// аутентификации клиентов.
 	so_5::send< updated_auth_params_t >(
 			m_app_ctx.m_config_updates_mbox,
 			config.m_denied_ports,
@@ -515,14 +506,13 @@ void
 a_processor_t::handle_upcoming_acl_list(
 	const config_t & config )
 {
-	// Если диспетчеры еще не созданы, то их нужно создать.
+	// New io_threads should be launched.
 	create_dispatchers_if_necessary( config );
 
-	// Те ACL, которых больше нет в конфигурации, должны быть
-	// удалены и остановлены.
+	// If there are some outdated ACLs they should be removed.
 	stop_and_remove_outdated_acls( config );
 
-	// Новые ACL должны быть запущены.
+	// If there are new ACLs they should be started.
 	launch_new_acls( config );
 }
 
@@ -533,8 +523,9 @@ a_processor_t::create_dispatchers_if_necessary(
 	if( !m_io_threads.empty() )
 		return;
 
-	// Если вычислительных ядер много, то два из них оставим для
-	// нужд ОС и самого arataga. А остальные выделим под IO-потоки.
+	// If there are many CPUs then two of them will be left for the OS
+	// and admin parts of arataga. All other CPUs will be allocated
+	// for IO-threads.
 	const std::size_t threads_count = [this]( const auto & /*cfg*/ ) {
 		auto count = m_params.m_io_threads_count;
 		if( !count )
@@ -559,12 +550,12 @@ a_processor_t::create_dispatchers_if_necessary(
 						.use_own_io_context()
 			);
 
-		// На этом диспетчере должен начать работать свой authentificator.
+		// New authentificator agent should be created for the IO-thread.
 		std::tie( info.m_auth_coop, info.m_auth_mbox ) =
 				::arataga::authentificator::
 						introduce_authentificator(
 								so_environment(),
-								so_coop(), // Наша кооперация в качестве родителя.
+								so_coop(), // We as the parent coop.
 								info.m_disp.binder(),
 								m_app_ctx,
 								::arataga::authentificator::params_t{
@@ -572,12 +563,12 @@ a_processor_t::create_dispatchers_if_necessary(
 								}
 							);
 
-		// На этом диспетчере должен начать работать свой dns_resolver.
+		// New dns_resolver agent should be created for the IO-thread.
 		std::tie( info.m_dns_coop, info.m_dns_mbox ) =
 				::arataga::dns_resolver::
 						introduce_dns_resolver(
 								so_environment(),
-								so_coop(), // Наша кооперация в качестве родителя.
+								so_coop(), // We as the parent coop.
 								info.m_disp.binder(),
 								m_app_ctx,
 								::arataga::dns_resolver::params_t{
@@ -606,7 +597,7 @@ void
 a_processor_t::stop_and_remove_outdated_acls(
 	const config_t & config )
 {
-	// Формируем список ACL, которые должны быть удалены.
+	// Form a list of outdated ACLs.
 	running_acl_container_t outdated_acls;
 	std::set_difference(
 			m_running_acls.begin(), m_running_acls.end(),
@@ -615,9 +606,8 @@ a_processor_t::stop_and_remove_outdated_acls(
 			tricky_acl_comparator_t{} );
 
 	{
-		// Формируем список ACL, которые должны остаться.
-		// Делаем это в отдельном блоке кода, чтобы living_acls
-		// жил как можно меньше.
+		// Form a list of live ACLs.
+		// Use a nested scope to limit the lifetime of living_acls.
 		running_acl_container_t living_acls;
 		std::set_intersection(
 				m_running_acls.begin(), m_running_acls.end(),
@@ -625,12 +615,11 @@ a_processor_t::stop_and_remove_outdated_acls(
 				std::back_inserter( living_acls ),
 				tricky_acl_comparator_t{} );
 
-		// Список оставшихся ACL будем считать нашим новым текущим списком.
+		// The list of live ACLs will become the current ACL list.
 		swap( m_running_acls, living_acls );
 	}
 
-	// Остановим все ACL, которые больше не нужны или поменяли
-	// свой тип.
+	// Handle outdated ACL.
 	for( auto & racl : outdated_acls )
 	{
 		::arataga::logging::wrap_logging(
@@ -644,11 +633,8 @@ a_processor_t::stop_and_remove_outdated_acls(
 							racl.m_config );
 				} );
 
-		// Инициируем принудительное завершение работы ACL.
-		so_5::send< ::arataga::acl_handler::shutdown_t >(
-				racl.m_mbox );
+		so_5::send< ::arataga::acl_handler::shutdown_t >( racl.m_mbox );
 
-		// Мы должны знать, что на конкретной IO-thread стало меньше ACL.
 		m_io_threads[ racl.m_io_thread_index ].m_running_acl_count -= 1u;
 	}
 }
@@ -657,8 +643,7 @@ void
 a_processor_t::launch_new_acls(
 	const config_t & config )
 {
-	// Нам нужно получить список ACL из конфига, для которых
-	// нужно будет создавать новых агентов ACL.
+	// Form a list of new ACLs from the config.
 	config_t::acl_container_t new_acl;
 	std::set_difference(
 			config.m_acls.begin(), config.m_acls.end(),
@@ -666,8 +651,7 @@ a_processor_t::launch_new_acls(
 			std::back_inserter( new_acl ),
 			tricky_acl_comparator_t{} );
 
-	// Начинаем распределять новые ACL с нити, на которой меньше
-	// всего работающих ACL.
+	// Start to bind new ACLs from the IO-thread with the lowest ACL count.
 	auto io_thread_index = index_of_io_thread_with_lowest_acl_count();
 
 	for( const auto & acl_conf : new_acl )
@@ -688,7 +672,7 @@ a_processor_t::launch_new_acls(
 				io_thread_index,
 				::arataga::acl_handler::introduce_acl_handler(
 						so_environment(),
-						so_coop(), // Наша кооперация в качестве родителя.
+						so_coop(), // We as the parent coop.
 						m_io_threads[ io_thread_index ].m_disp.binder(),
 						m_app_ctx,
 						::arataga::acl_handler::params_t{
@@ -707,20 +691,20 @@ a_processor_t::launch_new_acls(
 				)
 		);
 
-		// Теперь на этой IO-thread стало на одного ACL больше.
+		// We should know that this IO-thread holds one more ACL.
 		m_io_threads[ io_thread_index ].m_running_acl_count += 1u;
 
-		// Переходим к другой IO-thread.
-		// Делаем это только если у соседа справа (или у первого, для
-		// случая крайне правого элемента) количество ACL меньше,
-		// чем у текущей IO-thread.
+		// Try to switch to another IO-thread.
+		// Do that only if the next IO-thread (or the first if the current
+		// is the rightmost) holds less ACL than the current IO-thread.
 		const auto next_index = (io_thread_index + 1u) % m_io_threads.size();
 		if( m_io_threads[ io_thread_index ].m_running_acl_count >
 				m_io_threads[ next_index ].m_running_acl_count )
 			io_thread_index = next_index;
 	}
 
-	// Новое значение m_running_acls должно быть отсортировано!
+	// Important: new content of m_running_acls should be sorted
+	// the right way.
 	std::sort( m_running_acls.begin(), m_running_acls.end(),
 			[]( const auto & a, const auto & b ) {
 				return port_and_in_addr_less_comparator( a.m_config, b.m_config );
@@ -800,7 +784,7 @@ a_processor_t::initiate_debug_auth_processing(
 	namespace auth = ::arataga::authentificator;
 	namespace http_entry = ::arataga::admin_http_entry;
 
-	// Объект, благодаря которому ответ будет отослан в HTTP-вход.
+	// Type of object for sending the response to HTTP-entry.
 	class act_t final : public auth::completion_token_t
 	{
 		http_entry::replier_shptr_t m_replier;
@@ -847,7 +831,7 @@ a_processor_t::initiate_debug_auth_processing(
 		}
 	};
 
-	// Должен быть ACL, от имени которого нужно выполнять аутентификацию.
+	// There should be an ACL to be used as the source of auth request.
 	const auto it = std::find_if(
 			m_running_acls.begin(), m_running_acls.end(),
 			[&]( const auto & racl ) {
@@ -856,22 +840,22 @@ a_processor_t::initiate_debug_auth_processing(
 			} );
 	if( it != m_running_acls.end() )
 	{
-		// Т.к. ACL найден, то запрос будем адресовать тому authentificator-у,
-		// который работает на рабочей нити ACL.
+		// ACL found. The request will be sent to authentificator agent
+		// from ACL's IO-thread.
 		const so_5::mbox_t auth_mbox =
 				m_io_threads.at( it->m_io_thread_index ).m_auth_mbox;
 
-		// Сперва создаем и наполняем объект с запросом...
+		// Make and fill the request object...
 		auto auth_msg = std::make_unique< auth::auth_request_t >();
 
-		// Идентификатор запроса здесь не имеет значения.
+		// Request ID doesn't matter here.
 		auth_msg->m_req_id = auth::auth_req_id_t{ 0u, 0u };
-		// Ответ ждем на собственный mbox.
+		// Wait the reply on the direct mbox.
 		auth_msg->m_reply_to = so_direct_mbox();
-		// Нужный нам completion-token.
+		// Our completion token for the request.
 		auth_msg->m_completion_token = std::make_shared< act_t >( replier );
 
-		// Остальные параметры копируем из исходного запроса.
+		// All other params are copied from the source request.
 		auth_msg->m_proxy_in_addr = request.m_proxy_in_addr;
 		auth_msg->m_proxy_port = request.m_proxy_port;
 		auth_msg->m_user_ip = request.m_user_ip;
@@ -880,8 +864,8 @@ a_processor_t::initiate_debug_auth_processing(
 		auth_msg->m_target_host = request.m_target_host;
 		auth_msg->m_target_port = request.m_target_port;
 
-		// Остается отослать это сообщение как иммутабельное.
-		// Для чего потребуется message_holder_t.
+		// This message should be sent as immutable message,
+		// we need message_holder_t for that.
 		so_5::send(
 				auth_mbox,
 				so_5::message_holder_t< auth::auth_request_t >(
@@ -889,8 +873,7 @@ a_processor_t::initiate_debug_auth_processing(
 	}
 	else
 	{
-		// Нет такого ACL, ничего не нужно делать кроме отрицательного
-		// ответа.
+		// ACL not found, nothing has to be done.
 		replier->reply(
 				http_entry::status_bad_request,
 				"There is no ACL with the specified parameters\r\n" );
@@ -906,7 +889,7 @@ a_processor_t::initiate_debug_dns_resolve_processing(
 	namespace forward = ::arataga::dns_resolver::forward;
 	namespace http_entry = ::arataga::admin_http_entry;
 
-	// Объект, благодаря которому ответ будет отослан в HTTP-вход.
+	// Type of object for sending the response to HTTP-entry.
 	class act_t final : public forward::completion_token_t
 	{
 		http_entry::replier_shptr_t m_replier;
@@ -947,7 +930,8 @@ a_processor_t::initiate_debug_dns_resolve_processing(
 		}
 	};
 
-	// Должен быть ACL, от имени которого нужно выполнять разрешение имени.
+	// There should be an ACL to be used as the source of domain
+	// name resolution request.
 	const auto it = std::find_if(
 		m_running_acls.begin(), m_running_acls.end(),
 		[&]( const auto & racl ) {
@@ -957,23 +941,23 @@ a_processor_t::initiate_debug_dns_resolve_processing(
 
 	if( it != m_running_acls.end() )
 	{
-		// Т.к. ACL найден, то запрос будем адресовать тому dns_resolver-у,
-		// который работает на рабочей нити ACL.
+		// ACL found. The request will be sent to the dns_resolver agent
+		// from ACL's IO-thread.
 		const so_5::mbox_t dns_mbox =
 				m_io_threads.at( it->m_io_thread_index ).m_dns_mbox;
 
-		// Сперва создаем и наполняем объект с запросом...
+		// Create and fill the request object...
 		auto dns_msg = std::make_unique< dns::resolve_request_t >();
 
-		// Идентификатор запроса здесь не имеет значения.
+		// Request ID doesn't matter here.
 		dns_msg->m_req_id = dns::resolve_req_id_t{ 0u, 0u };
-		// Ответ ждем на собственный mbox.
+		// Wait the response on the direct mbox.
 		dns_msg->m_reply_to = so_direct_mbox();
-		// Нужный нам completion-token.
+		// Our completion token.
 		dns_msg->m_completion_token = std::make_shared< act_t >(
 			replier );
 
-		// Остальные параметры копируем из исходного запроса.
+		// All other parameters are just copied from the source request.
 		dns_msg->m_name = request.m_target_host;
 		dns_msg->m_ip_version =
 			request.m_ip_version.empty()?
@@ -981,8 +965,8 @@ a_processor_t::initiate_debug_dns_resolve_processing(
 				dns::from_string(
 					request.m_ip_version );
 
-		// Остается отослать это сообщение как иммутабельное.
-		// Для чего потребуется message_holder_t.
+		// This message should be sent as immutable message,
+		// we need message_holder_t for that.
 		so_5::send(
 			dns_mbox,
 			so_5::message_holder_t< dns::resolve_request_t >(
@@ -990,8 +974,7 @@ a_processor_t::initiate_debug_dns_resolve_processing(
 	}
 	else
 	{
-		// Нет такого ACL, ничего не нужно делать кроме отрицательного
-		// ответа.
+		// ACL not found, nothing has to be done.
 		replier->reply(
 				http_entry::status_bad_request,
 				"There is no ACL with the specified parameters\r\n" );

@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Агент для обработки конфигурации.
+ * @brief Agent for handling arataga's configuration.
  */
 
 #pragma once
@@ -20,18 +20,18 @@ namespace arataga::config_processor
 // a_processor_t
 //
 /*!
- * @brief Агент для работы с конфигурацией arataga.
+ * @brief Agent for handling arataga's configuration.
  */
 class a_processor_t : public so_5::agent_t
 {
 public:
-	//! Основной конструктор.
+	//! Initializing constructor.
 	a_processor_t(
-		//! SOEnv и параметры для агента.
+		//! SOEnv and SObjectizer-related parameters for the agent.
 		context_t ctx,
-		//! Контекст всего arataga.
+		//! The whole app's context.
 		application_context_t app_ctx,
-		//! Индивидуальные параметры для этого агента.
+		//! Initial parameters for the agent.
 		params_t params );
 
 	void
@@ -40,23 +40,21 @@ public:
 	void
 	so_evt_start() override;
 
-	// Эта структура описана в публичной части для того, чтобы
-	// с ней могли работать свободные вспомогательные функции,
-	// не входящие в класс a_processor_t.
+	// NOTE: this struct is defined in the public part of the class
+	// to have a possibility to work with it outside the class.
 
-	//! Описание одного запущенного ACL.
+	//! The description for one running ACL.
 	struct running_acl_info_t
 	{
-		//! Конфигурация для этого ACL.
+		//! Config for that ACL.
 		acl_config_t m_config;
 
-		//! Порядковый номер IO-thread, к которой привязан данный ACL.
+		//! Index of IO-thread on that the ACL works.
 		std::size_t m_io_thread_index;
 
-		//! Почтовый ящик, через который можно общаться с этим ACL.
+		//! ACL's mbox.
 		so_5::mbox_t m_mbox;
 
-		//! Инициализирующий конструктор.
 		running_acl_info_t(
 			acl_config_t config,
 			std::size_t io_thread_index,
@@ -68,95 +66,92 @@ public:
 	};
 
 private:
-	//! Описание одной IO-нити, на которой обслуживаются ACL.
+	//! The description of a IO-thread for serving ACLs.
 	struct io_thread_info_t
 	{
-		//! Диспетчер, к которому должны привязываться агенты acl_handler.
+		//! The dispatcher for acl_handler agents.
 		so_5::extra::disp::asio_one_thread::dispatcher_handle_t m_disp;
 
-		//! Кооперация с агентом authentificator для этой IO-нити.
+		//! Coop with authentificator-agent for that IO-thread.
 		so_5::coop_handle_t m_auth_coop;
-		//! Почтовый ящик агента authentificator для этой IO-нити.
+		//! mbox of authentificator-agent for that IO-thread.
 		so_5::mbox_t m_auth_mbox;
 
-		//! Кооперация с агентом dns_resolver для этой IO-нити.
+		//! Coop with dns_resolver-agent for that IO-thread.
 		so_5::coop_handle_t m_dns_coop;
-		//! Почтовый ящик агента dns_resolver для этой IO-нити.
+		//! mbox of dns_resolver-agent for that IO-thread.
 		so_5::mbox_t m_dns_mbox;
 
-		//! Сколько ACL запущенно на этом диспетчере.
+		//! How many ACLs work on that IO-thread.
 		std::size_t m_running_acl_count{ 0u };
 	};
 
-	//! Тип контейнера для хранения диспетчеров, к которым должны
-	//! привязываться агенты acl_handler.
+	//! Type of container for descriptions of IO-threads.
 	using io_thread_container_t = std::vector< io_thread_info_t >;
 
-	//! Тип контейнера для хранения информации о созданных ACL.
+	//! Type of container for info about running ACLs.
 	using running_acl_container_t = std::vector< running_acl_info_t >;
 
-	//! Контекст всего arataga.
+	//! The context of the whole app.
 	const application_context_t m_app_ctx;
 
-	//! Индивидуальные параметры для агента.
+	//! Initial parameters for the agent.
 	const params_t m_params;
 
-	//! Имя файла с локальной копией конфига.
+	//! Name of the file with local copy of the config.
 	const std::filesystem::path m_local_config_file_name;
 
-	//! Парсер конфигурации.
+	//! The parser for the configuration.
 	config_parser_t m_parser;
 
-	//! Диспетчеры, которые должны обслуживать агентов acl_handler.
+	//! IO-threads for serving ACLs.
 	/*!
-	 * Изначально этот контейнер пуст. Диспетчеры создаются при первой
-	 * успешной загрузке конфигурации.
+	 * This container is initially empty. It will be filled up on the
+	 * first successful config update.
 	 */
 	io_thread_container_t m_io_threads;
 
-	//! Информация о запущенных ACL.
+	//! Info about running ACLs.
 	/*!
 	 * @attention
-	 * Содержимое этого списка должно быть упорядочно по (port, in_addr).
+	 * The content is sorted by (port, in_addr).
 	 */
 	running_acl_container_t m_running_acls;
 
-	//! Счетчик обновлений конфигурации.
+	//! Counter of configuration updates.
 	/*!
-	 * Увеличивается каждый раз как поступает корректно разобранная
-	 * и непротиворечивая версия конфигурации.
+	 * It's incremented on every successful config update.
 	 *
-	 * Используется при формировании имен дочерних агентов.
+	 * It's used for making names of children agents.
 	 */
 	std::uint_fast64_t m_config_update_counter{ 0u };
 
-	//! Реакция на получение новой конфигурации.
+	//! Handler for a new config.
 	void
 	on_new_config(
 		mhood_t< new_config_t > cmd );
 
-	//! Реакция на запрос списка известных ACL.
+	//! Handler for requesting the list of running ACLs.
 	void
 	on_get_acl_list(
 		mhood_t< get_acl_list_t > cmd );
 
-	//! Реакция на попытку провести тестовую аутентификацию.
+	//! Handler for test authentification.
 	void
 	on_debug_auth(
 		mhood_t< debug_auth_t > cmd );
 
-	//! Реакция на получение ответа на попытку провести
-	//! тестовую аутентификацию.
+	//! Handler for a reply for test authentification.
 	void
 	on_auth_reply(
 		mhood_t< ::arataga::authentificator::auth_reply_t > cmd );
 
-	//! Реакция на запрос разрешения доменного имени.
+	//! Handler for test domain name resolution.
 	void
 	on_debug_dns_resolve(
 		mhood_t< debug_dns_resolve_t > cmd );
 
-	//! Реакция на получение ответа о попытке разрешения доменного имени.
+	//! Handler for a reply for test domain name resolution.
 	void
 	on_resolve_reply(
 		mhood_t< ::arataga::dns_resolver::resolve_reply_t > cmd );
@@ -164,21 +159,18 @@ private:
 	void
 	try_load_local_config_first_time();
 
-	//! Попытка обработать новый конфиг, который пришел
-	//! в виде POST-запроса от HTTP-входа.
+	//! An attempt to process new config from HTTP-entry.
 	/*!
-	 * В случае ошибок порождает исключение.
+	 * Throws an exception in the case of error.
 	 */
 	void
 	try_handle_new_config_from_post_request(
 		std::string_view content );
 
-	//! Попытка обработать конфиг, который только что был успешно
-	//! разобран.
+	//! An attempt to process new config that successfully parsed.
 	/*!
-	 * Этот метод должен вызываться после того, как конфиг был
-	 * успешно разобран после чтения содержимого конфига из файла или
-	 * после получения его от HTTP-входа.
+	 * This method should be called after successful reading from a file
+	 * or after receiving the content from HTTP-entry.
 	 */
 	void
 	try_handle_just_parsed_config(
@@ -186,13 +178,13 @@ private:
 
 	/*!
 	 * @attention
-	 * Ожидается, что список ACL в @a config будет упорядочен
-	 * по (port, in_addr) и что в нем не будет дубликатов.
+	 * It's expected that ACL list in @a config is sorted by (port, in_addr)
+	 * and there is no duplicates.
 	 *
 	 * @note
-	 * ПРИМЕЧАНИЕ: этот метод не выпускает наружу исключений. Если внутри
-	 * возникает исключение, то оно логируется, а работа приложения аварийно
-	 * прерывается.
+	 * This method doesn't throw exceptions. If there is an exception
+	 * inside it that exception is caught and logged. Then the work of
+	 * the whole application will be aborted.
 	 */
 	void
 	accept_new_config( config_t config ) noexcept;
@@ -203,8 +195,8 @@ private:
 
 	/*!
 	 * @attention
-	 * Ожидается, что список ACL в @a config будет упорядочен
-	 * по (port, in_addr) и что в нем не будет дубликатов.
+	 * It's expected that ACL list in @a config is sorted by (port, in_addr)
+	 * and there is no duplicates.
 	 */
 	void
 	handle_upcoming_acl_list(
@@ -216,8 +208,8 @@ private:
 
 	/*!
 	 * @attention
-	 * Ожидается, что список ACL в @a config будет упорядочен
-	 * по (port, in_addr) и что в нем не будет дубликатов.
+	 * It's expected that ACL list in @a config is sorted by (port, in_addr)
+	 * and there is no duplicates.
 	 */
 	void
 	stop_and_remove_outdated_acls(
@@ -225,11 +217,10 @@ private:
 
 	/*!
 	 * @attention
-	 * Ожидается, что список ACL в @a config будет упорядочен
-	 * по (port, in_addr) и что в нем не будет дубликатов.
+	 * It's expected that ACL list in @a config is sorted by (port, in_addr)
+	 * and there is no duplicates.
 	 *
-	 * На выходе будет m_running_acls, в котором все ACL так
-	 * же будут упорядочены по (port, in_addr).
+	 * At the end m_running_acls will be sorted by (port, in_addr).
 	 */
 	void
 	launch_new_acls(
@@ -239,23 +230,22 @@ private:
 	std::size_t
 	index_of_io_thread_with_lowest_acl_count() const noexcept;
 
-	//! Сохранение нового конфига в локальный файл.
+	//! Store the new config into a local file.
 	/*!
 	 * @note
-	 * Возникшие при выполнении этой операции исключения логируются,
-	 * но не выпускаются наружу.
+	 * Exceptions are caught and logged, then suppressed.
 	 */
 	void
 	store_new_config_to_file(
 		std::string_view content );
 
-	//! Начало обработки тестовой аутентификации пользователя.
+	//! Initiation of test authentification.
 	void
 	initiate_debug_auth_processing(
 		::arataga::admin_http_entry::replier_shptr_t replier,
 		::arataga::admin_http_entry::debug_requests::authentificate_t request );
 
-	//! Начало обработки запроса на разрешение доменного имени.
+	//! Initiation of test domain name resolution.
 	void
 	initiate_debug_dns_resolve_processing(
 		::arataga::admin_http_entry::replier_shptr_t replier,
