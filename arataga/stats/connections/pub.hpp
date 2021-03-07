@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Средства для сбора статистики по подключениям.
+ * @brief Stuff for collecting connections-related stats.
  */
 
 #pragma once
@@ -15,18 +15,18 @@ namespace arataga::stats::connections
 //
 // acl_stats_t
 //
-//! Статистика по одному ACL.
+//! Stats for a single ACL.
 struct acl_stats_t
 {
-	//! Общее количество подключений.
+	//! Total number of connections.
 	std::atomic< std::uint64_t > m_total_connections{};
-	//! Количество подключений по протоколу HTTP.
+	//! Number of connections by HTTP protocol.
 	std::atomic< std::uint64_t > m_http_connections{};
-	//! Количетсво подключений по протоколу SOCKS5.
+	//! Number of connections by SOCKS5 protocol.
 	std::atomic< std::uint64_t > m_socks5_connections{};
 
 	/*!
-	 * @name Счетчики причин удаления connection-handler-ов.
+	 * @name Counters for various reasons of connection_handlers deletion.
 	 * @{
 	 */
 	std::atomic< std::uint64_t > m_remove_reason_normal_completion{};
@@ -117,14 +117,12 @@ lambda_as_enumerator( Lambda && lambda )
 // acl_stats_reference_manager_t
 //
 /*!
- * @brief Интерфейс хранителя ссылок на объекты acl_stats_t.
+ * @brief An interface of holder of references to acl_stats objects.
  *
- * Объет acl_stats_t является собственностью обработчика ACL.
- * Но ссылки на существующие acl_stats-объекты должны быть
- * доступны stats_collector-у. Для чего ACL-handler при начале
- * своей работы сохраняет ссылку на свой acl_stats-объект в
- * acl_stats_reference_manager. А перед уничтожением ACL-handler
- * уничтожает эту ссылку.
+ * An object of acl_stats is owned by ACL-agent. But a reference to that
+ * object should be available to stats_collector. ACL-agent passes that
+ * reference to acl_stats_reference_manager at the beginning, then removes that
+ * references at the end.
  */
 class acl_stats_reference_manager_t
 {
@@ -132,26 +130,28 @@ public:
 	acl_stats_reference_manager_t();
 	virtual ~acl_stats_reference_manager_t();
 
-	// Объекты этого типа нельзя ни копировать, ни перемещать.
+	// Objects of that type can't be copied or moved.
 	acl_stats_reference_manager_t(
 		const acl_stats_reference_manager_t & ) = delete;
 	acl_stats_reference_manager_t(
 		acl_stats_reference_manager_t && ) = delete;
 
-	//! Добавить очередной acl_stats_t в хранилище.
+	//! Add a new acl_stats to the storage.
 	virtual void
 	add( acl_stats_t & stats_object ) = 0;
 
-	//! Изъять acl_stats_t из хранилища.
+	//! Remove acl_stats from the storage.
 	virtual void
 	remove( acl_stats_t & stats_object ) noexcept = 0;
 
-	//! Пробежаться по всем элементам в хранилище.
+	//! Enumerate all objects from the storage.
 	/*!
-	 * Для обеспечения exception-safety хранилище будет заблокировано
-	 * на время выполнения итерации. До тех пор пока enumerate не вернет
-	 * управление вызовы add() и remove() будут блокировать вызывающую
-	 * сторону. Поэтому делать вызовы add/remove внутри enumerate нельзя.
+	 * For the safety purposes the storage will be blocked to the end
+	 * of the enumeration. It means that add() and remove() will block
+	 * the caller until enumerate() completes.
+	 *
+	 * It also means that calls to add()/remove() from inside enumerate()
+	 * are prohibited.
 	 */
 	virtual void
 	enumerate( acl_stats_enumerator_t & enumerator ) = 0;
@@ -161,8 +161,8 @@ public:
 // auto_reg_t
 //
 /*!
- * @brief Вспомогательный класс для добавления и удаления ссылки
- * на acl_stats объект в acl_stats_reference_manager в стиле RAII.
+ * @brief Helper for adding/removing references to acl_stats
+ * objects in RAII style.
  */
 class auto_reg_t
 {
@@ -183,7 +183,7 @@ public:
 		m_manager->remove( m_stats );
 	}
 
-	// Копирование и перемещение этих объектов запрещено.
+	// Objects of that class can't be copied or moved.
 	auto_reg_t( const auto_reg_t & ) = delete;
 	auto_reg_t( auto_reg_t && ) = delete;
 };

@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Описание агента dns_resolver.
+ * @brief Implementation of dns_resolver-agent.
  */
 
 #include <arataga/dns_resolver/a_dns_resolver.hpp>
@@ -87,7 +87,7 @@ local_cache_t::add_records(
 	auto resolve_info = m_data.emplace(
 		std::move(name),
 		resolve_info_t(
-			// В качестве времени создания передается текущий момент времени.
+			// The current timepoint is used as the creation time.
 			std::chrono::steady_clock::now() ) );
 
 	for( const auto & ep: results )
@@ -198,7 +198,7 @@ a_dns_resolver_t::on_resolve( const resolve_request_t & msg )
 							resolve->to_string() );
 				} );
 
-		// Обновляем статистику.
+		// Update the stats.
 		m_dns_stats.m_dns_cache_hits += 1u;
 
 		forward::successful_resolve_t result{
@@ -231,8 +231,8 @@ a_dns_resolver_t::on_resolve( const resolve_request_t & msg )
 void
 a_dns_resolver_t::on_clear_cache( so_5::mhood_t<clear_cache_t> )
 {
-// Этот фрагмент оставлен в коде на случай, если потребуется быстро
-// вернуть его назад для целей отладки.
+// This code fragment is kept here for the case when some debugging
+// will be necessary.
 #if 0
 	std::ostringstream o;
 	o << m_cache;
@@ -253,7 +253,7 @@ a_dns_resolver_t::on_clear_cache( so_5::mhood_t<clear_cache_t> )
 						n_removed );
 			} );
 
-	// Инициируем следующую чистку.
+	// Initiate the next cleanup.
 	so_5::send_delayed< clear_cache_t >( *this, m_cache_cleanup_period );
 }
 
@@ -300,21 +300,21 @@ a_dns_resolver_t::handle_resolve_result(
 
 	if( !ec )
 	{
-		// Обновляем статистику успешных DNS lookup.
+		// The stats for successful DNS lookups has to be updated.
 		m_dns_stats.m_dns_successful_lookups += 1u;
-
-		std::string ips;
-		for( const auto & ep: results )
-		{
-			ips += ep.endpoint().address().to_string();
-			ips += ' ';
-		}
 
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,
 				spdlog::level::debug,
 				[&]( auto & logger, auto level )
 				{
+					std::string ips;
+					for( const auto & ep: results )
+					{
+						ips += ep.endpoint().address().to_string();
+						ips += ' ';
+					}
+
 					logger.log(
 							level,
 							"{}: domain resolved: name={}, results=[{}]",
@@ -339,7 +339,7 @@ a_dns_resolver_t::handle_resolve_result(
 	}
 	else
 	{
-		// Обновляем статистику неудачных DNS lookup.
+		// The stats for failed DNS lookups has to be updated.
 		m_dns_stats.m_dns_failed_lookups += 1u;
 
 		forward::resolve_result_t result = forward::failed_resolve_t{

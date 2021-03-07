@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Средства для сбора статистики по подключениям.
+ * @brief Stuff for collecting connections-related stats.
  */
 
 #include <arataga/stats/connections/pub.hpp>
@@ -70,7 +70,7 @@ public:
 			const auto r = enumerator.on_next( *o );
 			switch( r )
 			{
-				case acl_stats_enumerator_t::go_next: /* Ничего не делаем. */
+				case acl_stats_enumerator_t::go_next: /* Nothing to do. */
 				break;
 
 				case acl_stats_enumerator_t::stop: return;

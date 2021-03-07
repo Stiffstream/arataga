@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Средства для сбора статистики по аутентификациям.
+ * @brief Stuff for collecting authentification-related stats.
  */
 
 #include <arataga/stats/auth/pub.hpp>
@@ -70,7 +70,7 @@ public:
 			const auto r = enumerator.on_next( *o );
 			switch( r )
 			{
-				case auth_stats_enumerator_t::go_next: /* Ничего не делаем. */
+				case auth_stats_enumerator_t::go_next: /* Nothing to do. */
 				break;
 
 				case auth_stats_enumerator_t::stop: return;

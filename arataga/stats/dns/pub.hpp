@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Средства для сбора статистики по DNS.
+ * @brief Stuff for collecting DNS-related stats.
  */
 
 #pragma once
@@ -15,14 +15,14 @@ namespace arataga::stats::dns
 //
 // dns_stats_t
 //
-//! Статистика по одному агенту-dns_resolver-у.
+//! Stats for a single dns_resolver-agent.
 struct dns_stats_t
 {
-	//! Количество попаданий в кэш.
+	//! Cache hits counter.
 	std::atomic< std::uint64_t > m_dns_cache_hits{};
-	//! Количество успешных операций DNS lookup.
+	//! Counter for successful lookups.
 	std::atomic< std::uint64_t > m_dns_successful_lookups{};
-	//! Количество неудачных операций DNS lookup.
+	//! Counter for failed lookups.
 	std::atomic< std::uint64_t > m_dns_failed_lookups{};
 };
 
@@ -92,14 +92,13 @@ lambda_as_enumerator( Lambda && lambda )
 // dns_stats_reference_manager_t
 //
 /*!
- * @brief Интерфейс хранителя ссылок на объекты dns_stats_t.
+ * @brief An interface of holder of references to dns_stats objects.
  *
- * Объет dns_stats_t является собственностью агента dns_resolver.
- * Но ссылки на существующие dns_stats-объекты должны быть
- * доступны stats_collector-у. Для чего агент dns_resolver при начале
- * своей работы сохраняет ссылку на свой dns_stats-объект в
- * dns_stats_reference_manager. А перед уничтожением агент
- * dns_resolver уничтожает эту ссылку.
+ * An object of auth_stats_t is owned by dns_resolver-agent.
+ * But a reference to that object should be available to stats_collector.
+ * Dns_resolver-agent passes that reference to
+ * dns_stats_reference_manager at the beginning, then removes that
+ * references at the end.
  */
 class dns_stats_reference_manager_t
 {
@@ -107,26 +106,28 @@ public:
 	dns_stats_reference_manager_t();
 	virtual ~dns_stats_reference_manager_t();
 
-	// Объекты этого типа нельзя ни копировать, ни перемещать.
+	// Objects of that type can't be moved or copied.
 	dns_stats_reference_manager_t(
 		const dns_stats_reference_manager_t & ) = delete;
 	dns_stats_reference_manager_t(
 		dns_stats_reference_manager_t && ) = delete;
 
-	//! Добавить очередной auth_stats_t в хранилище.
+	//! Add a new dns_stats to the storage.
 	virtual void
 	add( dns_stats_t & stats_object ) = 0;
 
-	//! Изъять auth_stats_t из хранилища.
+	//! Remove dns_stats from the storage.
 	virtual void
 	remove( dns_stats_t & stats_object ) noexcept = 0;
 
-	//! Пробежаться по всем элементам в хранилище.
+	//! Enumerate all objects from the storage.
 	/*!
-	 * Для обеспечения exception-safety хранилище будет заблокировано
-	 * на время выполнения итерации. До тех пор пока enumerate не вернет
-	 * управление вызовы add() и remove() будут блокировать вызывающую
-	 * сторону. Поэтому делать вызовы add/remove внутри enumerate нельзя.
+	 * For the safety purposes the storage will be blocked to the end
+	 * of the enumeration. It means that add() and remove() will block
+	 * the caller until enumerate() completes.
+	 *
+	 * It also means that calls to add()/remove() from inside enumerate()
+	 * are prohibited.
 	 */
 	virtual void
 	enumerate( dns_stats_enumerator_t & enumerator ) = 0;
@@ -136,8 +137,8 @@ public:
 // auto_reg_t
 //
 /*!
- * @brief Вспомогательный класс для добавления и удаления ссылки
- * на dns_stats объект в dns_stats_reference_manager в стиле RAII.
+ * @brief Helper for adding/removing references to dns_stats
+ * objects in RAII style.
  */
 class auto_reg_t
 {
@@ -158,7 +159,7 @@ public:
 		m_manager->remove( m_stats );
 	}
 
-	// Копирование и перемещение этих объектов запрещено.
+	// Objects of that class can't be copied or moved.
 	auto_reg_t( const auto_reg_t & ) = delete;
 	auto_reg_t( auto_reg_t && ) = delete;
 };

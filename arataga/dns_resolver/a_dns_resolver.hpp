@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Описание агента dns_resolver.
+ * @brief The definition of dns_resolver_agent.
  */
 
 #pragma once
@@ -21,9 +21,10 @@ namespace arataga::dns_resolver
 {
 
 /*!
- * @brief Класс, определяющий локальный кеш с доменными именами.
- * Реализован в виде словаря, соотносящего имя ресурса к его адресу и времени
- * создания записи.
+ * @brief Local cache for resolved domain names.
+ *
+ * Implemented as a map with the domain name as key. Address and resolution
+ * time are stored as values.
  */
 class local_cache_t
 {
@@ -32,46 +33,41 @@ public:
 	~local_cache_t() = default;
 
 	/*!
-	 * @brief Выполнить разрешение доменного имени.
+	 * @brief Perform the resolution of a domain name.
 	 *
-	 * @param name Имя, для которого нужно получить адрес.
-	 * @return std::optional<asio::ip::address> Адрес из локального словаря
-	 * или std::nullopt.
+	 * @return IP-address if name is present in the cache or empty value
+	 * otherwise.
 	 */
 	[[nodiscard]]
 	std::optional<asio::ip::address>
 	resolve(
+		//! Domain name to be resolved.
 		const std::string & name,
+		//! IPv4 or IPv6 address as result?
 		ip_version_t ip_version ) const;
 
 	/*!
-	 * @brief Удалить устаревшие записи.
+	 * @brief Remove outdated items.
 	 *
-	 * @param time_to_live Время жизни, старше которого элементы будут удалены.
-	 *
-	 * @return Количество элементов, которые были изъяты из кэша.
+	 * @return Count of removed items.
 	 */
 	std::size_t
-	remove_outdated_records( const std::chrono::seconds & time_to_live );
+	remove_outdated_records(
+		//! Max age for item in the cache.
+		const std::chrono::seconds & time_to_live );
 
 	/*!
-	 * @brief Добавить запись в словарь.
-	 *
-	 * @param name Имя ресурса.
-	 * @param address Адрес ресурса.
+	 * @brief Add an item to the cache.
 	 */
-	// void
-	// add_record(
-	// 	std::string name,
-	// 	asio::ip::address address );
-
 	void
 	add_records(
+		//! Domain name to be added.
 		std::string name,
+		//! IP-addresses for that domain.
 		const asio::ip::tcp::resolver::results_type & results );
 
 	/*!
-	 * @brief Очистить содержимое кеша.
+	 * @brief Clear the cache.
 	 */
 	void
 	clear();
@@ -100,30 +96,13 @@ public:
 private:
 
 	/*!
-	 * @brief Вспомогательный класс, объекты которого соотносятся
-	 * к именам ресурсов в локальном кеше.
-	 *
-	 * Данный класс необходим для возможности хранения времени создания
-	 * записи в кеше вместе с адресом ресурса для последующего удаления
-	 * устаревших записей.
+	 * @brief The data for one resolved domain name.
 	 */
 	struct resolve_info_t
 	{
-		asio::ip::address m_address;
-
-		//! Адрес записи.
 		std::list< asio::ip::address > m_addresses;
 
-		//! Момент времени создания записи.
 		std::chrono::steady_clock::time_point m_creation_time;
-
-		resolve_info_t(
-			asio::ip::address address,
-			std::chrono::steady_clock::time_point creation_time )
-			:	m_address{ std::move(address) }
-			,	m_creation_time{ std::move(creation_time) }
-		{
-		}
 
 		resolve_info_t(
 			std::chrono::steady_clock::time_point creation_time )
@@ -141,12 +120,10 @@ private:
 		}
 
 		/*!
-		* @brief Проверить, устарела ли информация о разрешении имени.
-		*
-		* @param time_to_live Время жизни объекта.
-		* @return true Если информация устарела.
-		* @return false Если информация не устарела.
-		*/
+		 * @brief Check the age of domain name info.
+		 *
+		 * @return true if domain name info is outdated.
+		 */
 		[[nodiscard]]
 		bool
 		is_outdated( const std::chrono::seconds & time_to_live ) const
@@ -154,13 +131,11 @@ private:
 			return age() >= time_to_live;
 		}
 	};
+
 	/*!
-	 * @brief Локальный словарь ресурсов, для которых ранее выполнялся резолвинг.
+	 * @brief The map of resolved domain names.
 	 *
-	 * Ключ - имя ресурса.
-	 *
-	 * Значение - информация о записи, содержащая адреса ресурса и время создания
-	 * записи в локальном кеше.
+	 * Domain name is used as the key.
 	 */
 	std::map< std::string, resolve_info_t > m_data;
 };
@@ -177,18 +152,18 @@ operator<<( std::ostream & o, const local_cache_t & cache )
 // a_dns_resolver_t
 //
 /*!
- * @brief Агент для работы с конфигурацией arataga.
+ * @brief Agent for performing domain name resolution.
  */
 class a_dns_resolver_t final : public so_5::agent_t
 {
 public:
-	//! Основной конструктор.
+	//! Initializing constructor.
 	a_dns_resolver_t(
-		//! SOEnv и параметры для агента.
+		//! SOEnv and SObjectizer-related parameters.
 		context_t ctx,
-		//! Контекст всего arataga.
+		//! Aragata's context.
 		application_context_t app_ctx,
-		//! Индивидуальные параметры для этого агента.
+		//! Initial parameters for that agent.
 		params_t params );
 
 	void
@@ -202,59 +177,59 @@ public:
 
 private:
 
-	//! Сигнал о необходимости очистить кеш.
+	//! The signal for cache cleanup.
 	struct clear_cache_t final : public so_5::signal_t {};
 
-	//! Событие появления нового запроса на разрешение имени.
+	//! Handler for a new resolution request.
 	void
 	on_resolve( const resolve_request_t & msg );
 
-	//! Событие очистки содержимого кеша.
+	//! Handler for cache cleanup event.
 	void
 	on_clear_cache( so_5::mhood_t<clear_cache_t> );
 
 	using updated_dns_params_t =
 		arataga::config_processor::updated_dns_params_t;
 
-	//! Реакция на обновление параметров конфигурации.
+	//! Handler for configuration updates.
 	void
 	on_updated_dns_params(
 		const updated_dns_params_t & msg );
 
-	//! Обработать результат поиска.
+	//! The reaction to the resolution result.
 	void
 	handle_resolve_result(
-		//! Код ошибки asio.
+		//! Low-level error from Asio.
 		const asio::error_code & ec,
-		//! Результаты разрешения доменного имени.
+		//! IP-addresses for the domain name.
 		asio::ip::tcp::resolver::results_type results,
+		//! Domain name.
 		std::string name );
 
-	//! Контекст всего arataga.
+	//! Arataga's context.
 	const application_context_t m_app_ctx;
 
-	//! Индивидуальные параметры этого агента.
+	//! Initial parameters for that agent.
 	const params_t m_params;
 
-	//! Индивидуальная статистика этого агента.
+	//! Agent's stats.
 	::arataga::stats::dns::dns_stats_t m_dns_stats;
 	::arataga::stats::dns::auto_reg_t m_dns_stats_reg;
 
-	//! Текущий темп очистки кэша от старых записей.
+	//! The current period for cache cleanup procedures.
 	std::chrono::milliseconds m_cache_cleanup_period;
 
 	//! Экземпляр resolver-а из asio.
 	asio::ip::tcp::resolver m_resolver;
 
-	//! Локальный кеш.
+	//! The local cache for domain name.
 	local_cache_t m_cache;
 
 	/*!
-	 * @brief Добавить запрос в список ожидающих и если в данный момент
-	 * для этого имени нет обращения к DNS-серверу, то сделать соответствующий
-	 * запрос.
+	 * @brief Add a new request to the waiting list or initiate the resolution.
 	 *
-	 * @param req Запрос на разрешение доменного имени.
+	 * Checks the presence of the domain name in waiting list. If it isn't
+	 * in the list then initiate a new resolution.
 	 */
 	void
 	add_to_waiting_and_resolve( const resolve_request_t & req );

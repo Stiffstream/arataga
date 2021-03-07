@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Средства для сбора статистики по DNS.
+ * @brief Stuff for collecting DNS-related stats.
  */
 
 #include <arataga/stats/dns/pub.hpp>
@@ -70,7 +70,7 @@ public:
 			const auto r = enumerator.on_next( *o );
 			switch( r )
 			{
-				case dns_stats_enumerator_t::go_next: /* Ничего не делаем. */
+				case dns_stats_enumerator_t::go_next: /* Nothing to do. */
 				break;
 
 				case dns_stats_enumerator_t::stop: return;
