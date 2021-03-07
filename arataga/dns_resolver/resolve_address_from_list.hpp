@@ -1,6 +1,7 @@
 /*!
  * @file
- * @brief Вспомогательная функция для поиска адреса нужного типа из списка.
+ * @brief Helper function for searching an address of appropriate type
+ * in a list of addresses.
  */
 
 #pragma once
@@ -12,24 +13,27 @@ namespace arataga::dns_resolver
 {
 
 /*!
- * @brief Функция, позоляющая выбрать из списка IP адрес необходимой версии.
+ * @brief Search an IP-address of appropriate version in a list of addresses.
  *
- * \note Возвращается первый попавшийся адрес соответствующей версии.
- * \note Если нужен IPv6 адрес, и до конца списка его не нашли, то в итоге
- * конвиртируется в IPv6 первый адрес IPv4.
+ * @note
+ * Return the first IP-address with the appropriate version.
  *
- * @param list Список с адресами
- * @param ip_version Версия IP.
- * @param address_extractor Функтор, позволяющий извлечь адрес из элемента списка.
- * @return asio::ip::address Адрес с нужной версией IP.
- * @return std::nullopt Если не удалось произвести конвертацию к адресу
- * нужной версии.
+ * @note
+ * If IPv6 address is required and not found then the first IPv4 address
+ * will be converted into IPv6 address.
+ *
+ * @return asio::ip::address The resulting address with required version.
+ * @return std::nullopt If there is no appropriate address and no
+ * possibility to make a conversion between IPv4 and IPv6 versions.
  */
 template <typename List, typename Extractor>
 std::optional<asio::ip::address>
 resolve_address_from_list(
+	//! List of addresses to search within.
 	const List & list,
+	//! The required IP version.
 	ip_version_t ip_version,
+	//! Functor (lambda-function) for extraction an IP address from a list item.
 	Extractor && address_extractor )
 {
 	for( const auto & element: list )
@@ -46,8 +50,8 @@ resolve_address_from_list(
 		}
 	}
 	/*
-		Если оказались здесь, значит не нашли адрес искомой версии.
-		А значит нужно произвести конвертацию адреса имеющейся версии.
+		If we are here then there is no an address with required version.
+		Let's try to convert the first IPv4 address.
 	*/
 	if( ip_version == ip_version_t::ip_v6 )
 	{
@@ -57,25 +61,23 @@ resolve_address_from_list(
 	}
 	else
 	{
-		// Вероятнее всего корректно преобразовать IPv6->IPv4
-		// не получится, а значит просто вернем пустой результат.
+		// Assume that there is no way to convert IPv6 to IPv4.
+		// Because of that return nullopt.
 		return std::nullopt;
 	}
 }
 
 /*!
- * @brief Получить результат разрешения имени для определенной версии IP.
- *
- * @param list Результаты разрешения имени, пришедшие от DNS-сервера.
- * @param ip_version Версия IP-адреса: IPv4 или IPv6.
- * @param address_extractor Функция, позволяющая извлечь адрес из
- * объекта-результата разрешения имени.
+ * @brief Get the resolution result for the specified IP version.
  */
 template <typename List, typename Extractor>
 forward::resolve_result_t
 get_resolve_result(
+	//! List of addresses to search within.
 	const List & list,
+	//! The required IP version.
 	ip_version_t ip_version,
+	//! Functor (lambda-function) for extraction an IP address from a list item.
 	Extractor && address_extractor )
 {
 	forward::resolve_result_t result;
@@ -100,3 +102,4 @@ get_resolve_result(
 }
 
 } /* namespace arataga::dns_resolver */
+
