@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Описание агента authentificator.
+ * @brief Authentificator agent.
  */
 
 #include <arataga/authentificator/a_authentificator.hpp>
@@ -141,7 +141,7 @@ a_authentificator_t::do_auth_by_ip(
 		);
 	if( it == m_auth_data.m_by_ip.end() )
 	{
-		// Такой клиент нам неизвестен.
+		// It is unknown client.
 		m_auth_stats.m_failed_auth_by_ip_count += 1u;
 		complete_failed_auth( req, failure_reason_t::unknown_user );
 	}
@@ -149,8 +149,7 @@ a_authentificator_t::do_auth_by_ip(
 	{
 		m_auth_stats.m_auth_by_ip_count += 1u;
 
-		// Клиент успешно аутентифицирован и теперь должен пройти
-		// авторизацию.
+		// The client is authentificated. Now it should be authorized.
 		const auto authorize_result = try_authorize_user( req );
 		if( authorize_result )
 		{
@@ -159,13 +158,12 @@ a_authentificator_t::do_auth_by_ip(
 				m_auth_stats.m_failed_authorization_denied_port += 1u;
 			}
 
-			// Клиент не авторизован, работать дальше он не может.
+			// Client isn't authorized, it can't work with arataga.
 			complete_failed_auth( req, *authorize_result );
 		}
 		else
 		{
-			// Клиент авторизован, можно отсылать ему положительный
-			// результат.
+			// Client is authorized, it should receive positive response.
 			complete_successful_auth( req, it->second );
 		}
 	}
@@ -185,7 +183,7 @@ a_authentificator_t::do_auth_by_login_password(
 		);
 	if( it == m_auth_data.m_by_login.end() )
 	{
-		// Такой клиент нам неизвестен.
+		// It's unknown client.
 		m_auth_stats.m_failed_auth_by_login_count += 1u;
 		complete_failed_auth( req, failure_reason_t::unknown_user );
 	}
@@ -193,8 +191,7 @@ a_authentificator_t::do_auth_by_login_password(
 	{
 		m_auth_stats.m_auth_by_login_count += 1u;
 
-		// Клиент успешно аутентифицирован и теперь должен пройти
-		// авторизацию.
+		// The client is authentificated. Now it should be authorized.
 		const auto authorize_result = try_authorize_user( req );
 		if( authorize_result )
 		{
@@ -203,13 +200,12 @@ a_authentificator_t::do_auth_by_login_password(
 				m_auth_stats.m_failed_authorization_denied_port += 1u;
 			}
 
-			// Клиент не авторизован, работать дальше он не может.
+			// Client isn't authorized, it can't work with arataga.
 			complete_failed_auth( req, *authorize_result );
 		}
 		else
 		{
-			// Клиент авторизован, можно отсылать ему положительный
-			// результат.
+			// Client is authorized, it should receive positive response.
 			complete_successful_auth( req, it->second );
 		}
 	}
@@ -252,8 +248,7 @@ a_authentificator_t::complete_successful_auth(
 	result.m_user_id = user_data.m_user_id;
 	result.m_user_bandlims = user_data.m_bandlims;
 
-	// Определяем лимит для домена, к которому пользователь собирается
-	// подключаться.
+	// Try to find an individual limit for the target domain.
 	result.m_domain_limits = try_detect_domain_limits(
 			user_data,
 			req.m_target_host );
@@ -283,7 +278,7 @@ a_authentificator_t::try_authorize_user(
 {
 	std::optional< failure_reason_t > result;
 
-	// Клиент не должен обращаться к заблокированном порту.
+	// Client can't access a denied port.
 	if( m_denied_ports.is_denied( req.m_target_port ) )
 		result = failure_reason_t::target_blocked;
 
@@ -297,16 +292,15 @@ a_authentificator_t::try_detect_domain_limits(
 {
 	std::optional< one_domain_limit_t > result;
 
-	// Сперва нужно найти список лимитов для этого пользователя,
-	// если такой список вообще определен.
+	// The first step: try to find a list of limits for the user,
+	// it such list exists.
 	if( const auto it_list = m_auth_data.m_site_limits.find(
 			::arataga::user_list_auth::site_limits_key_t{
 					user_data.m_site_limits_id
 			} );
 			it_list != m_auth_data.m_site_limits.end() )
 	{
-		// И если такой список есть, то нужно поискать домен уже
-		// в этот список.
+		// If that list is found look for the target domain in the list.
 		result = it_list->second.try_find_limits_for(
 				::arataga::user_list_auth::domain_name_t{ target_host } );
 	}
