@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Агент для сбора статистики.
+ * @brief Agent for collecting arataga's stats.
  */
 
 #pragma once
@@ -25,10 +25,10 @@ public:
 	so_define_agent() override;
 
 private:
-	//! Тип для счетчиков значений.
+	//! Type for stats counters.
 	using counter_t = std::uint_fast64_t;
 
-	//! Тип для хранения общих значений по подключениям.
+	//! Type of stats for connections.
 	struct connections_stats_t
 	{
 		counter_t m_total_connections{};
@@ -53,7 +53,7 @@ private:
 		counter_t m_remove_reason_http_no_incoming_request{};
 	};
 
-	//! Тип для хранения общих значений по аутентификациям.
+	//! Type of stats for authentifications.
 	struct auth_stats_t
 	{
 		counter_t m_auth_total_count{};
@@ -64,7 +64,7 @@ private:
 		counter_t m_failed_authorization_denied_port{};
 	};
 
-	//! Тип для хранения общих значений по DNS-lookup.
+	//! Type of stats for DNS-lookups.
 	struct dns_stats_t
 	{
 		counter_t m_dns_cache_hits{};
