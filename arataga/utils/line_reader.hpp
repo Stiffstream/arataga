@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Вспомогательный класс для построчной обработки массива символов.
+ * @brief A helper class for line-by-line processing of a char array.
  */
 
 #pragma once
@@ -14,14 +14,14 @@ namespace arataga::utils
 // line_reader_t
 //
 /*!
- * @brief Вспомогательный класс для построчной обработки массива символов.
+ * @brief A helper class for line-by-line processing of a char array.
  *
- * Принцип использования:
- * - создать экземпляр line_reader_t, в конструктор которого передается
- *   string_view с содержимым обрабатываемого массива символов;
- * - вызвать метод line_reader_t::for_each_line и передать в него
- *   лямбда-функцию, которая будет вызываться для каждой непустой строки
- *   из обрабатываемого массива.
+ * The main scenario of the usage:
+ * - create an instance of line_reader_t. Pass a string_view with a
+ *   content of char array to the constructor;
+ * - call line_reader_t::for_each_line method and pass a lambda function
+ *   to it. This lambda will be called for every non-empty line
+ *   from the char array.
  *
  */
 class line_reader_t
@@ -56,8 +56,8 @@ public:
 		:	m_content{ content }
 	{}
 
-	// В лямбду будет передаваться единственный аргумент: экземпляр
-	// типа line_t, который создается для каждой непустой строки.
+	// A single argument will be passed to lambda-function: an instance
+	// of line_t object that will be created for every non-empty line.
 	template< typename Handler >
 	void
 	for_each_line( Handler && handler ) const

@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Инструмент для дробления массива символов на строки.
+ * @brief A tool for spliting a vector of chars into lines.
  */
 
 #pragma once
@@ -15,20 +15,19 @@ namespace arataga::utils
 // line_extractor_t
 //
 /*!
- * @brief Вспомогательный класс для построчного извлечения содержимого
- * из ранее загруженного в память содержимого файла.
+ * @brief A helper class for line-by-line extraction of the content
+ * of previously loaded file.
  *
- * При извлечении строк подсчитываются номера строк, а так же
- * выбрасываются строки с комментариями.
+ * This class counts line numbers and skips lines with comments.
  *
- * Игнорируются пустые строки.
+ * All empty lines are ignored.
  *
- * Лидирующие пробелы в извлекаемых строках удаляются.
+ * All leading spaces in extracted lines are removed.
  */
 class line_extractor_t
 {
 public:
-	//! Тип для хранения номеров строк.
+	//! Type for holding line numbers.
 	using line_number_t = std::uint_fast32_t;
 
 private:
@@ -47,8 +46,8 @@ private:
 	void
 	handle_comment() noexcept
 	{
-		// Избавляемся от содержимого комментария.
-		// Нужно пропустить все символы до конца строки.
+		// Remove the comment.
+		// We have to skip all symbols till the end-of-line.
 		m_content.remove_prefix(
 				std::min( m_content.find_first_of( crlf() ), m_content.size() ) );
 	}
@@ -63,7 +62,7 @@ private:
 		{
 			if( '\n' == m_content[ 1u ] )
 			{
-				// Это случай \r\n. Изымать нужно сразу два символа.
+				// That is the case of \r\n, two symbols have to be removed.
 				chars_to_remove = 2u;
 			}
 		}
@@ -77,7 +76,7 @@ private:
 	{
 		std::string_view result;
 
-		// Нужно взять все, что идет до конца строки.
+		// We have to take all contnent except the end-of-line.
 		const auto chars_to_extract = std::min(
 				m_content.find_first_of( crlf() ),
 				m_content.size() );
@@ -105,15 +104,15 @@ public:
 
 		while( !result && !m_content.empty() )
 		{
-			// Пропускаем лидирующие пробелы, если они есть.
+			// Skip leading spaces if any.
 			const auto non_space_pos = m_content.find_first_not_of( spaces() );
 			if( std::string_view::npos != non_space_pos )
 			{
-				// Избавляемся от лидирующих пробелов.
+				// Remove leading spaces.
 				m_content = m_content.substr( non_space_pos );
 
-				// m_content не может быть пустым в этой точке.
-				// Поэтому можно смело обращаться к первому символу.
+				// m_content is not empty at that point,
+				// so it's safe to access the first char.
 				const auto front_ch = m_content.front();
 				if( '#' == front_ch )
 				{
@@ -130,13 +129,14 @@ public:
 			}
 			else
 			{
-				// Во входном потоке остались только пробельные символы.
+				// There are only space symbols.
 				m_content.remove_prefix( m_content.size() );
 			}
 		}
 
-		// Если оказались здесь, значит либо получено очередное значение,
-		// либо достигли конца входного потока.
+		// We are here in two cases only:
+		// - the next line extracted;
+		// - the end-of-file reached.
 		return result;
 	}
 };

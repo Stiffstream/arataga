@@ -1,7 +1,7 @@
 /*!
  * @file
- * @brief Тип, который должен использоваться ACL для выдачи запросов
- * в authentificator и dns_resolver.
+ * @brief Type to be used by ACL for requests to authentificator-
+ * and dns_resolver-agents.
  */
 
 #pragma once
@@ -13,7 +13,7 @@
 namespace arataga::utils
 {
 
-//! Идентификатор запроса от ACL.
+//! Type for ID from ACL.
 struct acl_req_id_t
 {
 private:
@@ -22,14 +22,14 @@ private:
 	tie() const noexcept { return std::tie( m_proxy_port, m_id ); }
 
 public:
-	//! Номер порта ACL, от которого пришел запрос.
+	//! TCP-port of ACL that has sent the request.
 	/*!
-	 * Этот номер необходим для того, чтобы в логах было проще
-	 * отличать от кого именно поступил запрос.
+	 * This number is necessary to simplify distinguishing
+	 * issuers of requests in log files.
 	 */
 	std::uint16_t m_proxy_port;
 
-	//! Порядковый номер запроса.
+	//! Ordinal number of the request.
 	std::uint_fast64_t m_id;
 
 	[[nodiscard]]

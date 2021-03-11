@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Вспомогательные средства для работы с уровнями логирования spdlog.
+ * @brief Helpers for working with spdlog's severity levels.
  */
 
 #pragma once

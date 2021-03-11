@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Класс can_throw_t и необходимая для него обвязка.
+ * @brief Stuff related to can_throw_t class.
  */
 
 #pragma once
@@ -33,7 +33,7 @@ public:
 // exception_handling_context_t
 //
 /*!
- * @brief Класс, которому разрешено создавать экземпляры can_throw_t.
+ * @brief The only class that can create instances of can_throw.
  */
 class exception_handling_context_t
 {

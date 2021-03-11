@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Вспомогательные средства для получения подстроки.
+ * @brief Helper tools for obtaining a subview of a string/string_view.
  */
 
 #pragma once
