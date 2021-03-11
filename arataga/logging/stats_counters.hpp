@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Счетчики статистики для сообщений лога.
+ * @brief Stats counters for log messages.
  */
 
 #pragma once
@@ -14,14 +14,13 @@
 namespace arataga::logging
 {
 
-// Выравнивание, которое нужно использовать для отдельных полей-счетчиков
-// в общей структуре для того, чтобы избежать проблемы false-sharing.
+// An alignment to be used to avoid false-sharing problem.
 constexpr unsigned default_aligment = 64;
 
-// Тип для одного счетчика.
+// Type for a single counter.
 using counter_type_t = std::atomic<std::uint64_t>;
 
-// Набор счетчиков, относящихся к количеству сообщений разных типов.
+// A bunch of counters for log messages.
 struct counter_values_t
 {
 	alignas(default_aligment) counter_type_t m_level_trace_count{0u};
@@ -32,8 +31,7 @@ struct counter_values_t
 	alignas(default_aligment) counter_type_t m_level_critical_count{0u};
 };
 
-// Получить ссылку на экземпляр с набором счетчиков с количеством
-// сообщений разных типов.
+// Get a reference to object with counters.
 [[nodiscard]]
 counter_values_t &
 counters() noexcept;
