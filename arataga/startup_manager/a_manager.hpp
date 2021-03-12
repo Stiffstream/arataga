@@ -1,7 +1,6 @@
 /*!
  * @file
- * @brief Агент, который отвечает за организацию правильной последовательности
- * запуска основных агентов arataga.
+ * @brief Agent that starts all main agents in the right sequence.
  */
 
 #pragma once
@@ -24,25 +23,23 @@ namespace arataga::startup_manager
 // a_manager_t
 //
 /*!
- * @brief Агент для запуска основных агентов arataga в правильной
- * последовательности.
+ * @brief Agent that starts all main agents in the right sequence.
  *
- * Именно этот агент создает экземпляр application_context, который затем
- * используется для инициализации всех остальных агентов в приложении.
+ * This agent creates an instance of application_context that will
+ * be used by all other agents in the application.
  *
- * Порядок запуска агентов:
+ * The sequence of launching the main agents:
  * - user_list_processor;
  * - config_processor.
- *
  */
 class a_manager_t : public so_5::agent_t
 {
 public:
-	//! Основной конструктор.
+	//! Initializing constructor.
 	a_manager_t(
-		//! SOEnv и SObjectizer-овские параметры для агента.
+		//! SObjectizer-related parameters for the agent.
 		context_t ctx,
-		//! Индивидуальные параметры для этого агента.
+		//! Initial params for the agent.
 		params_t params );
 
 	void
@@ -55,95 +52,95 @@ public:
 	so_evt_finish() override;
 
 private:
-	//! Уведомление о том, что user_list_processor вовремя не стартовал.
+	//! Notification about too long time of user_list_processor's startup.
 	struct user_list_processor_startup_timeout final : public so_5::signal_t {};
 
-	//! Уведомление о том, что config_processor вовремя не стартовал.
+	//! Notification about too long time of config_processor's startup.
 	struct config_processor_startup_timeout final : public so_5::signal_t {};
 
-	//! Команда на создание административного HTTP-входа в приложение.
+	//! Command for the creation of admin HTTP-entry.
 	struct make_admin_http_entry final : public so_5::signal_t {};
 
-	//! Индивидуальные параметры для этого агента.
+	//! Initial parameters for the agent.
 	const params_t m_params;
 
-	//! Контекст всего приложения, который должен использоваться
-	//! остальными агентами.
+	//! The context of the whole application.
 	const application_context_t m_app_ctx;
 
-	//! Состояние, в котором ждем завершения запуска user_list_processor.
+	//! State for waiting start of user_list_processor agent.
 	state_t st_wait_user_list_processor{ this, "wait_user_list_processor" };
-	//! Состояние, в котором ждем завершения запуска config_processor.
+	//! State for waiting start of wait_config_processor.
 	state_t st_wait_config_processor{ this, "wait_config_processor" };
-	//! Состояние, в котором запускаем административный HTTP-вход.
+	//! State for launching admin HTTP-entry.
 	state_t st_http_entry_stage{ this, "http_entry_stage" };
-	//! Нормальное состояние при котором все компоненты запущены.
+	//! The normal state when all components are started.
 	state_t st_normal{ this, "normal" };
 
-	//! Таймер, который будет срабатывать раз в секунду.
+	//! Global one-second timer.
 	so_5::timer_id_t m_one_second_timer;
 
-	//! Реализация интерфейса для коммуникации HTTP-входа с
-	//! SObjectizer-овской частью.
+	//! The implementation of gateway for interaction with
+	//! admin HTTP-entry.
 	std::unique_ptr< ::arataga::admin_http_entry::requests_mailbox_t >
 			m_admin_entry_requests_mailbox;
 
-	//! Административный HTTP-вход.
+	//! The admin HTTP-entry.
 	::arataga::admin_http_entry::running_entry_handle_t m_admin_entry;
 
-	//! Создать экземпляр контекста всего приложения.
+	//! Create an instance of application_context for the whole application.
 	[[nodiscard]]
 	static application_context_t
 	make_application_context(
 		so_5::environment_t & env,
 		const params_t & params );
 
-	//! Реакция на вход в состояние wait_user_list_processor.
+	//! on_enter-handler for wait_user_list_processor state.
 	/*!
-	 * Выполняется создание агента user_list_processor.
+	 * Creates a user_list_processor agent.
 	 */
 	void
 	on_enter_wait_user_list_processor();
 
-	//! Реакция на начало работы user_list_processor.
+	//! Handler of the start of user_list_processor agent.
 	void
 	on_user_list_processor_started(
 		mhood_t< arataga::user_list_processor::started_t > );
 
-	//! Реакция на истечение времени старта для user_list_processor.
+	//! Handler for the timeout of user_list_processor startup.
 	[[noreturn]] void
 	on_user_list_processor_startup_timeout(
 		mhood_t< user_list_processor_startup_timeout > );
 
-	//! Реакция на вход в состояние wait_config_processor.
+	//! on_enter-handler for wait_config_processor state.
 	/*!
-	 * Выполняется создание агента config_processor.
+	 * Creates a config_processor agent.
 	 */
 	void
 	on_enter_wait_config_processor();
 
-	//! Реакция на начало работы config_processor.
+	//! Handler for the start of config_processor agent.
 	void
 	on_config_processor_started(
 		mhood_t< arataga::config_processor::started_t > );
 
-	//! Реакция на истечение времени старта для config_processor.
+	//! Handler for the timeout of config_processor startup.
 	[[noreturn]] void
 	on_config_processor_startup_timeout(
 		mhood_t< config_processor_startup_timeout > );
 
-	//! Реакция на вход в состояние http_entry_stage.
+	//! on_enter-handler for http_entry_stage state.
 	/*!
-	 * Агент сам себе отсылает команду make_admin_http_entry.
+	 * The agent sends make_admin_http_entry to itself.
 	 *
-	 * Нельзя выполнять действия, которые могут бросить исключения
-	 * в обработчике входа в состояние. Поэтому создание точки
-	 * входа делегируется в обычный обработчик сообщения.
+	 * We can't do actions that throws in on_enter-handler because
+	 * on_enter-handler should be noexcept method. So we send a message
+	 * and then do all necessary actions in an ordinary event-handler
+	 * where exceptions can go out.
 	 */
 	void
 	on_enter_http_entry_stage();
 
-	//! Реакция на команду создания административного HTTP-входа.
+	//! Handler for a command to create admin HTTP-entry.
 	void
 	on_make_admin_http_entry(
 		mhood_t< make_admin_http_entry > );

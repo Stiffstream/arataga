@@ -1,7 +1,6 @@
 /*!
  * @file
- * @brief Агент, который отвечает за организацию правильной последовательности
- * запуска основных агентов arataga.
+ * @brief Agent that starts all main agents in the right sequence.
  */
 
 #include <arataga/startup_manager/a_manager.hpp>
@@ -25,7 +24,7 @@ namespace arataga::startup_manager
 //
 // startup_manager_ex_t
 //
-//! Тип исключения, которое может выбрасывать startup_manager.
+//! Exception to be used by startup_manager.
 struct startup_manager_ex_t : public exception_t
 {
 public:
@@ -40,7 +39,7 @@ namespace impl
 //
 // actual_requests_mailbox_t
 //
-//! Актуальная реализация интерфейса admin_http_entry::requests_mailbox.
+//! Actual implementation of admin_http_entry::requests_mailbox interface.
 class actual_requests_mailbox_t final
 	:	public ::arataga::admin_http_entry::requests_mailbox_t
 {
@@ -136,9 +135,9 @@ a_manager_t::a_manager_t(
 void
 a_manager_t::so_define_agent()
 {
-	// ПРИМЕЧАНИЕ: методы обработки входа в состояния могут бросать
-	// исключения. Но нас это не волнует, т.к. если здесь возникают
-	// ошибки, то продолжать работу все равно нельзя.
+	// NOTE: on_enter handlers can't throw exceptions.
+	// But we don't care about this because the whole application
+	// has to be terminated in the case of an error in on_enter handlers.
 	st_wait_user_list_processor
 		.on_enter( [this]{ on_enter_wait_user_list_processor(); } )
 		.event( &a_manager_t::on_user_list_processor_started )
@@ -165,33 +164,32 @@ a_manager_t::so_evt_start()
 				logger.log( level, "startup_manager: startup procedure started" );
 			} );
 	
-	// Инициируем таймер, который будет срабатывать раз в секунду.
+	// One-second timer should be started.
 	m_one_second_timer = so_5::send_periodic< one_second_timer_t >(
 			m_app_ctx.m_global_timer_mbox,
 			std::chrono::seconds{1},
 			std::chrono::seconds{1} );
 
-	// Сразу же запускаем агента для сбора статистики, т.к. этот агент
-	// не требует к себе какого-то пристального внимания.
+	// Start stats_collector because it doesn't require additional attention
+	// to itself.
 	::arataga::stats_collector::introduce_stats_collector(
 			so_environment(),
 			so_coop(),
-			// Агент будет работать на своем собственном контексте.
+			// This agent will use own worker thread.
 			so_5::disp::one_thread::make_dispatcher(
 					so_environment(),
 					"stats_collector" ).binder(),
 			m_app_ctx,
 			::arataga::stats_collector::params_t{} );
 
-	// Ну а далее переходим к запуску более "тяжелых" агентов.
-
+	// Initiate launch of more heavy agents.
 	this >>= st_wait_user_list_processor;
 }
 
 void
 a_manager_t::so_evt_finish()
 {
-	// Если HTTP-вход запущен, то нужно дать ему команду на останов.
+	// If HTTP-entry works then it should be stopped.
 	if( m_admin_entry )
 		m_admin_entry->stop();
 }
@@ -206,12 +204,11 @@ a_manager_t::make_application_context(
 	result.m_config_processor_mbox = env.create_mbox();
 	result.m_user_list_processor_mbox = env.create_mbox();
 
-	// В качестве этого mbox-а используется специальный retained_mbox,
-	// который будет хранить последнее отправленное сообщение и
-	// перепосылать его при новых подписках.
-	// Это нужно, чтобы новые агенты могли получать сообщения об
-	// изменениях в конфигурации, которые отсылались еще до запуска
-	// этих новых агентов.
+	// A special retained_mbox will be used.
+	// It stores the last message sent and resend it automatically
+	// for every new subscriber.
+	// It's necessary for new agents: they will get the last config
+	// right after the subscription to this mbox.
 	result.m_config_updates_mbox = so_5::extra::mboxes::retained_msg::
 			make_mbox( env );
 
@@ -244,7 +241,7 @@ a_manager_t::on_enter_wait_user_list_processor()
 						"startup_manager: starting user_list_processor" );
 			} );
 
-	// Агент user_list_processor будет работать на своем собственном контексте.
+	// user_list_processor will use own worker thread.
 	namespace ulp = arataga::user_list_processor;
 	ulp::introduce_user_list_processor(
 			so_environment(),
@@ -257,7 +254,7 @@ a_manager_t::on_enter_wait_user_list_processor()
 					so_direct_mbox()
 			} );
 
-	// Ограничиваем время ожидания user_list_processor.
+	// Limit the time of user_list_processor startup.
 	so_5::send_delayed< user_list_processor_startup_timeout >(
 			*this,
 			m_params.m_max_stage_startup_time );
@@ -294,7 +291,7 @@ a_manager_t::on_user_list_processor_startup_timeout(
 						"startup_manager: user_list_processor startup timed-out" );
 			} );
 
-	// Выброс этого исключения приведет к завершению работы приложения.
+	// This exception will kill the whole application.
 	throw startup_manager_ex_t{ "user_list_processor startup timed-out" };
 }
 
@@ -311,7 +308,7 @@ a_manager_t::on_enter_wait_config_processor()
 						"startup_manager: starting config_processor" );
 			} );
 
-	// Агент config_processor будет работать на своем собственном контексте.
+	// The config_processor agent will work on own worker thread.
 	namespace cp = arataga::config_processor;
 	cp::introduce_config_processor(
 			so_environment(),
@@ -325,7 +322,7 @@ a_manager_t::on_enter_wait_config_processor()
 					m_params.m_io_threads_count
 			} );
 
-	// Ограничиваем время ожидания config_processor.
+	// Limit the time of config_processor startup.
 	so_5::send_delayed< config_processor_startup_timeout >(
 			*this,
 			m_params.m_max_stage_startup_time );
@@ -362,7 +359,7 @@ a_manager_t::on_config_processor_startup_timeout(
 						"startup_manager: config_processor startup timed-out" );
 			} );
 
-	// Выброс этого исключения приведет к завершению работы приложения.
+	// This exception will kill the whole application.
 	throw startup_manager_ex_t{ "config_processor startup timed-out" };
 }
 
