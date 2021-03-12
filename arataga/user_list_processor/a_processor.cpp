@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Агент для обработки списка пользователей.
+ * @brief Agent for handling user-list.
  */
 
 #include <arataga/user_list_processor/a_processor.hpp>
@@ -22,7 +22,7 @@ namespace arataga::user_list_processor
 //
 // user_list_processor_ex_t
 //
-//! Тип исключения, которое может выбрасывать user_list_processor.
+//! Exception to be used by user_list_processor-agent.
 struct user_list_processor_ex_t : public exception_t
 {
 public:
@@ -57,7 +57,7 @@ a_processor_t::so_evt_start()
 {
 	try_load_local_user_list_first_time();
 
-	// Можно подтвердить, что агент стартовал.
+	// Now we can acknowledge the successful start.
 	so_5::send< started_t >( m_params.m_startup_notify_mbox );
 }
 
@@ -75,7 +75,7 @@ a_processor_t::on_new_user_list(
 			{
 				try_handle_new_user_list_from_post_request( cmd->m_content );
 
-				// Если оказались здесь, значит все прошло нормально.
+				// Everything is OK if we are here.
 				return http_entry::replier_t::reply_params_t{
 						http_entry::status_ok,
 						"New user list accepted\r\n"
@@ -90,8 +90,8 @@ a_processor_t::try_load_local_user_list_first_time()
 
 	if( auth_data )
 	{
-		// Поскольку список пользователей успешно загружен, то можно
-		// отослать его всем желающим.
+		// User-list successfully loaded, it can now be distributed
+		// for all subscribers.
 		distribute_updated_user_list( std::move(*auth_data) );
 	}
 }
@@ -112,13 +112,13 @@ a_processor_t::try_handle_new_user_list_from_post_request(
 						content.size() );
 			} );
 
-	// Пытаемся разобрать конфиг.
+	// Try to parse the data.
 	auto auth_data = ::arataga::user_list_auth::parse_auth_data( content );
 
-	// И если уж успешно разобрали, то сохраняем его в виде локального файла...
+	// Parsing was successful, data can be stored in local file.
 	store_new_user_list_to_file( content );
 
-	// ...и рассылаем уведомление о новом списке пользоваталей.
+	// New user-list should be distributed.
 	distribute_updated_user_list( std::move(auth_data) );
 
 	::arataga::logging::wrap_logging(
@@ -150,16 +150,14 @@ a_processor_t::try_load_local_user_list_content()
 						m_local_user_list_file_name.string() );
 			} );
 
-	// Исключения, которые возникают при попытке загрузить локальный файл со
-	// списком пользователей можно игнорировать, т.к. даже в случае неудачи нам
-	// должны будут прислать новый список через HTTP-вход.
+	// Exceptions related to user-list loading can be ignored because
+	// even in the case of failure a new user-list will be received from
+	// HTTP-entry sooner or later.
 	try
 	{
-		// Используем здесь лямбду для того, чтобы content
-		// был автоматически удален сразу после парсинга, т.к.
-		// больше содержимое конфига нам не нужно.
+		// Use a lambda to destroy `content` as soon as possible.
 		result = [this] {
-			// Содержимое файла нужно поднять в память...
+			// Load the content...
 			auto content = ::arataga::utils::load_file_into_memory(
 					m_local_user_list_file_name );
 			::arataga::logging::wrap_logging(
@@ -174,7 +172,7 @@ a_processor_t::try_load_local_user_list_content()
 								content.size() );
 					} );
 
-			// ...и попробовать разобрать его.
+			// ...and parse it.
 			return ::arataga::user_list_auth::parse_auth_data(
 					std::string_view{ content.data(), content.size() } );
 		}();
