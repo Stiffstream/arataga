@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Публичная часть интерфейса агента acl_handler.
+ * @brief The public part of acl_handler-agent.
  */
 
 #pragma once
@@ -18,27 +18,26 @@ namespace arataga::acl_handler
 // params_t
 //
 /*!
- * @brief Параметры, необходимые агенту для начала его работы.
+ * @brief Initial parameters for acl_handler-agent.
  */
 struct params_t
 {
-	//! Asio-шный контекст, на котором предстоит работать этому агенту.
+	//! Asio's io_context to be used by the agent.
 	asio::io_context & m_io_ctx;
 
-	//! Конфигурация ACL для этого агента.
+	//! ACL parameters to be used by the agent.
 	acl_config_t m_acl_config;
 
-	//! Почтовый ящик агента dns_resolver.
+	//! mbox of dns_resolver to be used.
 	so_5::mbox_t m_dns_mbox;
 
-	//! Почтовый ящик агента authentificator.
+	//! mbox of authentificator to be used.
 	so_5::mbox_t m_auth_mbox;
 
-	//! Уникальное имя, которое должно использоваться этим агентом
-	//! для логирования.
+	//! Unique name to be used for logging.
 	std::string m_name;
 
-	//! Общие для всех ACL параметры.
+	//! Common parameters for all ACLs.
 	common_acl_params_t m_common_acl_params;
 };
 
@@ -46,11 +45,11 @@ struct params_t
 // shutdown_t
 //
 /*!
- * @brief Специальный сигнал, который указывает, что acl_handler
- * должен завершить свою работу.
+ * @brief Special signal that tells that acl_handler-agent has to
+ * finish its work.
  *
- * Получив этот сигнал acl_handler должен закрыть свою точку входа,
- * а затем должен инициировать дерегистрацию своей кооперации.
+ * When this signal is received acl_handler-agent has to close its
+ * entry-point, then it should deregister itself.
  */
 struct shutdown_t final : public so_5::signal_t {};
 
@@ -58,23 +57,23 @@ struct shutdown_t final : public so_5::signal_t {};
 // introduce_acl_handler
 //
 /*!
- * @brief Функция для создания и запуска агента acl_handler в
- * указанном SObjectizer Environment с привязкой к указанному диспетчеру.
+ * @brief A factory for the creation of a new acl_handler-agent with
+ * binding to the specified dispatcher.
  *
- * Возвращается mbox, через который можно общаться с агентом acl_handler.
+ * Returns a mbox for interaction with the new acl_handler-agent.
  */
 [[nodiscard]]
 so_5::mbox_t
 introduce_acl_handler(
-	//! SObjectizer Environment, в котором нужно работать.
+	//! SObjectizer Environment to work within.
 	so_5::environment_t & env,
-	//! Родительская кооперация.
+	//! The parent for a new agent.
 	so_5::coop_handle_t parent_coop,
-	//! Диспетчер, к которому должен быть привязан новый агент.
+	//! The dispatcher for a new agent.
 	so_5::disp_binder_shptr_t disp_binder,
-	//! Контекст всего arataga.
+	//! The context of the whole application.
 	application_context_t app_ctx,
-	//! Индивидуальные параметры для нового агента.
+	//! Initial parameters for a new agent.
 	params_t params );
 
 } /* namespace arataga::acl_handler */

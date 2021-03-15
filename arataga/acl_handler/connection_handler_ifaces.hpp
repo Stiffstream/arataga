@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Интерфейсы, необходимые для обработчиков подключений.
+ * @brief Interfaces for connection_handlers.
  */
 
 #pragma once
@@ -38,8 +38,7 @@ namespace arataga::acl_handler
 // config_t
 //
 /*!
- * @brief Интерфейс объекта, предоставляющего доступ к конфигурационной
- * информации.
+ * @brief An interface of object for accessing the config.
  */
 class config_t
 {
@@ -106,44 +105,45 @@ public:
 //
 // remove_reason_t
 //
-//! Почему следует удалять connection-handler.
+//! Enumeration for connection-handler removal reason.
 enum remove_reason_t
 {
-	//! Нормальное завершение работы с соединением.
+	//! Normal completion of connection serving.
 	normal_completion,
-	//! Ошибка ввода-вывода.
+	//! I/O error detected.
 	io_error,
-	//! Истекло время на выполнение текущей операции.
+	//! The current operation timed-out.
 	current_operation_timed_out,
-	//! Данный проткол не поддерживается.
+	//! Unsupported protocol detected.
 	unsupported_protocol,
-	//! Ошибка протокола. Например, неподдерживаемая версия протокола.
+	//! Some protocol-related error. For example, an unsupported protocol
+	//! version detected.
 	protocol_error,
-	//! Возникновение ситуации, которая не предполагалась и которая
-	//! не может быть обработана как-то иначе.
+	//! Some unexpected case that can't be correctly handled.
 	unexpected_and_unsupported_case,
-	//! Слишком долго нет активности в соединении.
+	//! There is no activity in the connection for too long time.
 	no_activity_for_too_long,
-	//! Текущая операция была прервана извне.
+	//! The current operation was cancelled from outside.
 	current_operation_canceled,
-	//! Поймано необработанное в connection-handler-е исключение.
+	//! A uncaught exception fron connection-handled detected.
 	unhandled_exception,
-	//! Несовпадение версий IP-адресов.
-	//! Например, невозможно подключиться к IPv6 адресу с IPv4 адреса.
+	//! The required IP-version can't be used.
+	//! For example, an attempt to connect IPv6 address from IPv4 address.
 	ip_version_mismatch,
-	//! Пользователю запрещен доступ.
+	//! The user has no required permissions.
 	access_denied,
-	//! Не удалось установить адрес хоста, к которому нужно подключаться.
+	//! The failure of target domain name resolution.
 	unresolved_target,
-	//! Подключение к целевому узлу оказалось закрытым.
+	//! The connection to the target host was broken.
 	target_end_broken,
-	//! Подключение со стороны клиента оказалось закрытым.
+	//! The connection from the user was broken.
 	user_end_broken,
-	//! HTTP-ответ был получен еще до завершения HTTP-запроса.
+	//! HTTP-reposnse was received before the completion of outgoing
+	//! HTTP-request.
 	http_response_before_completion_of_http_request,
-	//! Клиент закрыл соединение на своей стороне.
+	//! The connection from the user was closed by the user-end.
 	user_end_closed_by_client,
-	//! Клиент не прислал новый входящий HTTP-запрос.
+	//! The user didn't send a new incoming HTTP-request.
 	http_no_incoming_request
 };
 
@@ -232,14 +232,14 @@ operator<<( std::ostream & to, remove_reason_t reason )
 	return (to << to_string_view(reason));
 }
 
-// Сам класс будет определен позже.
+// The definition is going below.
 class connection_handler_t;
 
 //
 // connection_handler_shptr_t
 //
 /*!
- * @brief Тип умного указателя на connection_handler.
+ * @brief An alias for shared_ptr to connection_handler.
  */
 using connection_handler_shptr_t = std::shared_ptr< connection_handler_t >;
 
@@ -247,11 +247,10 @@ using connection_handler_shptr_t = std::shared_ptr< connection_handler_t >;
 // traffic_limiter_t
 //
 /*!
- * @brief Интерфейс объекта, который отвечает за ограничение трафика
- * по подключению.
+ * @brief An interface for object that limits the bandwidth.
  *
- * Реализация этого интерфейса в своем деструкторе должна подчищать
- * за собой все ресурсы.
+ * An implementation of that interface should clean all resources
+ * in its destructor.
  */
 class traffic_limiter_t
 {
@@ -259,30 +258,29 @@ public:
 	enum class direction_t { from_user, from_target };
 
 	/*!
-	 * @brief Описание результата запроса объема данных для чтения
-	 * на текущем такте.
+	 * @brief The result of asking a quote for reading incoming
+	 * data on the current turn.
 	 *
-	 * Если из направления можно читать, то m_capacity будет содержать
-	 * разрешенный объем для однократного чтения.
-	 * После завершения чтения у объекта reserved_capacity_t нужно
-	 * вызвать метод release().
+	 * If the direction can be read then m_capacity will contain
+	 * an enabled amount of data to be read. After the completion
+	 * of the read operation method release() should be called
+	 * for reserved_capacity_t object.
 	 */
 	struct reserved_capacity_t
 	{
 		std::size_t m_capacity;
 		sequence_number_t m_sequence_number;
 
-		//! Метод для регистрации результата операции ввода-вывода
-		//! в traffic-limiter-е.
+		//! The method for registering the result of I/O operation
+		//! in traffic_limiter.
 		/*!
-		 * Этот метод сам анализирует значение кода ошибки и, если
-		 * ошибка произошла, считает, что прочитано 0 байт.
+		 * This method analyses the error code and, if that code is not 0,
+		 * assumes that 0 bytes are read.
 		 *
 		 * @attention
-		 * Этот метод обязательно должен вызываться при получении
-		 * результата ввода-вывода. Поскольку в противном случае
-		 * емкость, которая была зарезервирована для текущей операции
-		 * так и останется занятой до конца такта.
+		 * This method must be called after the completion of I/O operation.
+		 * Otherwise the reserved capacity will remain reserved till the
+		 * end of the current turn.
 		 */
 		void
 		release(
@@ -298,9 +296,9 @@ public:
 	traffic_limiter_t();
 	virtual ~traffic_limiter_t();
 
-	// Может возвращать значение 0.
-	// В этом случае нужно прекратить попытки чтения данных до
-	// наступления следующего такта работы.
+	// Can return 0.
+	// In that case attempts of reading data should be suspended
+	// until the next turn.
 	[[nodiscard]]
 	virtual reserved_capacity_t
 	reserve_read_portion(
@@ -318,7 +316,7 @@ public:
 // traffic_limiter_unique_ptr_t
 //
 /*!
- * @brief Псевдоним unique_ptr для traffic_limiter-а.
+ * @brief An alias for unique_ptr to traffic_limiter.
  */
 using traffic_limiter_unique_ptr_t =
 	std::unique_ptr< traffic_limiter_t >;
@@ -326,28 +324,28 @@ using traffic_limiter_unique_ptr_t =
 namespace dns_resolving
 {
 
-//! Результат успешного резолвинга доменного имени.
+//! The result of successful DNS-resolving.
 struct hostname_found_t
 {
-	//! Адрес, который соответствует доменному имени.
+	//! IP-address for the domain name.
 	asio::ip::address m_ip;
 };
 
-//! Результат неудачного резолвинга доменного имени.
+//! The result of failed DNS-resolving.
 struct hostname_not_found_t
 {
-	//! Описание причины неудачи.
+	//! Textual description of the failure.
 	std::string m_error_desc;
 };
 
-//! Тип результата резолвинга доменного имени.
+//! Type for DNS-resolving result.
 using hostname_result_t = std::variant<
 		hostname_found_t,
 		hostname_not_found_t
 	>;
 
-//! Тип функтора, который должен быть вызван при завершении
-//! резолвинга доменного имени.
+//! Type of a functor that should be called after the completion
+//! of DNS-resolving.
 using hostname_result_handler_t =
 	std::function< void(const hostname_result_t &) >;
 
@@ -356,7 +354,7 @@ using hostname_result_handler_t =
 namespace authentification
 {
 
-//! Параметры запроса на аутентификацию.
+//! Parameters for an authentification request.
 struct request_params_t
 {
 	asio::ip::address_v4 m_user_ip;
@@ -366,7 +364,7 @@ struct request_params_t
 	std::uint16_t m_target_port;
 };
 
-//! Причина неудачной аутентификации пользователя.
+//! Enumeration of reasons for failed authentification.
 enum class failure_reason_t
 {
 	unknown_user,
@@ -386,27 +384,27 @@ to_string_view( failure_reason_t reason )
 	return "<unknown>";
 }
 
-//! Отрицательный результате аутентификации.
+//! Type of negative authentification result.
 struct failure_t
 {
 	failure_reason_t m_reason;
 };
 
-//! Положительный результат аутентификации.
+//! Type of positive authentification result.
 struct success_t
 {
-	//! Объект, который будет ограничивать трафик для подключения.
+	//! Actual traffic limiter for the new connection.
 	traffic_limiter_unique_ptr_t m_traffic_limiter;
 };
 
-//! Тип результата аутентификации пользователя.
+//! Type for authentification result.
 using result_t = std::variant< failure_t, success_t >;
 
-//! Тип функтора, который должен быть вызван при завершении
-//! аутентификации пользователя.
+//! Type of a functor to be called after the completion of
+//! user authentification.
 using result_handler_t =
-	// Значение в функцию передается по значению для
-	// того, чтобы из result_t можно было забирать move-only значения.
+	// The result is passed by value to enable to borrow
+	// moveable only values.
 	std::function< void(result_t) >;
 
 } /* namespace dns_resolving */
@@ -415,17 +413,18 @@ using result_handler_t =
 // connection_type_t
 //
 /*!
- * @brief Различные варианты типов подключения.
+ * @brief Enumeration of various types of connections.
  */
 enum class connection_type_t
 {
-	//! Тип подключения еще неизвестен.
-	//! Этот элемент перечисления должен использоваться для подсчета
-	//! общего количества подключений.
+	//! Type of the connection is not known yet.
+	/*!
+	 * This type should be used for stats of total number of connections.
+	 */
 	generic,
-	//! Подключение по протоколу SOCKS5.
+	//! The connection uses SOCKS5 protocol.
 	socks5,
-	//! Подключение по протоколу HTTP.
+	//! The connection uses HTTP protocol.
 	http
 };
 
@@ -439,34 +438,29 @@ class delete_protector_maker_t;
 // delete_protector_t
 //
 /*!
- * @brief Специальный маркер, наличие которого показывает, что
- * connection_handler защищен от удаления и можно безопасно заменять
- * текущий connection_handler новым connection_handler-ом.
+ * @brief A special marker that tells that connection_handler is
+ * protected from the deletion and it's safe to replace the current
+ * handler by a new one.
  *
- * Сам по себе экземпляр класса delete_protector не делает ничего.
- * Но его наличие показывает, что где-то выше по стеку находится
- * экземпляр details::delete_protector_maker_t, который как раз
- * и препятствует преждевременному уничтожению connection_handler-а.
+ * An instance of delete_protector does nothing. But it presence
+ * tells that there is an instance of
+ * details::delete_protector_maker_t somewhere at the stack. And
+ * that delete_protector_maker_t defends the connection_handler
+ * from early deletion.
  *
- * Надобность в подобном классе возникла из-за того, что connection_handler
- * вызывает методы remove_connection_handler и replace_connection_handler
- * у handler_context_t внутри своих методов. В результате работы
- * remove_connection_handler/replace_connection_handler может получиться
- * так, что текущий connection_handler будет удален. Т.е. значение
- * this внутри текущего метода может стать невалидным. А это может
- * привести к возникновению ошибок из категории use after free (например,
- * если к this произойдет обращение уже после возврата из
- * remove_connection_handler/replace_connection_handler).
+ * The necessity of that class goes from the fact that connection_handler calls
+ * remove_connection_handler and replace_connection_handler from inside of own
+ * methods. As result of remove_connection_handler and
+ * replace_connection_handler the current handler can be deleted and this
+ * invalidates the `this` value. This can lead to use-after-free errors (for
+ * example if some non-static method will be acidentially called after the
+ * return from remove_connection_handler/replace_connection_handler).
  *
- * Чтобы избежать ошибок use after free используется схема, в которой
- * сперва создается дополнительный экземпляр connection_handler_shptr_t,
- * а уже затем запукается тот или иной метод connection_handler-а.
- * Этот дополнительный (охранный) экземпляр connection_handler_shptr_t не
- * позволяет уничтожать connection_handler-а даже если после
- * remove_connection_handler/replace_connection_handler на этот 
- * connection_handler больше никто не ссылается. Тем самым значение
- * this остается валидным и к this можно обращаться даже после
- * возврата из remove_connection_handler/replace_connection_handler.
+ * For protection from use-after-free error a scheme with additional
+ * connection_handler_shptr_t is used. This additional instance is created on
+ * the stack and only then methods like
+ * remove_connection_handler/replace_connection_handler are called.  This
+ * additional instance protects the current handler from the deletion.
  */
 class delete_protector_t
 {
@@ -504,15 +498,15 @@ public:
 // handler_context_t
 //
 /*!
- * @brief Интерфейс объекта, представляющего собой контекст, внутри
- * которого обрабатываются подключения от клиентов.
+ * @brief An interface of objects that holds a context in that
+ * user's connections are handled.
  */
 class handler_context_t
 {
 public:
 	virtual ~handler_context_t();
 
-	//! Идентификатор подключения в рамках этого контекста.
+	//! Type of connection ID inside that context.
 	using connection_id_t = std::uint_fast64_t;
 
 	virtual void
@@ -527,8 +521,7 @@ public:
 		connection_id_t id,
 		remove_reason_t reason ) noexcept = 0;
 
-	// ПРИМЕЧАНИЕ: этот метод должен вызываться внутри
-	// logging::wrap_logging!
+	// NOTE: this method should be called inside logging::wrap_logging!
 	virtual void
 	log_message_for_connection(
 		connection_id_t id,
@@ -560,30 +553,28 @@ public:
 // handler_context_holder_t
 //
 /*!
- * @brief Специальный класс, который гарантирует, что handler_context
- * будет существовать, пока на него держат умную ссылку.
+ * @brief A special class that guarantees that handler_context
+ * will exist until someone holds a smart reference to it.
  *
- * Опасность асинхронных операций на io_context из Asio в том, что
- * обработчик результата IO-операции может быть вызван Asio уже после того,
- * как реализация handler_context-а завершила свою работу. И если
- * connection-handler захочет дернуть какую-то операцию из handler_context-а
- * (например, log_message_for_connection), то может выянится, что
- * connection-handler владеет "протухшей" ссылкой на handler_context.
+ * There a danger in the use of Asio's async operations: completion
+ * handler for an operation can be called after the destruction of
+ * handler_context. In that case connection_handler will hold a
+ * dangled reference to handler_context. Any attempt to use
+ * that reference (a call to log_message_for_connection for example)
+ * will lead to undefined behaviour.
  *
- * Чтобы этого не происходило, класс handler_context_holder_t играет
- * роль умной ссылки (или умного указателя) на handler_context. Что
- * гарантирует, что если connection-handler держит у себя экземпляр
- * handler_context_holder_t, то ссылка на handler_context останется
- * валидной, даже если handler_context уже завершил основную свою
- * работу и остается жить до тех пор, пока не исчезнут все
- * connection-handler-ы.
+ * To avoid that class handler_context_holder_t plays a role of
+ * a smart reference (or smart pointer) to handler_context.
+ * If a connection_handler holds an instance of
+ * handler_context_holder_t then it guarantees that handler_context
+ * will live even if handler_context itself has finished its work.
  */
 class handler_context_holder_t
 {
-	//! Умный указатель на объект, который хранит в себе handler_context.
+	//! A smart pointer to the object that holds handler_context.
 	so_5::agent_ref_t m_holder_agent;
 
-	//! Ссылка на актуальный handler_context.
+	//! A reference to the actual handler_context.
 	std::reference_wrapper< handler_context_t > m_context;
 
 public:
@@ -603,55 +594,57 @@ public:
 // connection_handler_t
 //
 /*!
- * @brief Интерфейс обработчика для соединения.
+ * @brief A base type for connection_handler.
  *
- * Это не просто интерфейс, но и базовый класс для обработчиков,
- * который содержит самую базовую функциональность, необходимую
- * всем обработчикам.
+ * This type not only defines an interface of connection_handler
+ * but also contains a basic functionality necessary for all
+ * connection_handler implementations.
  */
 class connection_handler_t
 	: public std::enable_shared_from_this< connection_handler_t >
 {
 public:
-	//! Статус обработчика соединения.
+	//! Handler status.
 	enum class status_t
 	{
-		//! Обработчик активен, поэтому имеет право обрабатывать
-		//! результаты операций ввода-вывода.
+		//! Handler is active. It can handle the results of I/O operations.
 		active,
-		//! Обработчик был изъят и/или заменен другим обработчиком,
-		//! поэтому он не имеет права обрабатывать результаты
-		//! операций ввода-вывода.
+		//! Handler is released. It was removed or replaced by another
+		//! handler. Because of that it can't handle the results
+		//! of I/O operations.
 		released
 	};
 
 protected:
 	/*!
-	 * @brief Индикатор того, что можно выпускать исключения наружу.
+	 * @brief A special indicator that tells that exceptions can go out.
 	 *
-	 * Специальный тип, который означает, что метод/лямбда работает внутри
-	 * блока try/catch и, поэтому, может выпускать исключения наружу.
+	 * This indicator tells a method/lambda that it's invoked inside
+	 * try/catch block and throwing of an exception is permited.
 	 *
-	 * Экземпляр создается внутри обертки wrap_action_and_handle_exceptions
-	 * и передается аргументом в лямбду, которая является параметром для
-	 * wrap_action_and_handle_exceptions.
+	 * An instance is created inside wrap_action_and_handle_exceptions()
+	 * and passed as a parameter to lambda-argument of
+	 * wrap_action_and_handle_exceptions().
 	 */
 	using can_throw_t = ::arataga::utils::can_throw_t;
 
-	//! Контекст, в рамках которого обрабатывается соединение.
+	//! Context for connection handler.
 	handler_context_holder_t m_ctx;
 
-	//! Идентификатор данного соединения.
+	//! ID for the connection.
 	handler_context_t::connection_id_t m_id;
 
-	//! Само соединение с клиентом, которое должно обрабатываться.
+	//! The connection with the client.
+	/*!
+	 * That is the socked accepted by ACL.
+	 */
 	asio::ip::tcp::socket m_connection;
 
-	//! Статус обработчика.
+	//! Handler status.
 	status_t m_status;
 
 	/*!
-	 * @name Методы, внутри которых возможно удаление текущего обработчика.
+	 * @name Methods inside those the handler can be removed/replaced.
 	 * @{
 	 */
 	virtual void
@@ -668,7 +661,7 @@ protected:
 	context() noexcept { return m_ctx.ctx(); }
 
 	/*!
-	 * @brief Заменить обработчик соединения на новый.
+	 * @brief Replace the handler to a new one.
 	 */
 	template< typename New_Handler_Factory >
 	void
@@ -677,21 +670,23 @@ protected:
 		can_throw_t can_throw,
 		New_Handler_Factory && new_handler_factory )
 	{
-		// Если при замене обработчика возникает исключение, то
-		// нам не остается больше ничего, кроме принудительного
-		// изъятия старого обработчика.
-		// Это касается и проблем при создании нового обработчика.
-		// Т.е. если new_handler_factory бросит исключение, то
-		// текущий обработчик уже может находится в неверном состоянии и
-		// продолжать работу не сможет. Поэтому его можно только удалить.
-		// Ловим только исключения, производные от std::exception,
-		// все остальное пусть приводит к краху приложения.
+		// If there will be an exception we'll have no choice except
+		// the removement of the old handler.
+		//
+		// The same picture is also for problems with the exceptions
+		// during the creation of a new handler. The old handler can
+		// be in invalid state when new_handler_factory throws. So we can
+		// only delete the old handler.
+		//
+		// Will catch only exceptions derived from std::exception.
+		// All other types of exception will crash the whole app.
 		[&]() noexcept {
 			NOEXCEPT_CTCHECK_STATIC_ASSERT_NOEXCEPT(
 					handler_context_holder_t{ m_ctx } );
 
-			// Делаем копию handler_context_holder, т.к. в процессе работы
-			// new_handler_factory значение m_ctx может стать пустым.
+			// Make a copy of handler_context_holder because as
+			// the result of new_handler_factory invocation the m_ctx
+			// can become empty.
 			handler_context_holder_t ctx_holder = m_ctx;
 			try
 			{
@@ -705,8 +700,7 @@ protected:
 			}
 			catch( const std::exception & x )
 			{
-				// Исключения, которые могут возникнуть при логировании
-				// подавляем.
+				// Ignore exceptions that can be thrown during the logging.
 				try
 				{
 					::arataga::logging::wrap_logging(
@@ -732,7 +726,7 @@ protected:
 		}();
 	}
 
-	//! Удалить обработчик вообще.
+	//! Remove the handler.
 	void
 	remove_handler(
 		delete_protector_t delete_protector,
@@ -742,8 +736,7 @@ protected:
 				delete_protector, m_id, remove_reason );
 	}
 
-	// ПРИМЕЧАНИЕ! Этот метод должен вызываться из
-	// logging::wrap_logging.
+	// NOTE: this method should be called from inside logging::wrap_logging.
 	void
 	log_message_for_connection(
 		can_throw_t /*can_throw*/,
@@ -760,7 +753,8 @@ protected:
 		const asio::error_code & ec,
 		std::string_view operation_description )
 	{
-		// Логируем ошибку только если это не operation_aborted.
+		// Should log the error except operation_aborted (this error is
+		// expected).
 		if( asio::error::operation_aborted != ec )
 		{
 			::arataga::logging::wrap_logging(
@@ -815,18 +809,13 @@ protected:
 		}
 		catch( const std::exception & x )
 		{
-			// Нужно ловить и проглатывать исключения, которые
-			// могут выскочить уже внутри catch.
+			// We have to catch and suppress exceptions from here.
 			try
 			{
 				::arataga::utils::exception_handling_context_t ctx;
 
-				// В случае возникновения исключения продолжать работу нельзя.
 				log_and_remove_connection(
 						delete_protector,
-						// Здесь явно передаем can_throw потому, что нет
-						// смысла ловить и подавлять исключения, которые
-						// могут возникнуть при выполнении этих действий.
 						ctx.make_can_throw_marker(),
 						remove_reason_t::unhandled_exception,
 						spdlog::level::err,
@@ -837,17 +826,13 @@ protected:
 		}
 		catch( ... )
 		{
-			// Нужно ловить и проглатывать исключения, которые
-			// могут выскочить уже внутри catch.
+			// We have to catch and suppress exceptions from here.
 			try
 			{
 				::arataga::utils::exception_handling_context_t ctx;
 
 				log_and_remove_connection(
 						delete_protector,
-						// Здесь явно передаем can_throw потому, что нет
-						// смысла ловить и подавлять исключения, которые
-						// могут возникнуть при выполнении этих действий.
 						ctx.make_can_throw_marker(),
 						remove_reason_t::unhandled_exception,
 						spdlog::level::err, "unknown exception caught" );
@@ -860,51 +845,51 @@ protected:
 	friend struct completion_handler_maker_t;
 
 	/*!
-	 * @brief Вспомогательный класс для создания коллбэка для
-	 * обработчика завершения операции ввода-вывода.
+	 * @brief A helper class for the creation of a callback
+	 * for completion handler of an I/O operation.
 	 *
-	 * Особенность completion-handler-ов в том, что они могут
-	 * быть вызываны уже после того, как connection-handler перестал
-	 * быть актуальным и был заменен новым connection-handler-ом.
-	 * В такой ситуации completion-handler не должен выполнять свою
-	 * работу.
+	 * There is a tricky moment related to completion-handlers:
+	 * they can be called after the removal of the coresponding
+	 * connection_handler. In that case a completion-handler
+	 * shouldn't do its work.
 	 *
-	 * Для этого нужно проверить статус connection-handler-а и разрешить
-	 * работу completion-handler-а только если этот статус равен
-	 * status_t::active. В остальных случаях completion-handler
-	 * должен сразу же завершить свою работу.
+	 * The connection_handler's status should be checked at the
+	 * beginning of completion-handler. The work should be done only
+	 * if the connection_handler is still active (the status is
+	 * status_t::active).
+	 * 
+	 * Because there ara many different completion-handlers it's
+	 * boring task to write that check in every of handlers. Another
+	 * approach is used here: a programmer writes completion-handler
+	 * in the form of a lambda. This lambda then wrapped into another
+	 * lambda-function that is passed to Asio. This wrapper perform
+	 * necessary status check and calls programmer's lambda if
+	 * the status allows process the result of I/O operation.
 	 *
-	 * Поскольку создается много разных completion-handler-ов, то
-	 * невыгодно повторять эти проверки в каждом из них вручную.
-	 * Вместо этого используется следующий подход: программист
-	 * пишет свой completion-handler в виде лямбды, затем эта
-	 * лямбда оборачивается в другую лямбду, которая и отдается
-	 * в Asio. Эта лямбда-обертка как раз и делает проверку status-а.
-	 * Если status равен status_t::active, то оригинальная, заданная
-	 * пользователем лямбда вызывается.
+	 * The class completion_handler_maker_t is a part of process
+	 * of creation of the wrapped mentioned above.
 	 *
-	 * Класс completion_handler_maker_t является частью механизма
-	 * создания лямбды-обертки.
+	 * This is two-step process, because we have to create
+	 * completion-handlers with different signatures.
 	 *
-	 * Этот механизм двушаговый, т.к. нужно уметь создавать
-	 * completion-handler-ы с разными сигнатурами. Поэтому на первом
-	 * шаге создается экземпляр completion_handler_maker_t, параметрами
-	 * шаблона которого будут типы аргументов для completion-handler-а.
-	 * А на втором шаге у созданного экземпляра вызывается метод
-	 * make_handler, в который отдается уже актуальный completion-handler
-	 * в виде функтора/лямбды.
+	 * An instance of completion_handler_maker_t is created on the first step.
+	 * The template parameters for it will be types of arguments for
+	 * the completion-handler.
+	 *
+	 * Method make_handler is called on the second step. That method
+	 * gets an actual completion-handler lambda as an argument and
+	 * returns a proper wrapper.
 	 *
 	 * @attention
-	 * Первым аргументом актуального compltion-handler-а будет
-	 * значение типа delete_protector_t. За ним будет идти аргумент
-	 * can_throw_t. Далее будут следовать аргументы типов @a Args.
+	 * This first parameter for user-provided completion-handler will be
+	 * a value of delete_protector_t type. Then there will be a value
+	 * of type can_throw_t. Then there will be parameters of types @a Args.
 	 *
 	 * @note
-	 * Первоначально обертка, которая создавалась в методе make_handler
-	 * не занималась перехватом и обработкой исключений. Но затем
-	 * внутри этой обертки стал использоваться wrap_action_and_handle_exceptions,
-	 * поэтому сейчас актуальный completion-handler вызывается внутри
-	 * блока try.
+	 * Initialy a wrapper, created inside make_handler() method, doesn't
+	 * catch exceptions. But then wrap_action_and_handle_exceptions() was
+	 * used inside so now user-provided completion-handler is called
+	 * from try...catch block.
 	 */
 	template< typename... Args >
 	struct completion_handler_maker_t
@@ -945,9 +930,9 @@ protected:
 		}
 	};
 
-	//! Выполнить первый шаг операции создания completion-handler-а.
+	//! Do the first step of completion-handler creation.
 	/*!
-	 * Пример использования:
+	 * Usage example:
 	 * @code
 	 * with<const asio::error_code &, std::size_t>().make_handler(
 	 * 	[this]( delete_protector_t delete_protector,
@@ -955,7 +940,7 @@ protected:
 	 * 		const asio::error_code & ec,
 	 * 		std::size_t bytes_transferred )
 	 * 	{
-	 * 		... // Код обработчика.
+	 * 		... // Handler code.
 	 * 	});
 	 * @endcode
 	 */
@@ -970,15 +955,15 @@ protected:
 	[[nodiscard]]
 	auto
 	make_read_write_completion_handler(
-		// ВНИМАНИЕ: этот аргумент должен прожить до конца работы
-		// completion-handler-а. Т.е. это должен быть строковый литерал.
+		// ATTENTION: this argument has to be valid until the end
+		// of completion-handler work. So it has to be a string literal.
 		std::string_view op_name,
 		Completion && completion )
 	{
 		return with<const asio::error_code &, std::size_t>()
 			.make_handler(
-				// Нет необходимости вызывать shared_from_this, т.к. это
-				// уже делает make_io_completion_handler.
+				// There is no sense to call shared_from_this because
+				// it's already done by make_io_completion_handler.
 				[this, op_name, completion_func = std::move(completion)](
 				delete_protector_t delete_protector,
 				can_throw_t can_throw,
@@ -1065,9 +1050,8 @@ public:
 	virtual std::string_view
 	name() const noexcept = 0;
 
-	// Реализация по умолчанию закрывает m_connection, если
-	// m_connection еще не закрыт.
-	// Так же статус обработчика меняется на released.
+	// The default implementation closes m_connection if it is not closed yet.
+	// The status is changed to status_t::released.
 	virtual void
 	release() noexcept;
 };

@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Перечень фабрик для создания connection_handler-ов.
+ * @brief A list of factories for creation of connection_handlers.
  */
 
 #pragma once

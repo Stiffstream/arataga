@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Аналог string_view но для std::byte.
+ * @brief An analog of string_view but for std::byte.
  */
 
 #pragma once
@@ -17,7 +17,7 @@ namespace arataga::acl_handler
 // byte_sequence_t
 //
 /*!
- * @brief Примитивный аналог string_view но для std::byte.
+ * @brief A very trivial analog of string_view but for std::byte.
  */
 class byte_sequence_t
 {

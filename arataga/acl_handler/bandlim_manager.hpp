@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Менеджер лимитов по подключениям одного пользователя.
+ * @brief Bandwidth limit manager for a single user.
  */
 
 #pragma once
@@ -14,24 +14,24 @@
 namespace arataga::acl_handler
 {
 
-//! Псевдоним для типа, являющегося именем домена.
+//! Alias for type representing a domain name.
 using domain_name_t = ::arataga::user_list_auth::domain_name_t;
 
 //
 // bandlim_manager_t
 //
 /*!
- * @brief Менеджер лимитов для подключений одного клиента.
+ * @brief Bandwidth limit manager for a single user.
  */
 class bandlim_manager_t
 {
 public:
 	//
-	// Публично доступные типы данных.
+	// Public data type.
 	//
 	
-	//! Специальное представление квоты, которое автоматически
-	//! обрабатывает значение unlimited.
+	//! A special representation of a quote with automatic handling
+	//! of `unlimited` value.
 	class quote_t
 	{
 		static constexpr bandlim_config_t::value_t maximum =
@@ -66,69 +66,71 @@ public:
 		}
 	};
 
-	//! Информация о трафике по одному направлению.
+	//! Info about traffic in one direction.
 	struct direction_traffic_info_t
 	{
-		//! Квота на текущий такт.
+		//! The quote for the current turn.
 		quote_t m_quote{};
-		//! Зарезервированное пространство на текущем такте.
+		//! How much bandwidth are reserved on the current turn.
 		bandlim_config_t::value_t m_reserved{};
-		//! Фактическая величина трафика на текущем такте.
+		//! How much bandwidth are consumed on the current turn.
 		bandlim_config_t::value_t m_actual{};
 
-		//! Номер такта, к которому относится информация.
+		//! The number of the turn for that this information is actual.
 		sequence_number_t m_sequence_number{};
 	};
 
-	//! Информация по лимитам на одном подключении.
+	//! Info about limits for one connection.
 	struct channel_limits_data_t
 	{
-		//! Исходные значения, которые заданы в конфигурации.
+		//! Source values from the config.
 		bandlim_config_t m_directive_values;
 
-		// Показатели по расходу трафика на текущем такте.
+		// The current values.
 		direction_traffic_info_t m_user_end_traffic;
 		direction_traffic_info_t m_target_end_traffic;
 	};
 
-	//! Информация по трафику на конкретный домен.
+	//! Info about traffic for one specific domain.
 	struct domain_traffic_data_t
 	{
-		//! Сколько подключений сейчас работают с этим доменом.
+		//! How many connections are established to that domain.
 		std::size_t m_connection_count;
 
-		//! Информация по трафику на этот домен.
+		//! Info about traffic for that domain.
 		channel_limits_data_t m_traffic;
 	};
 
-	//! Тип словаря для лимитов по доменам.
+	//! Type of dictionary for domains and their bandwidths.
 	using domain_traffic_map_t =
 			std::map< domain_name_t, domain_traffic_data_t >;
 
 private:
 	//
-	// Собственные данные менеджера лимитов.
+	// Own data for bandwidth limits manager.
 	//
 
-	//! Значение персонального лимита для этого пользователя.
-	//! Это значение нужно сохранять на случай, если в конфигурации
-	//! изменились default_limits.
+	//! The value of the personal limit for the user.
+	/*!
+	 * This value has to be stored separately for the case when
+	 * `default_limits` in the config has been changed.
+	 */
 	bandlim_config_t m_directive_personal_limits;
 
-	//! Это значение общего лимита для клиента, которое вычислено
-	//! на основании персонального лимита и default_limits из конфигурации.
+	//! The general limit for the user calculated by using
+	//! the personal user limit and `default_limits` from the config.
 	bandlim_config_t m_general_limits;
 
-	//! Счетчик трафика по всем подключениям клиента.
+	//! Traffic counter for all user's connections.
 	channel_limits_data_t m_general_traffic;
 
-	//! Счетчики трафика по отдельным доменам.
+	//! Traffic counters for particular domains.
 	domain_traffic_map_t m_domain_traffic;
 
-	//! Счетчик номеров тактов.
+	//! Counter for number of turns.
 	sequence_number_t m_sequence_number;
 
-	//! Время последнего пересчета лимитов.
+	//! The timepoint of the last recalculation of limits.
 	std::chrono::steady_clock::time_point m_last_update_at;
 
 public:
@@ -136,14 +138,13 @@ public:
 		bandlim_config_t personal_limits,
 		bandlim_config_t default_limits );
 
-	// Вызывается каждый раз, когда получаем положительный
-	// ответ на аутентификацию этого клиента.
+	// Called every time of successful authentification of the user.
 	void
 	update_personal_limits(
 		bandlim_config_t personal_limits,
 		bandlim_config_t default_limits );
 
-	// Вызывается каждый раз, когда меняется конфигурация arataga.
+	// Called every time of a change of arataga's config.
 	void
 	update_default_limits(
 		bandlim_config_t default_limits ) noexcept;
@@ -156,10 +157,11 @@ public:
 	const channel_limits_data_t &
 	general_traffic() const noexcept;
 
-	// Создать новый лимит для конкретного домена.
+	// Create a new limit for a particular domain.
 	//
-	// Количество подключений для нового лимита устанавливается в 1.
-	// Если такой лимит уже был, то счетчик подключений увеличивается на 1.
+	// The number of connections for the new limit is set to 1.
+	// If there is already such limit then the number of connections
+	// is increased by 1.
 	[[nodiscard]]
 	domain_traffic_map_t::iterator
 	make_domain_limits(

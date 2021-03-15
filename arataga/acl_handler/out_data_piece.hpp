@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Класс для представления кусочков предназначенных для отсылки данных.
+ * @brief Stuff for representation of pieces of outgoing data.
  */
 
 #pragma once
@@ -13,15 +13,16 @@ namespace arataga::acl_handler
 {
 
 /*!
- * @brief Класс для представления одного кусочка данных для отсылки в сокет.
+ * @brief Class for representation a single piece of data to be sent
+ * into a socket.
  *
- * Кусочек данных может быть представлен либо объектом std::string или
- * fmt::memory_buffer (и тогда его значение нужно забирать к себе, во внутрь
- * out_data_piece_t), либо объектом std::string_view (тогда сами данные никуда
- * копировать не нужно).
+ * The piece of data can be represented by std::string object, or by
+ * fmt::memory_buffer (in that case all memory_buffer value has to be
+ * borrowed into out_data_piece_t), or by std::string_view object
+ * (in that case no move/copy is necessary).
  *
- * Класс out_data_piece_t может выступать в качестве buffer-а, по аналогии
- * с классами out_string_view_buffer_t, out_string_buffer_t.
+ * An instance of out_data_piece_t can be used as generic buffer,
+ * just like instances of out_string_view_buffer_t or out_string_buffer_t.
  */
 class out_data_piece_t
 {
