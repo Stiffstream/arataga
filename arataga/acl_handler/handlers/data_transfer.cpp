@@ -301,6 +301,10 @@ private:
 		// Куда затем данные нужно записывать.
 		direction_state_t & dest_dir )
 	{
+if( !src_dir.m_is_alive )
+{
+std::cout << "!!! Attempt to read from closed direction: " << src_dir.m_active_read << std::endl;
+}
 		// Нельзя начинать новую операцию чтения, если предыдущая начатая
 		// операция еще не завершена.
 		if( src_dir.m_active_read )
@@ -412,6 +416,107 @@ private:
 			src_dir.m_available_for_write_buffers -= 1u );
 	}
 
+	auto
+	handle_read_error_code(
+		can_throw_t can_throw,
+		direction_state_t & src_dir,
+		const direction_state_t & dest_dir,
+		// Номер буфера, который использовался для чтения данных.
+		std::size_t selected_buffer,
+		const asio::error_code & ec,
+		std::size_t bytes_transferred )
+	{
+		struct result_t {
+			std::optional< remove_reason_t > m_remove_reason;
+			bool m_can_read_src_dir;
+			bool m_can_write_dest_dir;
+		}
+		result{ std::nullopt, false, false };
+
+		if( !ec )
+		{
+			// Т.к. нет ошибок, то доверяем значению bytes_transferred.
+			src_dir.m_in_buffers[selected_buffer].m_data_size = bytes_transferred;
+
+			// Обозначаем, что есть еще один буфер для записи.
+			src_dir.m_available_for_write_buffers += 1u;
+
+			// Должны зафиксировать время последней активности.
+			m_last_read_at = std::chrono::steady_clock::now();
+
+			// Мы можем и читать следующую порцию данных,
+			// и записывать те данные, которые были прочитаны.
+			result.m_can_read_src_dir = true;
+			result.m_can_write_dest_dir = true;
+		}
+		else
+		{
+			// В любом случае считаем src_dir закрытым.
+			src_dir.m_is_alive = false;
+
+			// После того, как в версии 0.2.0 начали читать в несколько
+			// буферов, может случиться так, что при чтении очередного буфера
+			// обнаружили закрытие сокета на другой стороне.
+			// Но при этом у нас могут остаться ранее прочитанные данные,
+			// которые еще не были записаны.
+			if( asio::error::eof == ec )
+			{
+				// Если src_dir закрыт на другой стороне, то продолжать
+				// работать можно лишь в том случае, когда dest_dir еще жив
+				// и в src_dir есть пока еще не отправленные данные.
+				// В остальных случаях работу нужно завершать.
+				if( dest_dir.m_is_alive
+						&& 0u != src_dir.m_available_for_write_buffers )
+				{
+					// В этом случае читать src_dir больше нельзя.
+					// Но можно писать в dest_dir.
+					result.m_can_write_dest_dir = true;
+				}
+				else
+				{
+					// Продолжать нет смысла.
+					result.m_remove_reason = remove_reason_t::normal_completion;
+				}
+			}
+			else if( asio::error::operation_aborted == ec )
+			{
+				result.m_remove_reason =
+						remove_reason_t::current_operation_canceled;
+			}
+			else
+			{
+				// Возможно, мы наткнулись на ошибку ввода-вывода.
+				// Но, может быть просто сейчас завершается наша работа и
+				// сокет был закрыт, а Asio выдал код ошибки, отличный
+				// от operation_aborted.
+				if( src_dir.m_channel.is_open() )
+				{
+					// Все-таки это ошибка ввода-вывода.
+					result.m_remove_reason = remove_reason_t::io_error;
+
+					// Залогируем ошибку.
+					::arataga::logging::wrap_logging(
+							proxy_logging_mode,
+							spdlog::level::debug,
+							[this, can_throw, &src_dir, &ec]( auto level )
+							{
+								log_message_for_connection(
+										can_throw,
+										level,
+										fmt::format( "error reading data from {}: {}",
+												src_dir.m_name,
+												ec.message() ) );
+							} );
+				}
+				else
+					result.m_remove_reason =
+							remove_reason_t::current_operation_canceled;
+			}
+		}
+
+		return result;
+	}
+
 	void
 	on_read_result(
 		delete_protector_t delete_protector,
@@ -425,6 +530,10 @@ private:
 		const asio::error_code & ec,
 		std::size_t bytes_transferred )
 	{
+if( !src_dir.m_is_alive )
+{
+std::cout << "!!! Result for the read from dead direction: " << ec << std::endl;
+}
 		// Этот код оставлен под комментарием для того, чтобы проще было
 		// вернуть его при необрходимости отладки.
 #if 0
@@ -447,81 +556,35 @@ private:
 		// наличия активной операции чтения.
 		src_dir.m_active_read = false;
 
-		// Если это значение по итогу окажется не пустым, значит нужно
-		// прекращать работу соединения.
-		std::optional< remove_reason_t > remove_reason;
+		// Обрабатываем результат чтения...
+		const auto handling_result = handle_read_error_code(
+				can_throw,
+				src_dir,
+				dest_dir,
+				selected_buffer,
+				ec,
+				bytes_transferred );
 
-		if( ec )
-		{
-			src_dir.m_is_alive = false;
-
-			// Суть в том, что операция чтения для src_dir вызывается
-			// только тогда, когда все ранее прочитаные данные из src_dir
-			// были записаны в dest_dir. Поэтому, если src_dir закрылся,
-			// то записывать в dest_dir больше нечего и продолжать работу
-			// нельзя.
-			//
-			// Так что нам остается только выяснить с какой именно
-			// диагностикой завершать свою работу.
-			if( asio::error::eof == ec )
-			{
-				remove_reason = remove_reason_t::normal_completion;
-			}
-			else if( asio::error::operation_aborted == ec )
-			{
-				remove_reason = remove_reason_t::current_operation_canceled;
-			}
-			else
-			{
-				// Возможно, мы наткнулись на ошибку ввода-вывода.
-				// Но, может быть просто сейчас завершается наша работа и
-				// сокет был закрыт, а Asio выдал код ошибки, отличный
-				// от operation_aborted.
-				if( src_dir.m_channel.is_open() )
-				{
-					// Все-таки это ошибка ввода-вывода.
-					remove_reason = remove_reason_t::io_error;
-
-					// Залогируем ошибку.
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::debug,
-							[this, can_throw, &src_dir, &ec]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										fmt::format( "error reading data from {}: {}",
-												src_dir.m_name,
-												ec.message() ) );
-							} );
-				}
-				else
-					remove_reason = remove_reason_t::current_operation_canceled;
-			}
-		}
-
-		if( remove_reason )
+		// ...далее действуем в зависимости от результата чтения.
+		if( handling_result.m_remove_reason )
 		{
 			// Смысла продолжать нет, нужно удалять самих себя.
-			remove_handler( delete_protector, *remove_reason );
+			remove_handler( delete_protector,
+					*(handling_result.m_remove_reason) );
 		}
 		else
 		{
-			// Т.к. нет ошибок, то доверяем значению bytes_transferred.
-			src_dir.m_in_buffers[selected_buffer].m_data_size = bytes_transferred;
+			if( handling_result.m_can_write_dest_dir )
+			{
+				// И теперь уже можно отсылать прочитанные данные в другую сторону.
+				initiate_async_write_for_direction( can_throw, dest_dir, src_dir );
+			}
 
-			// Обозначаем, что есть еще один буфер для записи.
-			src_dir.m_available_for_write_buffers += 1u;
-
-			// Должны зафиксировать время последней активности.
-			m_last_read_at = std::chrono::steady_clock::now();
-
-			// И теперь уже можно отсылать прочитанные данные в другую сторону.
-			initiate_async_write_for_direction( can_throw, dest_dir, src_dir );
-
-			// А так же можно попробовать начать новое чтение.
-			initiate_async_read_for_direction( can_throw, src_dir, dest_dir );
+			if( handling_result.m_can_read_src_dir )
+			{
+				// А так же можно попробовать начать новое чтение.
+				initiate_async_read_for_direction( can_throw, src_dir, dest_dir );
+			}
 		}
 	}
 
@@ -595,14 +658,46 @@ private:
 				// увеличилось.
 				src_dir.m_available_for_read_buffers += 1u;
 
-				// Т.к. мы записали очередную порцию данных
-				// от клиента к целевому узлу, то нужно инициировать
-				// чтение очередной порции данных.
-				initiate_async_read_for_direction( can_throw, src_dir, dest_dir );
+				bool has_outgoing_data = 
+						0u != src_dir.m_available_for_write_buffers;
+
+				// Мы можем быть в ситуации, когда исходное направление
+				// еще живо и тогда у нас есть возможность прочитать очередную
+				// порцию данных.
+				if( src_dir.m_is_alive )
+				{
+					// Т.к. мы записали очередную порцию данных
+					// от клиента к целевому узлу, то нужно инициировать
+					// чтение очередной порции данных.
+					initiate_async_read_for_direction( can_throw, src_dir, dest_dir );
+
+				}
+				else
+				{
+					// А вот если исходное направление уже закрыто, и у нас
+					// больше не осталось данных для отсылки в dest_dir,
+					// то обработку соединений нужно прекращать.
+					if( !has_outgoing_data )
+					{
+						log_and_remove_connection(
+								delete_protector,
+								can_throw,
+								remove_reason_t::normal_completion,
+								spdlog::level::trace,
+								fmt::format( "no more outgoing data for: {}, "
+										"opposite direction is closed: {}",
+										dest_dir.m_name,
+										src_dir.m_name ) );
+					}
+				}
 
 				// Так же мы можем попробовать записать другие данные из
 				// src_dir, если они были прочитаны ранее.
-				initiate_async_write_for_direction( can_throw, dest_dir, src_dir );
+				if( has_outgoing_data )
+				{
+					initiate_async_write_for_direction(
+							can_throw, dest_dir, src_dir );
+				}
 			}
 		}
 	}
