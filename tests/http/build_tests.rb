@@ -10,5 +10,6 @@ MxxRu::Cpp::composite_target {
 	required_prj "#{path}/auth_params/prj.ut.rb"
 	required_prj "#{path}/chunked_encoding/prj.ut.rb"
 	required_prj "#{path}/illegal_responses/prj.ut.rb"
+	required_prj "#{path}/connect_data_transfer/prj.ut.rb"
 }
 

@@ -128,8 +128,6 @@ TEST_CASE("serie of large blocks") {
 				break;
 		}
 
-	chs::dump_trace( (std::cout << "-----\n"), simulator.get_trace() );
-
 		REQUIRE( blocks_count == i );
 	}
 
