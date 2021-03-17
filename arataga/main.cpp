@@ -37,7 +37,7 @@
 namespace {
 
 const char version_string[] =
-R"ver(arataga v.0.2.0
+R"ver(arataga v.0.2.1
 
 (c) 2020-2021 stiffstream (https://stiffstream.com)
 )ver";
