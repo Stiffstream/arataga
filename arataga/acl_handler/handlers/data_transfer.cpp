@@ -7,6 +7,8 @@
 #include <arataga/acl_handler/handler_factories.hpp>
 #include <arataga/acl_handler/buffers.hpp>
 
+#include <arataga/utils/overloaded.hpp>
+
 #include <noexcept_ctcheck/pub.hpp>
 
 namespace arataga::acl_handler
@@ -297,6 +299,10 @@ private:
 		// The direction to that data should be written.
 		direction_state_t & dest_dir )
 	{
+		// This shouldn't happen. But do that check for safety.
+		if( !src_dir.m_is_alive )
+			return;
+
 		// We can't start a new read operation if the current one is not
 		// completed yet.
 		if( src_dir.m_active_read )
@@ -363,6 +369,10 @@ private:
 		// The direction from that outgoint data has to be got.
 		direction_state_t & src_dir )
 	{
+		// This shouldn't happen. But do that check for safety.
+		if( !dest_dir.m_is_alive )
+			return;
+
 		// We can start a new write only if the current write completed.
 		if( dest_dir.m_active_write )
 			return;
@@ -407,6 +417,122 @@ private:
 			src_dir.m_available_for_write_buffers -= 1u );
 	}
 
+	// Type that tells that the connection-handler should be removed
+	// because of I/O error on read operation.
+	struct handler_should_be_removed_t
+	{
+		remove_reason_t m_remove_reason;
+	};
+
+	// Helper types those play role of boolean flags but provide
+	// additional type-safety.
+	enum class can_read_src_dir_t { yes, no };
+	enum class can_write_dest_dir_t { yes, no };
+
+	// Type that tells that the connection-handler should continue its
+	// work after the completion of read operation.
+	struct work_should_be_continued_t
+	{
+		can_read_src_dir_t m_can_read_src_dir;
+		can_write_dest_dir_t m_can_write_dest_dir;
+	};
+
+	// Type for representation the result of read-operation result
+	// analysis.
+	using read_error_code_handling_result_t = std::variant<
+			handler_should_be_removed_t,
+			work_should_be_continued_t
+		>;
+
+	read_error_code_handling_result_t
+	handle_read_error_code(
+		can_throw_t can_throw,
+		direction_state_t & src_dir,
+		const direction_state_t & dest_dir,
+		// Index of buffer used for the reading.
+		std::size_t selected_buffer,
+		const asio::error_code & ec,
+		std::size_t bytes_transferred )
+	{
+		if( !ec )
+		{
+			// No errors, we can trust bytes_transferred value.
+			src_dir.m_in_buffers[selected_buffer].m_data_size = bytes_transferred;
+
+			// There is another buffer with outgoing data.
+			src_dir.m_available_for_write_buffers += 1u;
+
+			// There is yet anoter activity in the channels.
+			m_last_read_at = std::chrono::steady_clock::now();
+
+			// We can read more, and we can write some more data.
+			return work_should_be_continued_t{
+					can_read_src_dir_t::yes,
+					can_write_dest_dir_t::yes
+			};
+		}
+
+		// Handle an error here.
+
+		// src_dir is assumed to be closed regardless of error type.
+		src_dir.m_is_alive = false;
+
+		// Since v.0.2.0 several buffers are used for reading data.
+		// We can find ourselves in the case when the source direction
+		// is closed on the remote site, but there still are some
+		// buffers with previously read data, and that data hasn't
+		// written to opposite direction yet.
+		if( asio::error::eof == ec )
+		{
+			// The src_dir is closed on remote site. We can continue
+			// only if there is some pending outgoing data.
+			// And if the dest_dir is still alive.
+			if( dest_dir.m_is_alive
+					&& 0u != src_dir.m_available_for_write_buffers )
+			{
+				// We can't read src_dir anymore.
+				// But can write into dest_dir.
+				return work_should_be_continued_t{
+						can_read_src_dir_t::no,
+						can_write_dest_dir_t::yes
+				};
+			}
+			else
+			{
+				// There is no sense to continue.
+				return handler_should_be_removed_t{
+						remove_reason_t::normal_completion
+				};
+			}
+		}
+		else if( asio::error::operation_aborted == ec ||
+				// There could be a case when we closed socket but
+				// Asio reports an error different from
+				// operation_aborted.
+				!src_dir.m_channel.is_open() )
+		{
+			return handler_should_be_removed_t{
+					remove_reason_t::current_operation_canceled
+			};
+		}
+
+		// If we are here then some I/O error happened. Log it.
+		::arataga::logging::wrap_logging(
+				proxy_logging_mode,
+				spdlog::level::debug,
+				[this, can_throw, &src_dir, &ec]( auto level )
+				{
+					log_message_for_connection(
+							can_throw,
+							level,
+							fmt::format( "error reading data from {}: {}",
+									src_dir.m_name,
+									ec.message() ) );
+				} );
+
+		return handler_should_be_removed_t{ remove_reason_t::io_error };
+	}
+
 	void
 	on_read_result(
 		delete_protector_t delete_protector,
@@ -441,72 +567,33 @@ private:
 		// has to be reset.
 		src_dir.m_active_read = false;
 
-		// If this value will be empty at the end then the service of
-		// the connection should be cancelled.
-		std::optional< remove_reason_t > remove_reason;
-
-		if( ec )
-		{
-			src_dir.m_is_alive = false;
-
-			if( asio::error::eof == ec )
-			{
-				remove_reason = remove_reason_t::normal_completion;
-			}
-			else if( asio::error::operation_aborted == ec )
-			{
-				remove_reason = remove_reason_t::current_operation_canceled;
-			}
-			else
-			{
-				// If could be I/O error. But it could also be a case 
-				// when arataga shuts down, the connection is closed but
-				// Asio reports an error different from operation_aborted.
-				if( src_dir.m_channel.is_open() )
-				{
-					// It's an I/O error.
-					remove_reason = remove_reason_t::io_error;
-
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::debug,
-							[this, can_throw, &src_dir, &ec]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										fmt::format( "error reading data from {}: {}",
-												src_dir.m_name,
-												ec.message() ) );
-							} );
-				}
-				else
-					remove_reason = remove_reason_t::current_operation_canceled;
-			}
-		}
-
-		if( remove_reason )
-		{
-			// There is no sense to continue. We have to destroy ourselves.
-			remove_handler( delete_protector, *remove_reason );
-		}
-		else
-		{
-			// There are no errors. We trust the value of bytes_transferred.
-			src_dir.m_in_buffers[selected_buffer].m_data_size = bytes_transferred;
-
-			// Yet another buffer is available for writting.
-			src_dir.m_available_for_write_buffers += 1u;
-
-			// Should store the time of the last activity.
-			m_last_read_at = std::chrono::steady_clock::now();
-
-			// Now the data read can be sent to the opposite direction.
-			initiate_async_write_for_direction( can_throw, dest_dir, src_dir );
-
-			// We can try to start a new read operation.
-			initiate_async_read_for_direction( can_throw, src_dir, dest_dir );
-		}
+		// Handle the result of read operation...
+		const auto handling_result = handle_read_error_code(
+				can_throw,
+				src_dir,
+				dest_dir,
+				selected_buffer,
+				ec,
+				bytes_transferred );
+		// ...our further actions depends on that result.
+		std::visit( ::arataga::utils::overloaded{
+				[&]( const handler_should_be_removed_t & r ) {
+					// There is no sense to continue.
+					remove_handler( delete_protector, r.m_remove_reason );
+				},
+				[&]( const work_should_be_continued_t & r ) {
+					if( can_write_dest_dir_t::yes == r.m_can_write_dest_dir )
+					{
+						initiate_async_write_for_direction(
+								can_throw, dest_dir, src_dir );
+					}
+					if( can_read_src_dir_t::yes == r.m_can_read_src_dir )
+					{
+						initiate_async_read_for_direction(
+								can_throw, src_dir, dest_dir );
+					}
+				} },
+				handling_result );
 	}
 
 	void
@@ -576,13 +663,44 @@ private:
 				// There is one more free buffer for next read.
 				src_dir.m_available_for_read_buffers += 1u;
 
-				// Becase yet another buffer is free now we can try to start
-				// a new read operation.
-				initiate_async_read_for_direction( can_throw, src_dir, dest_dir );
+				bool has_outgoing_data = 
+						0u != src_dir.m_available_for_write_buffers;
 
-				// Maybe there are some waiting outgoing data so try to start
-				// a new write operation.
-				initiate_async_write_for_direction( can_throw, dest_dir, src_dir );
+				// We can find outselves in the case where the source direction
+				// is still alive and we can read some more data from it.
+				if( src_dir.m_is_alive )
+				{
+					// Because we've written some data to dest_dir we
+					// can now initiate a new read from src_dir.
+					initiate_async_read_for_direction(
+							can_throw, src_dir, dest_dir );
+
+				}
+				else
+				{
+					// The source direction is closed.
+					// If we don't have any pending outgoing data then
+					// the connection-handler has to be removed.
+					if( !has_outgoing_data )
+					{
+						log_and_remove_connection(
+								delete_protector,
+								can_throw,
+								remove_reason_t::normal_completion,
+								spdlog::level::trace,
+								fmt::format( "no more outgoing data for: {}, "
+										"opposite direction is closed: {}",
+										dest_dir.m_name,
+										src_dir.m_name ) );
+					}
+				}
+
+				// There is some pending outgoing data, we should write it.
+				if( has_outgoing_data )
+				{
+					initiate_async_write_for_direction(
+							can_throw, dest_dir, src_dir );
+				}
 			}
 		}
 	}

@@ -37,7 +37,7 @@
 namespace {
 
 const char version_string[] =
-R"ver(arataga v.0.2.0
+R"ver(arataga v.0.2.2
 
 (c) 2020-2021 stiffstream (https://stiffstream.com)
 )ver";
@@ -156,7 +156,8 @@ private:
 std::ostream &
 operator<<( std::ostream & o, const log_params_t & params )
 {
-	fmt::print( o, "(console_target {}) ", *(params.m_console_target) );
+	if(params.m_console_target)
+		fmt::print( o, "(console_target {}) ", *(params.m_console_target) );
 
 	if(params.m_syslog_target)
 		fmt::print( o, "(syslog_target {}) ", *(params.m_syslog_target) );
