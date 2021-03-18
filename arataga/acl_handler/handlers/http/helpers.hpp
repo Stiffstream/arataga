@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Различные вспомогательные штуки для HTTP connection-handler-ов.
+ * @brief Various helpers for HTTP connection_handlers.
  */
 
 #pragma once
@@ -39,9 +39,9 @@ wrap_http_parser_callback(
 		return (handler->*callback)( ctx.make_can_throw_marker(),
 				std::forward<Args>(args)... );
 	}
-	catch(...) // Все ошибки проглатывает, т.к. залогировать их
-		// здесь не представляется возможным (нет должного контекста,
-		// через который можно выполнить логирование).
+	catch(...) // All exceptions will be suppressed.
+		// We can't log them because there is no context via that
+		// the logging can be performed.
 	{
 	}
 
