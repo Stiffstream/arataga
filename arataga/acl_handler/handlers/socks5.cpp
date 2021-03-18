@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief connection_handler-ы для работы с SOCKS5.
+ * @brief SOCKS5 related connection_handlers.
  */
 
 #include <arataga/acl_handler/connection_handler_ifaces.hpp>
@@ -17,10 +17,9 @@ namespace arataga::acl_handler
 namespace handlers::socks5
 {
 
+// Forward declarations of some factories.
 //
-// Фабрики, которые будут реализованы ниже по тексту.
-// Но которые могут начать использоваться в коде еще до того, как они
-// будут определены.
+// The implementation is going below.
 //
 [[nodiscard]]
 connection_handler_shptr_t
@@ -100,8 +99,7 @@ constexpr std::byte command_reply_atype_not_supported{ 0x8u };
 //
 // make_negative_command_reply
 //
-//! Вспомогательная функция для формирования отрицательного ответа
-//! на command PDU.
+//! Helper function for making a negative reply to command PDU.
 template< typename Buffer >
 void
 make_negative_command_reply(
@@ -116,31 +114,31 @@ make_negative_command_reply(
 
 class auth_method_detection_handler_t final : public connection_handler_t
 {
-	//! Максимальный размер первого PDU от клиента.
+	//! Max size of the first PDU from a user.
 	static constexpr std::size_t first_pdu_max_size =
 			1 /* VER */
 			+ 1 /* method count */
 			+ 255 /* methods */
 			;
 
-	//! Первый PDU от клиента.
+	//! The first PDU from the user.
 	/*!
-	 * Здесь должен быть перечень способов аутентификации.
+	 * A list of authentification methods should be here.
 	 */
 	in_buffer_fixed_t< first_pdu_max_size > m_first_pdu;
 
-	//! Исходящий буфер для ответа на первый PDU.
+	//! Outgoing buffer for the reply to the first PDU.
 	/*
-	 * В ответе всего два байта.
+	 * Only 2 bytes in the reply.
 	 */
 	out_buffer_fixed_t< 2u > m_response;
 
-	//! Время, когда соединение было принято.
+	//! The timepoint when the connection was accepted.
 	std::chrono::steady_clock::time_point m_created_at;
 
-	//! Итоговый метод аутентификации, который мы приняли.
+	//! The selected authentification method.
 	/*!
-	 * Будет пустым, если подходящего метода не нашли.
+	 * Will be empty if we don't find an appropriate method.
 	 */
 	std::optional< std::byte > m_accepted_method{ std::nullopt };
 
@@ -179,7 +177,7 @@ protected:
 			delete_protector,
 			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 			{
-				// Пытаемся разобраться со способом аутентификации.
+				// Try to select an authentification method.
 				handle_data_already_read_or_read_more(
 						delete_protector, can_throw );
 			} );
@@ -222,7 +220,7 @@ private:
 				delete_protector, can_throw );
 				data_parsing_result_t::need_more == read_result )
 		{
-			// Нужно читать следующий кусок данных.
+			// Has to read more data.
 			read_some(
 					can_throw,
 					m_connection,
@@ -245,7 +243,7 @@ private:
 	{
 		buffer_read_trx_t read_trx{ m_first_pdu };
 
-		(void)m_first_pdu.read_byte(); // Пропускаем байт с версией.
+		(void)m_first_pdu.read_byte(); // Skip the version byte.
 
 		if( m_first_pdu.remaining() > 0u )
 		{
@@ -280,14 +278,13 @@ private:
 		return data_parsing_result_t::need_more;
 	}
 
-	// Этот метод использует предположение о том, что в m_first_pdu
-	// находится полный список поддерживаемых пользователем методов
-	// аутентификации.
+	// NOTE: this method assumes that m_first_pdu contains the whole
+	// list of supported by user authentification methods.
 	void
 	handle_auth_methods( can_throw_t can_throw )
 	{
-		// Для упрощения диагностики по ходу анализа собираем идентификаторы
-		// тех методов, которые поддерживаются клиентом.
+		// For simplicity of diagnostic collect all authentification
+		// method IDs.
 		std::string found_method_ids = collect_method_ids( can_throw );
 
 		::arataga::logging::wrap_logging(
@@ -300,7 +297,7 @@ private:
 									found_method_ids ) );
 				} );
 
-		// Ищем метод username/password.
+		// Prefer "username/password" method. Then "no_auth" method.
 		try_find_specific_auth_method( username_password_auth_method );
 		if( !m_accepted_method )
 			try_find_specific_auth_method( no_authentification_method );
@@ -367,8 +364,8 @@ private:
 	{
 		std::string result;
 
-		// Будем читать все оставшееся содержимое m_first_pdu,
-		// а затем вернем текущую позицию в буфере обратно.
+		// Will read all remaining part of m_first_pdu and then
+		// return the current read position back.
 		buffer_read_trx_t read_trx{ m_first_pdu };
 
 		while( m_first_pdu.remaining() )
@@ -386,8 +383,8 @@ private:
 	void
 	try_find_specific_auth_method( const std::byte expected_method ) noexcept
 	{
-		// Будем читать все оставшееся содержимое m_first_pdu,
-		// а затем вернем текущую позицию в буфере обратно.
+		// Will read all remaining part of m_first_pdu and then
+		// return the current read position back.
 		buffer_read_trx_t read_trx{ m_first_pdu };
 
 		while( m_first_pdu.remaining() )
@@ -428,7 +425,7 @@ class username_password_auth_handler_t final : public connection_handler_t
 	static constexpr std::byte access_denied{ 0x1u };
 	static constexpr std::byte access_granted{ 0x0u };
 
-	//! Буфер для чтения PDU с аутентификационными данными.
+	//! The buffer for reading a PDU with authentification data.
 	/*!
 	 * https://tools.ietf.org/html/rfc1929
 	 */
@@ -440,10 +437,10 @@ class username_password_auth_handler_t final : public connection_handler_t
 			+ 255 // PASSWD
 		> m_auth_pdu;
 
-	//! Буфер для ответного PDU.
+	//! The buffer for the reply.
 	out_buffer_fixed_t< 2 > m_response;
 
-	//! Время, когда соединение было принято.
+	//! The timepoint when the connection was accepted.
 	std::chrono::steady_clock::time_point m_created_at;
 
 public:
@@ -515,7 +512,7 @@ private:
 				delete_protector, can_throw );
 				data_parsing_result_t::need_more == read_result )
 		{
-			// Нужно читать следующий кусок данных.
+			// Has to read the next portion of data.
 			read_some(
 					can_throw,
 					m_connection,
@@ -588,10 +585,10 @@ private:
 			return data_parsing_result_t::invalid_data;
 		}
 
-		// Все прочитано и ничего в буфере не осталось.
+		// All data has been read, nothing left in the buffer.
 		read_trx.commit();
 
-		// Можно переходить к следующему шагу.
+		// Can go to the next step.
 		send_positive_response_then_replace_handler(
 				can_throw,
 				std::move(username),
@@ -640,7 +637,7 @@ class no_authentification_handler_t final : public connection_handler_t
 	static constexpr std::byte expected_version{ 0x1u };
 	static constexpr std::byte access_granted{ 0x0u };
 
-	//! Буфер для чтения PDU с аутентификационными данными.
+	//! The buffer for reading PDU with authentification data.
 	/*!
 	 * https://tools.ietf.org/html/rfc1929
 	 */
@@ -650,10 +647,10 @@ class no_authentification_handler_t final : public connection_handler_t
 			+ 1 // PLEN, должен быть 0.
 		> m_auth_pdu;
 
-	//! Буфер для ответного PDU.
+	//! Buffer for the reply.
 	out_buffer_fixed_t< 2 > m_response;
 
-	//! Время, когда соединение было принято.
+	//! The timepoint when the connection was accepted.
 	std::chrono::steady_clock::time_point m_created_at;
 
 public:
@@ -726,7 +723,7 @@ private:
 				delete_protector, can_throw );
 				data_parsing_result_t::need_more == read_result )
 		{
-			// Нужно читать следующий кусок данных.
+			// Has to read the next portion of data.
 			read_some(
 					can_throw,
 					m_connection,
@@ -750,12 +747,12 @@ private:
 
 		const auto version = m_auth_pdu.read_byte();
 
-		// Здесь может быть такой фокус: curl присылает auth PDU с
-		// пустыми username/password, а вот Firefox вообще не присылает
-		// auth PDU и шлет сразу command PDU.
-		// 
-		// Поэтому, если номер версии соответствует SOCKS5, то сразу
-		// переходим к другому connection-handler-у.
+		// There could be a trick: curl sends auth PDU with
+		// empty username/password, but Firefox doesn't send auth PDU
+		// at all and sends command PDU immediately.
+		//
+		// So if the version number is corresponds to SOCKS5 then
+		// switch to the next connection-handler right now.
 		if( version_byte == version )
 		{
 			replace_handler(
@@ -767,8 +764,7 @@ private:
 								m_ctx,
 								m_id,
 								std::move(m_connection),
-								// Все, что было прочитано, передается
-								// следующему connection-handler-у.
+								// All data read goes to the next handler.
 								m_auth_pdu.whole_data_as_sequence(),
 								m_created_at );
 					} );
@@ -829,10 +825,10 @@ private:
 			return data_parsing_result_t::invalid_data;
 		}
 
-		// Все прочитано и ничего в буфере не осталось.
+		// Everything has been read, nothing left in the buffer.
 		read_trx.commit();
 
-		// Можно переходить к следующему шагу.
+		// Can go to the next step.
 		send_positive_response_then_replace_handler( can_throw );
 
 		return data_parsing_result_t::success;
@@ -876,7 +872,7 @@ class command_handler_t final : public connection_handler_t
 	static constexpr std::byte connect_cmd{ 0x1u };
 	static constexpr std::byte bind_cmd{ 0x2u };
 
-	//! Буфер для чтения PDU с командной.
+	//! Buffer for the command PDU.
 	/*!
 	 * https://tools.ietf.org/html/rfc1928
 	 */
@@ -889,10 +885,9 @@ class command_handler_t final : public connection_handler_t
 			+ 2 // DST.PORT
 		> m_command_pdu;
 
-	//! Буфер для хранения значения отрицательного ответа.
+	//! Buffer for the negative reply.
 	/*!
-	 * Положительные ответы на command PDU будут формировать обработчики
-	 * конкретных комманд.
+	 * Positive replies will be formed by handlers of specific commands.
 	 */
 	out_buffer_fixed_t<
 			1 // VER
@@ -901,20 +896,19 @@ class command_handler_t final : public connection_handler_t
 			+ 1 // ATYP
 		> m_negative_reply_pdu;
 
-	//! Имя пользователя.
+	//! User's name.
 	/*!
-	 * Если отсутствует, значит аутентификация должна быть по IP.
+	 * If empty then authentification by IP should be performed.
 	 */
 	std::optional<std::string> m_username;
-	//! Пароль пользователя.
+	//! User's password.
 	std::optional<std::string> m_password;
 
-	//! Время, когда соединение было принято.
+	//! The timepoint when the connection was accepted.
 	std::chrono::steady_clock::time_point m_created_at;
 
 public:
-	// Конструктор для случая, когда сперва извлекли PDU
-	// с аутентификационной информацией.
+	// The constructor for the case when auth PDU was read first.
 	command_handler_t(
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
@@ -928,9 +922,9 @@ public:
 		,	m_created_at{ created_at }
 	{}
 
-	// Конструктор для случая, когда ждали auth PDU с пустыми
-	// username/password (такой PDU для no-auth присылает curl),
-	// но вместо этого прилетел command PDU.
+	// The constructor for the case when we waited auth PDU with
+	// empty username/password (such PDU is sent by curl), but
+	// a command PDU was received instead.
 	command_handler_t(
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
@@ -1011,7 +1005,7 @@ private:
 				delete_protector, can_throw );
 				data_parsing_result_t::need_more == read_result )
 		{
-			// Нужно читать следующий кусок данных.
+			// Has to read the next portion of data.
 			read_some(
 					can_throw,
 					m_connection,
@@ -1050,7 +1044,7 @@ private:
 			return data_parsing_result_t::invalid_data;
 		}
 
-		// Далее нам нужно прочитать не менее 3-х байт:
+		// At least 3 bytes have to be read:
 		// CMD, RSV, ATYP.
 		if( m_command_pdu.remaining() < 3u )
 			return data_parsing_result_t::need_more;
@@ -1059,7 +1053,7 @@ private:
 		(void)m_command_pdu.read_byte();
 		const auto atype = m_command_pdu.read_byte();
 
-		// Содержимое DST.ADDR будет зависеть от значения atype.
+		// The content of DST.ADDR depends on atype value.
 		data_parsing_result_t success_flag;
 		byte_sequence_t dst_addr_bytes;
 		std::tie(success_flag, dst_addr_bytes) = try_extract_dst_addr(
@@ -1067,7 +1061,7 @@ private:
 		if( success_flag != data_parsing_result_t::success )
 			return success_flag;
 
-		// Осталось прочитать DST.PORT.
+		// DST.PORT has to be read.
 		if( m_command_pdu.remaining() < 2u )
 			return data_parsing_result_t::need_more;
 
@@ -1075,7 +1069,7 @@ private:
 				(std::to_integer<std::uint16_t>(m_command_pdu.read_byte()) << 8u) |
 				std::to_integer<std::uint16_t>(m_command_pdu.read_byte());
 
-		// В PDU больше ничего не должно оставаться.
+		// Don't expect additional data here.
 		if( m_command_pdu.remaining() )
 		{
 			log_and_remove_connection(
@@ -1091,13 +1085,13 @@ private:
 			return data_parsing_result_t::invalid_data;
 		}
 
-		// Все прочитано и ничего в буфере не осталось.
+		// Everything has been read, nothing left in the buffer.
 		read_trx.commit();
 
 		if( connect_cmd == cmd )
 		{
-			// Эту команду должен обрабатывать другой handler.
-			// Он же и вернет ответ на запрос.
+			// This command has to be handled by another handler.
+			// That handler will send the reply.
 			replace_handler(
 					delete_protector,
 					can_throw,
@@ -1113,8 +1107,8 @@ private:
 		}
 		else if( bind_cmd == cmd )
 		{
-			// Эту команду должен обрабатывать другой handler.
-			// Он же и вернет ответ на запрос.
+			// This command has to be handled by another handler.
+			// That handler will send the reply.
 			replace_handler(
 					delete_protector,
 					can_throw,
@@ -1130,8 +1124,8 @@ private:
 		}
 		else
 		{
-			// Другие команды не поддерживаются, поэтому сразу же
-			// отсылаем отрицательный результат.
+			// Other commands are not supported. So send the negative
+			// reply right now.
 			make_negative_command_reply( m_negative_reply_pdu,
 					command_reply_command_not_supported );
 			send_negative_reply_then_close_connection(
@@ -1143,13 +1137,13 @@ private:
 
 	/*!
 	 * @attention
-	 * В случае успеха возвращается byte_sequence_t, который не содержит
-	 * отдельной копии данных, а указывает на область памяти внутри
-	 * m_command_pdu.
+	 * In the case of success a byte_sequence_t is returned.
+	 * That sequence doesn't hold a copy of data, but pointed to the
+	 * data inside m_command_pdu.
 	 *
 	 * @note
-	 * Может принудительно закрыть соединение, если обнаружит какие-то
-	 * недопустимые значения (например, нулевую длину доменного имени).
+	 * This method can close the connection if some garbage is found
+	 * in the PDU (like zero-length domain name).
 	 */
 	[[nodiscard]]
 	std::tuple< data_parsing_result_t, byte_sequence_t >
@@ -1182,7 +1176,7 @@ private:
 			{
 				const std::size_t name_len = std::to_integer<std::size_t>(
 						m_command_pdu.read_byte() );
-				// Длина доменного имени не может быть нулевой!
+				// Domain name can't be empty.
 				if( !name_len )
 				{
 					log_and_remove_connection(
@@ -1237,86 +1231,85 @@ private:
 // connect_and_bind_handler_base_t
 //
 /*!
- * @brief Вспомогательный класс, который содержит функциональность,
- * необходимую для реализации команд CONNECT и BIND.
+ * @brief A helper base class with the functionality necessary for
+ * CONNECT and BIND connection-handlers.
  */
 class connect_and_bind_handler_base_t : public connection_handler_t
 {
 protected:
-	//! Буфер для ответного PDU.
+	//! Buffer for the reply.
 	out_buffer_fixed_t< 
 			1 // VER
 			+ 1 // REP
 			+ 1 // RESERVED
 			+ 1 // ATYP
-			+ 16 // BIND.ADDR (это максимальная длина для IPv6, DOMAINNAME мы
-				// здесь не используем).
+			+ 16 // BIND.ADDR (this is the max size for IPv6, we don't
+				// use DOMAINNAME here).
 			+ 2 // BIND.PORT
 		> m_response;
 
-	//! Имя пользователя.
+	//! User's name.
 	std::optional<std::string> m_username;
-	//! Пароль пользователя.
+	//! User's password.
 	std::optional<std::string> m_password;
 
-	//! Тип адреса на который мы должны подключиться.
+	//! Type of address of the target host.
 	using destination_addr_t = std::variant<
 			asio::ip::address_v4,
 			asio::ip::address_v6,
 			std::string
 		>;
 
-	//! Адрес целевого хоста.
+	//! The target host's address.
 	/*!
-	 * Это может быть IPv4 или IPv6 адрес, или же доменное имя
-	 * в виде строки.
+	 * It can be IPv4, IPv6 address or domain name in the form of a string.
 	 */
 	destination_addr_t m_dst_addr;
-	//! Порт целевого хоста.
+	//! The target host's port.
 	std::uint16_t m_dst_port;	
 
-	//! Итоговое имя хоста, к которому нужно подключаться.
+	//! The target host's name.
 	/*!
-	 * Имеет значение для аутентификации клиента.
+	 * It will play its role during the authentification/authorization.
 	 */
 	std::string m_target_host;
 
-	//! Итоговый адрес, на который нужно подключаться.
+	//! The resulting address of the target host.
 	/*!
-	 * В случае, если пользователь передал доменное имя,
-	 * значение здесь получается в результате резолвинга
-	 * доменного имени.
+	 * If the target is identified by domain name then m_target_endpoint
+	 * will receive the value after DNS resolution.
 	 */
 	std::optional< asio::ip::tcp::endpoint > m_target_endpoint;
 
-	//! Ограничитель трафика для этого подключения.
+	//! The traffic limiter for this connection.
 	/*!
-	 * Появляется только в результате успешной аутентификации.
+	 * We get it as the result of successful authentification.
 	 */
 	traffic_limiter_unique_ptr_t m_traffic_limiter;
 
-	//! Когда именно началась операция, время которой нужно
-	//! контролировать.
+	//! The timepoint of the beginning of the current operation.
+	/*!
+	 * Will be used for controlling the duration of the current operation.
+	 */
 	std::chrono::steady_clock::time_point m_last_op_started_at;
 
-	//! Тип указателя на метод, который контролирует длительность
-	//! последней начатой операции.
+	//! Type of method pointer that controls the duration of
+	//! the current operation.
 	using timeout_handler_t = void (*)(
 			connect_and_bind_handler_base_t &,
 			delete_protector_t,
 			can_throw_t);
 
-	//! Указатель на метод, который контролирует длительность
-	//! последней начатой операции.
+	//! The pointer to the method that controls the duration of
+	//! the current operation.
 	timeout_handler_t m_last_op_timeout_handler{
 			&connect_and_bind_handler_base_t::authentification_timeout_handler
 		};
 
 	/*!
 	 * @attention
-	 * Реализация этого метода исходит из того, что для случаев IPv4 и IPv6
-	 * в dst_addr_bytes будет находится ровно такое количество байт,
-	 * какое нам необходимо.
+	 * The implementation assumes that dst_addr_bytes contains the
+	 * valid number of bytes for IPv4 and IPv6 addresses.
 	 */
 	[[nodiscard]]
 	static destination_addr_t
@@ -1381,8 +1374,7 @@ protected:
 		wrap_action_and_handle_exceptions(
 			delete_protector,
 			[this]( delete_protector_t, can_throw_t can_throw ) {
-				// Начальные действия зависят от того, что нам
-				// передали в dst_addr.
+				// Starting action depends on the type of dst_addr.
 				std::visit( ::arataga::utils::overloaded{
 					[this, can_throw]( const asio::ip::address_v4 & ipv4 ) {
 						try_start_with_direct_address( can_throw, ipv4 );
@@ -1391,15 +1383,14 @@ protected:
 						try_start_with_direct_address( can_throw, ipv6 );
 					},
 					[this, can_throw]( const std::string & hostname ) {
-						// Имя целевого узла известно сразу.
-						// Сохраняем его для использования затем в процедуре
-						// аутентификации.
+						// The domain name of the target host is known.
+						// Store it now to be used later for authentification.
 						m_target_host = hostname;
 
-						// Поскольку процедура DNS lookup может быть достаточно
-						// дорогой, то сперва проводим аутентификацию пользователя.
-						// И только если если пользователю разрешается доступ
-						// к целевому узлу, тогда инициируем DNS lookup.
+						// DNS lookup can be a long operation.
+						// So we authenitificate the user first and only then
+						// initiate DNS lookup (in the case of successful
+						// authentification).
 						initiate_authentification( can_throw );
 					} },
 					m_dst_addr );
@@ -1420,10 +1411,10 @@ protected:
 			} );
 	}
 
-	//! Начать выполнение основной логики после успешной аутентификации
-	//! и DNS-resolving-а.
+	//! Start a main operation after the successful authentification
+	//! and DNS lookup.
 	/*!
-	 * Должен быть переопределен у наследника.
+	 * Should be implemented in a derived class.
 	 */
 	virtual void
 	initiate_next_step( can_throw_t ) = 0;
@@ -1477,8 +1468,8 @@ protected:
 		can_throw_t can_throw,
 		asio::ip::address_v4 ipv4 )
 	{
-		// Актуальный target-endpoint будет зависеть от того, смотрит
-		// ли ACL наружу как IPv4 или IPv6.
+		// The actual target-endpoint depends on the version of ACL's
+		// external IP.
 		if( context().config().out_addr().is_v6() )
 			m_target_endpoint = asio::ip::tcp::endpoint{
 					asio::ip::address{ ipv4 }.to_v6(),
@@ -1497,8 +1488,7 @@ protected:
 		can_throw_t can_throw,
 		asio::ip::address_v6 ipv6 )
 	{
-		// Если ACL смотрит наружу как IPv4, то мы не можем обработать
-		// подключение на IPv6 адрес.
+		// If ACL has IPv4 external IP then we can't handle IPv6 address.
 		if( context().config().out_addr().is_v4() )
 		{
 			send_negative_command_reply_then_close_connection(
@@ -1552,8 +1542,8 @@ protected:
 		context().async_authentificate(
 				m_id,
 				authentification::request_params_t {
-					// Пока работаем только с IPv4 адресами на входе,
-					// поэтому не ждем ничего другого.
+					// Now we are using IPv4 addresses, so don't
+					// expect something else.
 					m_connection.remote_endpoint().address().to_v4(),
 					m_username,
 					m_password,
@@ -1579,7 +1569,7 @@ protected:
 				[this, can_throw]
 				( const dns_resolving::hostname_found_t & info )
 				{
-					// Теперь мы точно знаем куда подключаться.
+					// Now we know the destination address.
 					m_target_endpoint = asio::ip::tcp::endpoint{
 							info.m_ip, m_dst_port
 						};
@@ -1589,9 +1579,9 @@ protected:
 				[this, can_throw]
 				( const dns_resolving::hostname_not_found_t & info )
 				{
-					// Информация о хосте не найдена.
-					// Осталось только залогировать этот факт, отослать
-					// отрицательный результат и закрыть подключение.
+					// Domain name is not resolved.
+					// We can only log that fack, send the negative reply
+					// and close the connection.
 					send_negative_command_reply_then_close_connection(
 							can_throw,
 							remove_reason_t::unresolved_target,
@@ -1613,10 +1603,9 @@ protected:
 				[this, can_throw]( authentification::success_t & info ) {
 					m_traffic_limiter = std::move(info.m_traffic_limiter);
 
-					// Если был указан hostname, то сперва нужно
-					// выполнить DNS lookup. Но если использовались
-					// прямые IP-адреса, то остается только подключаться
-					// к целевому узлу.
+					// If hostname was specified then we have to do DNS lookup.
+					// But if IP-address was specified then we can attempt to
+					// connect.
 					if( auto * hostname = std::get_if< std::string >(
 							&m_dst_addr ) )
 						initiate_hostname_resolving( can_throw, *hostname );
@@ -1624,9 +1613,9 @@ protected:
 						initiate_next_step( can_throw );
 				},
 				[this, can_throw]( const authentification::failure_t & info ) {
-					// Пользователю не разрешено обращаться к целевому узлу.
-					// Осталось только залогировать этот факт, отослать
-					// отрицательный результат и закрыть подключение.
+					// The user has no permission to access the target host.
+					// We can only log that fact, send the negative reply
+					// and close the connection.
 					send_negative_command_reply_then_close_connection(
 							can_throw,
 							remove_reason_t::access_denied,
@@ -1640,9 +1629,9 @@ protected:
 			result );
 	}
 
-	// Вспомогательный метод для упрощения процедуры закрытия
-	// входящего подключения в случаях, когда работа не может быть
-	// продолжена.
+	// Helper method for the simplification of procedure of
+	// closing the incoming connection in the cases, when the work
+	// can't be continued.
 	void
 	send_negative_command_reply_then_close_connection(
 		can_throw_t can_throw,
@@ -1677,7 +1666,7 @@ protected:
 		Out_Buffer & to,
 		const asio::ip::tcp::endpoint & endpoint_to_report ) noexcept
 	{
-		// Готовим ответ, который должен уйти клиенту.
+		// Prepare the outgoing reply.
 		to.write_byte( version_byte );
 		to.write_byte( command_reply_successed );
 		to.write_byte( std::byte{0x0} ); // RSV
@@ -1707,8 +1696,7 @@ protected:
 class connect_command_handler_t final
 	:	public connect_and_bind_handler_base_t
 {
-	//! Сокет, который будет использоваться для создания исходящего
-	//! подключения.
+	//! Socket to be used for outgoing connection.
 	asio::ip::tcp::socket m_out_connection;
 
 public:
@@ -1729,22 +1717,22 @@ public:
 				dst_addr,
 				dst_port
 			}
-		// Исходящий сокет привязываем к тому же io_context-у, к которому
-		// привязан и входящий сокет.
+		// Bind the outgoing socket to the same io_context that was
+		// used for incoming socket.
 		,	m_out_connection{ m_connection.get_executor() }
 	{}
 
-	// Т.к. экземпляр может быть уничтожен в процессе выполнения
-	// async_connect, то в своей реализации release() нужно закрывать
-	// out_connection.
+	// This instance can be destroyed when async_connect is in progress.
+	// Because of that we have to close out_connection in our
+	// release() implementation.
 	void
 	release() noexcept override
 	{
-		// Проглатываем возможные ошибки.
+		// Ignore all errors.
 		asio::error_code ec;
 		m_out_connection.close( ec );
 
-		// И позволяем очисить ресурсы базовому классу.
+		// The furher actions will be performed by the base class.
 		connect_and_bind_handler_base_t::release();
 	}
 
@@ -1761,10 +1749,11 @@ private:
 		delete_protector_t,
 		can_throw_t can_throw )
 	{
-		// Просто так обращаться к содержимому базового класса нельзя,
-		// поэтому используем тот факт, что self указывает на экземпляр
-		// производного класса.
-		// Если это не так, то выскочит исключение.
+		// We can't simply access the content via a reference to the base class,
+		// so just use the fact that self is pointed to
+		// connect_command_handler_t.
+		//
+		// It this is not the case then an exception will be thrown.
 		auto & this_class = dynamic_cast< connect_command_handler_t & >( self );
 
 		if( std::chrono::steady_clock::now() >=
@@ -1788,9 +1777,9 @@ private:
 
 		try
 		{
-			// К этому моменту m_target_endpoint должен быть заполнен.
-			// Специально это не контролируем, но обращение к его содержимому
-			// делаем через std::optional::value().
+			// Expect that m_target_endpoint has a value.
+			// Don't check that, but use std::optional::value() method
+			// that throws an exception.
 			auto & target_endpoint = m_target_endpoint.value();
 
 			asio::error_code ec;
@@ -1809,7 +1798,7 @@ private:
 				return;
 			}
 
-			// Новый сокет должен начать работать в неблокирующем режиме.
+			// The new socket should work in non-blocking mode.
 			m_out_connection.non_blocking( true, ec );
 			if( ec )
 			{
@@ -1825,11 +1814,11 @@ private:
 				return;
 			}
 
-			// Подключаться нужно с внешнего IP, поэтому привяжем исходящий сокет
-			// к этому IP.
+			// We should use the external IP of ACL, so bind outgoing socket
+			// to that IP.
 			m_out_connection.bind(
-					// Указываем 0 в качестве номера порта для того,
-					// чтобы пор выделила ОС.
+					// Use 0 as port number, in that case port will be assigned
+					// by the OS.
 					asio::ip::tcp::endpoint{ context().config().out_addr(), 0u },
 					ec );
 			if( ec )
@@ -1860,7 +1849,7 @@ private:
 										m_out_connection.local_endpoint() ) );
 					} );
 
-			// Осталось только выполнить подключение.
+			// Now we can initiate the connect.
 			m_out_connection.async_connect(
 					target_endpoint,
 					with<const asio::error_code &>().make_handler(
@@ -1895,8 +1884,8 @@ private:
 	{
 		if( ec )
 		{
-			// Если это не отмена операции, то проблему нужно залогировать,
-			// а клиенту следует отослать отрицательный ответ.
+			// If the operation wasn't cancelled then the problem should
+			// be logged and negative response has to be sent.
 			if( asio::error::operation_aborted != ec )
 			{
 				send_negative_command_reply_then_close_connection(
@@ -1933,18 +1922,18 @@ private:
 	make_and_send_positive_response_then_switch_handler(
 		can_throw_t can_throw )
 	{
-		// Готовим ответ, который должен уйти клиенту.
+		// Prepare the reply.
 		make_positive_response_content(
 				m_response, m_out_connection.local_endpoint() );
 
-		// Теперь пишем ответ и ждем его отправки...
+		// Now send the reply and wait for the completion...
 		write_whole(
 				can_throw,
 				m_connection,
 				m_response,
 				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 				{
-					// ...ответ отправлен, можно менять обработчика.
+					// ...the response is sent, we can replace the handler.
 					replace_handler(
 							delete_protector,
 							can_throw,
@@ -1967,7 +1956,7 @@ private:
 class bind_command_handler_t final
 	:	public connect_and_bind_handler_base_t
 {
-	//! Сокет, который будет использоваться для приема входящих соединений.
+	//! The socket to be used for accepting new incoming connections.
 	asio::ip::tcp::acceptor m_acceptor;
 
 public:
@@ -1988,22 +1977,20 @@ public:
 				dst_addr,
 				dst_port
 			}
-		// Acceptor-а привязываем к тому же io_context-у, к которому
-		// привязан и входящий сокет.
+		// Acceptor will be bound to the same io_context as the incoming socket.
 		,	m_acceptor{ m_connection.get_executor() }
 	{}
 
-	// Т.к. экземпляр может быть уничтожен в процессе выполнения
-	// async_accept, то в своей реализации release() нужно закрывать
-	// acceptor-а.
+	// The instance can be removed while async_accept is in progress.
+	// Therefore we have to close the acceptor manually.
 	void
 	release() noexcept override
 	{
-		// Проглатываем возможные ошибки.
+		// Ignore errors.
 		asio::error_code ec;
 		m_acceptor.close( ec );
 
-		// И позволяем очисить ресурсы базовому классу.
+		// The furher actions will be performed by the base class.
 		connect_and_bind_handler_base_t::release();
 	}
 
@@ -2020,10 +2007,11 @@ private:
 		delete_protector_t,
 		can_throw_t can_throw )
 	{
-		// Просто так обращаться к содержимому базового класса нельзя,
-		// поэтому используем тот факт, что self указывает на экземпляр
-		// производного класса.
-		// Если это не так, то выскочит исключение.
+		// We can't simply access the content via a reference to the base class,
+		// so just use the fact that self is pointed to
+		// bind_command_handler_t.
+		//
+		// It this is not the case then an exception will be thrown.
 		auto & this_class = dynamic_cast< bind_command_handler_t & >( self );
 
 		if( std::chrono::steady_clock::now() >=
@@ -2045,8 +2033,7 @@ private:
 		set_operation_started_markers(
 				&bind_command_handler_t::accept_incoming_timeout_handler );
 
-		// Вспомогательная функция для того, чтобы уменьшить объем кода
-		// по выполнению однотипных действий в случае ошибки.
+		// A helper function to reduce the amount of error-handling code.
 		const auto finish_on_failure =
 			[this, can_throw]( std::string message ) -> void {
 				send_negative_command_reply_then_close_connection(
@@ -2059,10 +2046,10 @@ private:
 
 		try
 		{
-			// Формируем адрес, на котором мы должны ждать подключения.
+			// The address for incoming connections.
 			const asio::ip::tcp::acceptor::endpoint_type new_entry_endpoint{
 					context().config().out_addr(),
-					0u // Просим операционку выдать нам номер порта.
+					0u // Port number will be assigned by the OS.
 			};
 
 			asio::error_code ec;
@@ -2093,8 +2080,8 @@ private:
 								ec.message() ) );
 			}
 
-			// Подключаться нужно с внешнего IP, поэтому привяжем точку
-			// входа к этому IP.
+			// An incoming connection should go to the external IP.
+			// Bind our acceptor to that IP.
 			m_acceptor.bind( new_entry_endpoint, ec );
 			if( ec )
 			{
@@ -2105,7 +2092,7 @@ private:
 								ec.message() ) );
 			}
 
-			// Ждем всего одного подключения.
+			// Wait for just one connection.
 			m_acceptor.listen( 1, ec );
 			if( ec )
 			{
@@ -2114,10 +2101,9 @@ private:
 								ec.message() ) );
 			}
 
-			// Клиент должен получить от нас информацию о том,
-			// что мы уже готовы принимать входящие подключения.
-			// А когда этот ответ будет записан, можно будет начать
-			// принимать новые соединения.
+			// The user should know that we are ready.
+			// New connection can be accepted after sending the reply
+			// to the user.
 			make_and_send_first_positive_response_then_initiate_accept(
 					can_throw );
 		}
@@ -2172,8 +2158,8 @@ private:
 	{
 		if( ec )
 		{
-			// Если это не отмена операции, то проблему нужно залогировать,
-			// а клиенту следует отослать отрицательный ответ.
+			// If the operation wasn't cancelled then the problem should be
+			// logged and the negative response should be sent to the user.
 			if( asio::error::operation_aborted != ec )
 			{
 				send_negative_command_reply_then_close_connection(
@@ -2204,21 +2190,21 @@ private:
 										m_acceptor.local_endpoint() ) );
 					} );
 
-			// Новое подключение должно прийти именно с того адреса,
-			// который был изначально указан в команде bind.
+			// The new connection is expected from the address specified
+			// in source BIND command.
 			if( in_connection_endpoint.address() !=
 					m_target_endpoint.value().address() )
 			{
-				// Это какое-то левое подключение, закрываем его.
+				// It's unexpected connection, close it.
 				connection.close();
 
-				// Инициируем прием нового подключения.
+				// New accept should be initiated.
 				initiate_async_accept( can_throw );
 			}
 			else
 			{
-				// Дождались нормального подключения. Отсылаем
-				// второй результат и ждем возможности поменять обработчик.
+				// Normal connection accepted. Send the second reply
+				// and wait a possibility to replace connection-handler.
 				make_send_second_positive_response_then_switch_handler(
 						can_throw,
 						in_connection_endpoint,
@@ -2231,19 +2217,17 @@ private:
 	make_and_send_first_positive_response_then_initiate_accept(
 		can_throw_t can_throw )
 	{
-		// Готовим ответ, который должен уйти клиенту.
 		make_positive_response_content(
 				m_response,
 				m_acceptor.local_endpoint() );
 
-		// Теперь пишем ответ.
 		write_whole(
 				can_throw,
 				m_connection,
 				m_response,
 				[this]( delete_protector_t, can_throw_t can_throw )
 				{
-					// ...ответ отправлен, можно принимать входящие подключения.
+					// The reply is sent, now we can accept incoming connections.
 					initiate_async_accept( can_throw );
 				} );
 	}
@@ -2254,14 +2238,12 @@ private:
 		asio::ip::tcp::endpoint in_connection_endpoint,
 		asio::ip::tcp::socket connection )
 	{
-		// К этому моменту в m_response уже ничего важного
-		// не должно было остаться.
+		// Expect that m_response doesn't contain anything important now.
 		m_response.reset();
 		make_positive_response_content(
 				m_response,
 				in_connection_endpoint );
 
-		// Теперь пишем ответ и ждем его отправки...
 		write_whole(
 				can_throw,
 				m_connection,
@@ -2270,7 +2252,7 @@ private:
 					delete_protector_t delete_protector,
 					can_throw_t can_throw ) mutable
 				{
-					// ...ответ отправлен, можно менять обработчика.
+					// The reply has been sent, now we can replace the handler.
 					replace_handler(
 							delete_protector,
 							can_throw,
