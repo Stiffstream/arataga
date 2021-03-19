@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Базовые вещи для реализации HTTP connection-handler-ов.
+ * @brief Basic stuff for implementation of HTTP connection-handlers.
  */
 
 #include <arataga/acl_handler/handlers/http/basics.hpp>
@@ -63,12 +63,12 @@ handler_with_out_connection_t::handler_with_out_connection_t(
 void
 handler_with_out_connection_t::release() noexcept
 {
-	// Проглатываем возможные ошибки.
+	// Ignore errors.
 	asio::error_code ec;
 	m_out_connection.shutdown( asio::ip::tcp::socket::shutdown_both, ec );
 	m_out_connection.close( ec );
 
-	// И позволяем очисить ресурсы базовому классу.
+	// Let's the base class completes the release.
 	basic_http_handler_t::release();
 }
 

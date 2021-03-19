@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Перечень фабрик для создания HTTP connection-handler-ов.
+ * @brief A list of factories for HTTP connection-handlers.
  */
 #pragma once
 
@@ -52,10 +52,10 @@ make_target_connector_handler(
 	traffic_limiter_unique_ptr_t traffic_limiter );
 
 //
-// Примечание: у фабрик make_connect_method_handler и
-// make_ordinary_method_handler специально сделан одинаковый
-// интерфейс для того, чтобы можно было использовать один
-// и тот же тип указателя на функцию.
+// Note: factories make_connect_method_handler and
+// make_ordinary_method_handler have the same prototypes.
+// It was made intentionaly. That allows to use them via
+// a common type of pointer to function.
 //
 [[nodiscard]]
 connection_handler_shptr_t

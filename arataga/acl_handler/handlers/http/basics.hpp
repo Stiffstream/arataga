@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Базовые вещи для реализации HTTP connection-handler-ов.
+ * @brief Basic stuff for implementation of HTTP connection-handlers.
  */
 
 #pragma once
@@ -24,26 +24,25 @@ namespace handlers::http
 {
 
 /*!
- * @brief Объект для хранения информации для парсинга HTTP-сообщений.
+ * @brief Storage for data required for parsing of a HTTP-request.
  *
- * К этой информации относятся:
+ * This data includes:
  *
- * - объект http_parser, который и производит парсинг;
- * - буфер с данными подлежащими разбору (в том числе и количество
- *   данных в этом буфере);
- * - позиция, с которой должна начинаться следующая попытка разбора.
+ * - http_parser object that holds the state of request parsing;
+ * - buffer with incoming data to be parsed (including the size of
+ *   the data in the buffer);
+ * - the position in the buffer for the next parsing step.
  *
- * Предполагается, что объект данного типа будет создан при принятии
- * нового входящего соединения (или при создании нового исходящего
- * соединения), после чего будет сопровождать это соединение по мере
- * передачи его между connection-handler-ами.
+ * It's assumed that an instance of that type will be created when
+ * a new request is received (or when a new outgoing connection is
+ * created) and then will be transferred from one connection-handler
+ * to another.
  *
  * @note
- * В этом объекте есть http_parser, но нет http_parser_settings,
- * т.к. http_parser_settings зависит от connection-handler-а.
- * И каждый connection-handler, который будет обрабатывать
- * входящие HTTP-сообщения, будет создавать собственные экземпляры
- * http_parser_settings.
+ * This object holds http_parser but doesn't contain http_parser_settings
+ * because a particular http_parser_settings depends on connection-handler.
+ * Every connection-handler that needs to parse HTTP-request will create
+ * own instance of http_parser_settings.
  */
 struct http_handling_state_t
 {
@@ -82,53 +81,49 @@ struct http_handling_state_t
 };
 
 /*!
- * @brief Псевдоним unique_ptr для http_handling_state.
+ * @brief Alias for unique_ptr to http_handling_state.
  */
 using http_handling_state_unique_ptr_t = std::unique_ptr<
 		http_handling_state_t
 	>;
 
 /*!
- * @brief Тип объекта для хранения информации о входящем HTTP-запросе,
- * которая накапливается по мере разбора запроса.
+ * @brief Type of object for collecting additional info about HTTP-request.
  *
- * Объект типа http_handling_state_t хранит "сырую" информацию из
- * соединения, которая затем подвергается парсингу и обработке.
- * Результат этой обработки собирается в объекте request_info_t,
- * который создается при начале обработки очередного HTTP-запроса.
+ * An instance of http_handling_state_t holds "raw" data related to
+ * a HTTP-request. Various artefacts produced during the processing
+ * of that "raw" data are collected inside an instance of
+ * request_info_t type.
  */
 struct request_info_t
 {
-	//! HTTP-метод для запроса.
+	//! HTTP-method of the request.
 	/*!
-	 * Сохраняется в request_info для того, чтобы к нему было легко
-	 * и удобно получать доступ.
+	 * It is stored here to be easily accessible.
 	 */
 	http_method m_method;
 
-	//! Значение request-target из start-line.
+	//! The value of request-target from the start-line.
 	std::string m_request_target;
 
-	//! Разобранные заголовки из входящего запроса.
+	//! Parsed HTTP header fields from the incoming request.
 	restinio::http_header_fields_t m_headers;
 
-	//! Значение target_host для запроса.
+	//! The target-host value for the request.
 	/*!
-	 * Это значение извлекается либо из заголовка Host, либо из
-	 * request-target.
+	 * This value is extracted from Host field or from request-target.
 	 */
 	std::string m_target_host;
-	//! Значение target_port для запроса.
+	//! The target-port value for the request.
 	/*!
-	 * Это значение извлекается либо из заголовка Host, либо из
-	 * request-target.
+	 * This value is extracted from Host field of from request-target.
 	 */
 	std::uint16_t m_target_port{ 80u };
 
-	//! Нужно ли сохранять соединение с клиентом после обработки запроса.
+	//! Should the connection be kept after the processing of the request.
 	/*!
-	 * Т.к. мы работаем по HTTP/1.1, то по умолчанию соединение нужно
-	 * сохранять.
+	 * Because we are working with HTTP/1.1 the connection should be kept
+	 * by default.
 	 */
 	bool m_keep_user_end_alive{ true };
 };
@@ -137,10 +132,9 @@ struct request_info_t
 // basic_http_handler_t
 //
 /*!
- * @brief Базовый класс для актуальных обработчиков HTTP-соединений.
+ * @brief Base class for implementations of HTTP connection-handlers.
  *
- * Содержит в себе методы, которые потребуются в одном и том же виде
- * остальным обработчикам.
+ * Containts the stuff necessary for all other HTTP connection-handlers.
  */
 class basic_http_handler_t : public connection_handler_t
 {
@@ -148,8 +142,8 @@ public:
 	using connection_handler_t::connection_handler_t;
 
 protected:
-	// ПРИМЕЧАНИЕ! Заменяет текущий connection_handler новым
-	// обработчиком, который и отсылает отрицательный ответ.
+	// ATTENTION: replaces the current connection_handler by a new one.
+	// That new handler does the send of negative response.
 	void
 	send_negative_response_then_close_connection(
 			delete_protector_t delete_protector,
@@ -162,30 +156,27 @@ protected:
 // handler_with_out_connection_t
 //
 /*!
- * @brief Базовый класс для актуальных обработчиков HTTP-соединений
- * которые имеют еще и исходящее соединение.
+ * @brief Base class for implementations of HTTP connection-handlers
+ * that require an outgoing connection.
  *
- * Содержит поле m_out_connection.
+ * Contains m_out_connection for outgoing connection.
  *
- * Переопределяет метод release() для принудительного
- * закрытия m_out_connection.
+ * Reimplements release() for closing m_out_connection.
  */
 class handler_with_out_connection_t : public basic_http_handler_t
 {
 protected:
-	//! Исходящее соединение.
+	//! Outgoing connection to the target host.
 	asio::ip::tcp::socket m_out_connection;
 
 public:
-	//! Конструктор для случая, когда исходящее соединение
-	//! не нужно инициализировать конкретным сокетом.
+	//! Constructor for the case when there is no outgoing connection yet.
 	handler_with_out_connection_t(
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket in_connection );
 
-	//! Конструктор для случая, когда для исходящего соединения
-	//! уже есть открытый сокет.
+	//! Constructor for the case when an outgoing connection already exists.
 	handler_with_out_connection_t(
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
