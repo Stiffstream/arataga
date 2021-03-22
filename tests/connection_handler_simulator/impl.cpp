@@ -230,26 +230,25 @@ public:
 	void
 	so_evt_start() override
 	{
-		// Нужно открыть серверный сокет.
+		// The server socket has to be opened.
 		m_acceptor = std::make_unique< asio::ip::tcp::acceptor >(
 				m_io_ctx,
 				m_entry_point,
 				true /* SO_REUSEADDR */ );
 		m_acceptor->non_blocking( true );
 
-		// Теперь можно запустить таймер для вызова on_timer у handler-ов.
-		// Запускаем с более высоким темпом, т.к. в тестах времена
-		// будут не такими большими, как в основном приложении.
+		// A timer for calling on_timer for connection-handlers.
+		// Run it at a faster pace because execution times in tests won't be big.
 		m_timer = so_5::send_periodic< timer_t >( *this, 100ms, 100ms );
 
-		// Начинаем принимать новые подключения.
+		// Start acception new connections.
 		accept_next();
 	}
 
 	void
 	so_evt_finish() override
 	{
-		// Очищаем все, чем владеем.
+		// Cleanup sockets.
 		m_acceptor->close();
 		m_connections.clear();
 	}
@@ -270,9 +269,8 @@ public:
 						old_handler->name(),
 						info.handler()->name() ) );
 
-		// Новый обработчик должен быть запущен.
-		// ВНИМАНИЕ: в процессе выполнения этой операции обработчик
-		// может быть заменен еще раз.
+		// A new handler has to be started.
+		// ATTENTION: this handler can be replaced inside on_start call.
 		info.handler()->on_start();
 	}
 
@@ -382,7 +380,7 @@ public:
 	stats_inc_connection_count(
 		aclh::connection_type_t /*connection_type*/ ) override
 	{
-		// Ничего делать не нужно.
+		// Nothing to do.
 	}
 
 private:
@@ -392,13 +390,12 @@ private:
 	{
 		aclh::connection_handler_shptr_t m_handler;
 
-		// Конструктор копирования должен быть запрещен для этого типа.
+		// The copy constructor should be disabled for that type.
 		connection_info_t( const connection_info_t & ) = delete;
 		connection_info_t &
 		operator=( const connection_info_t & ) = delete;
 
-		// Принудительный вызов release для обработчика,
-		// который больше не нужен.
+		// Forces the release of a handler that is no longer needed.
 		static void
 		release_handler( const aclh::connection_handler_shptr_t & handler_ptr )
 		{
@@ -407,7 +404,7 @@ private:
 		}
 
 	public:
-		// Только конструктор и оператор перемещения доступны.
+		// Only move-constructor and move-operator are available.
 		connection_info_t( connection_info_t && ) = default;
 		connection_info_t &
 		operator=( connection_info_t && ) = default;
@@ -419,9 +416,8 @@ private:
 
 		~connection_info_t()
 		{
-			// Перед уничтожением m_handler нужно обязательно
-			// сделать вызов release(), чтобы завершить все текущие
-			// IO-операции.
+			// Have to call release() before the deletion of the handle
+			// to finish all active I/O operations.
 			release_handler( m_handler );
 		}
 
@@ -432,8 +428,8 @@ private:
 			return m_handler;
 		}
 
-		// Замена старого обработчика на новый.
-		// Для старого обработчика автоматически вызывается release.
+		// Replace the current handler to a new one.
+		// The release() method is automatically called for the current handler.
 		aclh::connection_handler_shptr_t
 		replace( aclh::connection_handler_shptr_t new_handler )
 		{
@@ -471,9 +467,9 @@ private:
 	{
 		for( auto it = m_connections.begin(); it != m_connections.end(); )
 		{
-			// Держим указатель у себя до тех пор, пока не завершится on_timer.
+			// Hold the pointer until on_timer completes.
 			auto handler = it->second.handler();
-			++it; // Обязательно идем к следующему элементу пока it валиден.
+			++it; // Go to the next item while 'it' is valid.
 
 			handler->on_timer();
 		}
@@ -513,20 +509,19 @@ private:
 	accept_new_connection(
 		asio::ip::tcp::socket connection )
 	{
-		// Для нового подключения нужен новый ID.
+		// New ID for the new connection.
 		const auto id = ++m_connection_id_counter;
 
-		// Для нового подключения нужен начальный обработчик.
+		// Initial handler for the new connection.
 		auto handler = aclh::make_protocol_detection_handler(
 				aclh::handler_context_holder_t{ so_5::make_agent_ref(this), *this },
 				id,
 				std::move(connection) );
 
-		// Запускаем начальный обработчик.
+		// The initial handler should start its work.
 		handler->on_start();
 
-		// Новое соединение должно быть сохранено в списке известных
-		// нам подключений.
+		// The new connection has to be stored.
 		m_connections.emplace( id,
 				connection_info_t{ std::move(handler) } );
 	}
@@ -539,7 +534,7 @@ struct simulator_t::internals_t
 
 	internals_t()
 		:	m_sobjectizer{
-				[]( so_5::environment_t & ) { /* ничего не делаем */ }
+				[]( so_5::environment_t & ) { /* nothing to do */ }
 			}
 	{}
 };
@@ -566,7 +561,7 @@ simulator_t::simulator_t(
 						return simulator->so_direct_mbox();
 					} );
 
-	// Нужно подождать, пока симулятор будет готов.
+	// Have to wait readiness of the simulator.
 	(void)a_handler_t::is_ready_dialog_t::ask_value( m_impl->m_simulator_mbox, 2s );
 }
 

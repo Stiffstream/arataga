@@ -101,7 +101,7 @@ TEST_CASE("Normal request without trailing headers") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать положительный ответ.
+	// A positive response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -202,7 +202,7 @@ TEST_CASE("Request with trailing headers") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать положительный ответ.
+	// A positive response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -314,7 +314,7 @@ TEST_CASE("Response with trailing headers") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать положительный ответ.
+	// A positive response is expected.
 	{
 		std::string response;
 		REQUIRE_NOTHROW(

@@ -73,7 +73,7 @@ TEST_CASE("no command PDU") {
 
 	write_auth_pdu( connection );
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -111,7 +111,7 @@ TEST_CASE("partial command PDU") {
 		REQUIRE_NOTHROW( asio::write(connection, asio::buffer(data)) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -150,7 +150,7 @@ TEST_CASE("command PDU with unsupported ATYP") {
 		REQUIRE_NOTHROW( asio::write(connection, asio::buffer(data)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< std::uint8_t, 4 > data;
 		REQUIRE_NOTHROW( asio::read(connection, asio::buffer(data)) );
@@ -158,7 +158,7 @@ TEST_CASE("command PDU with unsupported ATYP") {
 		REQUIRE( expected == data );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -197,7 +197,7 @@ TEST_CASE("command PDU with empty domain name") {
 		REQUIRE_NOTHROW( asio::write(connection, asio::buffer(data)) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -251,7 +251,7 @@ TEST_CASE("slow send") {
 		std::cout << std::endl;
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< std::uint8_t, 4 > data;
 		REQUIRE_NOTHROW( asio::read(connection, asio::buffer(data)) );
@@ -259,7 +259,7 @@ TEST_CASE("slow send") {
 		REQUIRE_NOTHROW( expected == data );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -286,7 +286,7 @@ TEST_CASE("connect command with unknown hostname") {
 	asio::ip::tcp::socket connection{ ctx };
 	REQUIRE_NOTHROW( connection.connect( proxy_endpoint ) );
 
-	// Теперь имя пользователя должно быть корректным.
+	// Now the user name should be correct.
 	write_auth_pdu( connection, "user", "12345" );
 
 	{
@@ -299,7 +299,7 @@ TEST_CASE("connect command with unknown hostname") {
 		REQUIRE_NOTHROW( asio::write(connection, asio::buffer(data)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< std::uint8_t, 4 > data;
 		REQUIRE_NOTHROW( asio::read(connection, asio::buffer(data)) );
@@ -307,7 +307,7 @@ TEST_CASE("connect command with unknown hostname") {
 		REQUIRE( expected == data );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -346,7 +346,7 @@ TEST_CASE("connect command with unknown user") {
 		REQUIRE_NOTHROW( asio::write(connection, asio::buffer(data)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< std::uint8_t, 4 > data;
 		REQUIRE_NOTHROW( asio::read(connection, asio::buffer(data)) );
@@ -354,7 +354,7 @@ TEST_CASE("connect command with unknown user") {
 		REQUIRE( expected == data );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;

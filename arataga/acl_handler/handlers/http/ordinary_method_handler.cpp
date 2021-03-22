@@ -1677,7 +1677,6 @@ private:
 				src_dir.m_pieces_read.pop_front();
 
 			// If there is some remaining data it has to be written.
-			// Если есть еще что записывать, запишем и это.
 			if( !src_dir.m_pieces_read.empty() )
 				write_data_read_from( can_throw, src_dir, dest_dir );
 			else

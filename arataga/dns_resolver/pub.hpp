@@ -220,7 +220,6 @@ struct resolve_reply_t final : public so_5::message_t
 	resolve_req_id_t m_req_id;
 
 	//! Completion token from the source request.
-	//! Токен для завершения обработки запроса.
 	/*!
 	 * @note
 	 * Maybe a nullptr.

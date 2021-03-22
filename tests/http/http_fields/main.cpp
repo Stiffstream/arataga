@@ -50,7 +50,7 @@ TEST_CASE("headers without the body") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -60,7 +60,7 @@ TEST_CASE("headers without the body") {
 				response, "HTTP/1.1 408 Request Timeout\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -110,7 +110,7 @@ TEST_CASE("severals Host headers") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -120,7 +120,7 @@ TEST_CASE("severals Host headers") {
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -172,7 +172,7 @@ TEST_CASE("request-target too long") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -182,7 +182,7 @@ TEST_CASE("request-target too long") {
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -235,7 +235,7 @@ TEST_CASE("HTTP-field name too long") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -245,7 +245,7 @@ TEST_CASE("HTTP-field name too long") {
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -298,7 +298,7 @@ TEST_CASE("HTTP-field value too long") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -308,7 +308,7 @@ TEST_CASE("HTTP-field value too long") {
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -364,7 +364,7 @@ TEST_CASE("total http-fields size too big") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -374,7 +374,7 @@ TEST_CASE("total http-fields size too big") {
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;

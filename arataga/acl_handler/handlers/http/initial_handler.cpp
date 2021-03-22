@@ -562,7 +562,7 @@ private:
 	on_chunk_complete_for_bodyful_method(
 		can_throw_t can_throw )
 	{
-		// На этой стадии мы не должны иметь дел с chunk-ами.
+		// Do not deal with chunks on that stage.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::err,

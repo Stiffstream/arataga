@@ -49,7 +49,7 @@ TEST_CASE("invalid value (no username/password in Proxy-Authorization)") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// Negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -59,7 +59,7 @@ TEST_CASE("invalid value (no username/password in Proxy-Authorization)") {
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -106,7 +106,7 @@ TEST_CASE("invalid value (garbage instead username/password in "
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -116,7 +116,7 @@ TEST_CASE("invalid value (garbage instead username/password in "
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -162,7 +162,7 @@ TEST_CASE("no basic-auth") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -172,7 +172,7 @@ TEST_CASE("no basic-auth") {
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -217,7 +217,7 @@ TEST_CASE("no target-host and port") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -227,7 +227,7 @@ TEST_CASE("no target-host and port") {
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -273,7 +273,7 @@ TEST_CASE("empty value of Host HTTP-field") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -283,7 +283,7 @@ TEST_CASE("empty value of Host HTTP-field") {
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -329,7 +329,7 @@ TEST_CASE("invalue value of Host HTTP-field") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< char, 512 > data;
 		std::size_t bytes_read;
@@ -339,7 +339,7 @@ TEST_CASE("invalue value of Host HTTP-field") {
 				response, "HTTP/1.1 400 Bad Request\r\n"sv ) );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;

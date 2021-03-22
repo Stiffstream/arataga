@@ -33,7 +33,7 @@ TEST_CASE("no first PDU") {
 	std::cout << "Do nothing for 1 second..." << std::endl;
 	std::this_thread::sleep_for( 1s );
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	asio::error_code ec;
 	REQUIRE_NOTHROW( connection.read_some( asio::buffer(data), ec ) );
 	REQUIRE( asio::error::eof == ec );
@@ -63,7 +63,7 @@ TEST_CASE("only one byte in PDU") {
 	REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(data) ) );
 	REQUIRE( 1u == written );
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	asio::error_code ec;
 	REQUIRE_NOTHROW( connection.read_some( asio::buffer(data), ec ) );
 	REQUIRE( asio::error::eof == ec );
@@ -96,7 +96,7 @@ TEST_CASE("invalid size of the first PDU") {
 	REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(data) ) );
 	REQUIRE( data.size() == written );
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	asio::error_code ec;
 	REQUIRE_NOTHROW( connection.read_some( asio::buffer(data), ec ) );
 	REQUIRE( asio::error::eof == ec );
@@ -129,7 +129,7 @@ TEST_CASE("garbage at the end of the first PDU") {
 	REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(data) ) );
 	REQUIRE( data.size() == written );
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	asio::error_code ec;
 	REQUIRE_NOTHROW( connection.read_some( asio::buffer(data), ec ) );
 	REQUIRE( asio::error::eof == ec );
@@ -163,7 +163,7 @@ TEST_CASE("no appropriate auth method") {
 	REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(data) ) );
 	REQUIRE( data.size() == written );
 
-	// В ответ должны прочитать два байта.
+	// 2 bytes in the response are expected.
 	std::array< std::uint8_t, 20 > response;
 	std::size_t bytes_read;
 	REQUIRE_NOTHROW( bytes_read = connection.read_some( asio::buffer(response) ) );
@@ -172,7 +172,7 @@ TEST_CASE("no appropriate auth method") {
 	REQUIRE( 0x5u == response[ 0 ] );
 	REQUIRE( 0xffu == response[ 1 ] );
 
-	// После этого соединение должно быть закрыто на другой стороне.
+	// The connection should closed on remote side after that.
 	asio::error_code ec;
 	REQUIRE_NOTHROW( connection.read_some( asio::buffer(data), ec ) );
 	REQUIRE( asio::error::eof == ec );

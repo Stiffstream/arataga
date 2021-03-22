@@ -219,7 +219,7 @@ private:
 	//! The current period for cache cleanup procedures.
 	std::chrono::milliseconds m_cache_cleanup_period;
 
-	//! Экземпляр resolver-а из asio.
+	//! The Asio's resolver instance to be used.
 	asio::ip::tcp::resolver m_resolver;
 
 	//! The local cache for domain name.

@@ -643,8 +643,8 @@ class no_authentification_handler_t final : public connection_handler_t
 	 */
 	in_buffer_fixed_t<
 			1 // VER
-			+ 1 // ULEN, должен быть 0.
-			+ 1 // PLEN, должен быть 0.
+			+ 1 // ULEN, has to be 0.
+			+ 1 // PLEN, has to be 0.
 		> m_auth_pdu;
 
 	//! Buffer for the reply.
@@ -881,7 +881,7 @@ class command_handler_t final : public connection_handler_t
 			+ 1 // CMD
 			+ 1 // RESERVED
 			+ 1 // ATYP
-			+ 256 // DST.ADDR (это максимальная возможная длина).
+			+ 256 // DST.ADDR (it's the max possible length).
 			+ 2 // DST.PORT
 		> m_command_pdu;
 

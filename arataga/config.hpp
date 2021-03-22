@@ -269,7 +269,6 @@ struct common_acl_params_t
 
 	/*!
 	 * @brief Max count of buffers for I/O ops on single connection.
-	 * @brief Максимальное количество буферов ввода-вывода на одном соединении.
 	 *
 	 * Since v.0.2.0 several buffers can be used for I/O operations
 	 * for data transfer. While one buffer is used for reading another

@@ -44,7 +44,7 @@ struct updated_dns_params_t final : public so_5::message_t
  */
 struct updated_common_acl_params_t final : public so_5::message_t
 {
-	//! Обновленные параметры.
+	//! New parameters.
 	const common_acl_params_t m_params;
 
 	updated_common_acl_params_t(

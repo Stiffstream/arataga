@@ -67,7 +67,7 @@ write_bind_pdu(
 				+ 1 // CMD
 				+ 1 // RESERVED
 				+ 1 // ATYP
-				+ 256 // DST.ADDR (это максимальная возможная длина).
+				+ 256 // DST.ADDR (it's the max possible length).
 				+ 2 // DST.PORT
 			> data;
 
@@ -110,7 +110,7 @@ TEST_CASE("no connection from target-end") {
 	write_auth_pdu( connection, "user", "12345" );
 	write_bind_pdu( connection, "localhost", 3333 );
 
-	// Должны прочитать положительный ответ.
+	// A positive response is expected.
 	{
 		std::array< std::uint8_t,
 				1 // VER
@@ -136,7 +136,7 @@ TEST_CASE("no connection from target-end") {
 
 	chs::dump_trace( (std::cout << "***\n"), simulator.get_trace() );
 
-	// Далее должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< std::uint8_t,
 				1 // VER
@@ -179,7 +179,7 @@ TEST_CASE("connection from target-end") {
 
 	chs::dump_trace( (std::cout << "***\n"), simulator.get_trace() );
 
-	// Должны прочитать положительный ответ.
+	// A positive response is expected.
 	std::uint16_t listening_port{ 0u };
 	{
 		std::array< std::uint8_t,
@@ -220,7 +220,7 @@ TEST_CASE("connection from target-end") {
 			} )
 	);
 
-	// Далее должны прочитать отрицательный ответ.
+	// A negative response is expected.
 	{
 		std::array< std::uint8_t,
 				1 // VER

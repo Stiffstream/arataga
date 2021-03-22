@@ -21,7 +21,7 @@ get_proxy_endpoint_from_envvar(
 		};
 
 	std::string_view value{ raw_value };
-	// Нужно найти номер порта.
+	// Have to find port number.
 	const auto colon_pos = value.find( ':' );
 	if( colon_pos == std::string_view::npos )
 		throw std::runtime_error{
