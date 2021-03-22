@@ -1,44 +1,45 @@
-# Описание структуры и содержимого конфигурационного файла
+# The desctiption of the structure and content of the config file
 
-## Пустые строки, комментарии и команды
+## Empty lines, comments and commands
 
-Конфигурационный файл обрабатывается построчно. Каждая строка может быть:
+The configuration file is processed line by line. Each line can be:
 
-* пустой строкой. Т.е. не содержит ничего кроме пробельных символов;
-* комментарием. Комментарием считается строка, у которой первый непробельный символ -- это символ решетка ('#').
-* команда. Строка, первый непробельный символ в которой отличается от символа решетка ('#') считается командой.
+* an empty line, i.e. does not contain anything but whitespace characters;
+* A comment. A comment is a line, where the first non-space character is a trellis `#`.
+* command. A string whose first nonwhite character is different from `#` character is considered a command.
 
-Например:
+For example:
 ```
-# Комментарий, после которого идет несколько пустых строк.
+# A comment with several empty lines below.
 
 
-   # Это также комментарий, т.к. перед решеткой только пробелы.
-	  # # # ##### И это комментарий.
+   # This is also a comment.
+	  # # # ##### And this is a comment too.
 
-# Следующая строка является командой.
+# The next line is a command.
 log_level debug
 
-# Дальше еще несколько команд.
+# Yet more commands below.
 bandlim.in 500kib
 bandlim.out 500kib
 acl.max.conn 1000
 ```
 
-**Примечание.** Комментарий должен занимать всю строку. Нельзя указывать комментарии в той же строке, где указана команда. Например, вот правильный комментарий:
+**Note.**The comment must occupy the entire line. You cannot put comments on the same line as the command. For example, here is a valid comment:
 ```
-# Нет ограничений.
+# No limits.
 bandlim.in 0
 ```
-Тогда как вот это неправильно:
+But this is wrong:
 ```
-bandlim.in 0 # Нет ограничений.
+bandlim.in 0 # No limits.
 ```
-т.к. в этом случае часть `# Нет ограничений` будет относиться к команде `bandlim.in` и вызовет ошибку разбора команды.
+because in that case `# No limits` will be treated as a part of `bandlim.in` commands, and will cause a parsing error.
 
-## Повторяющиеся команды
+## Repeated commands
 
-Если команда повторяется несколько раз, то каждое последующее вхождение команды заменяет значение, заданное предыдущим значением. Например:
+If a command is specified several times then each subsequent occurrence of the command replaces the value given by the previous occurrence. For example:
+
 ```
 bandlim.in 100
 
@@ -48,66 +49,65 @@ bandlim.in 100kib
 
 bandlim.in 5mib
 ```
-В этом случае итоговым значением для `bandlim.in` будет 5MiB, а все предыдущие значения будут проигнорированы.
 
-Исключением является команда `acl`.
+In that case the the result value for `bandlim.in` will be 5MiB, all the previous values will be ignored.
 
-## Пример конфига
+The only exception is `acl` command.
+
+## An example of config file
 
 ```
-# Делаем подробное логирование.
+# Set the log level.
 log_level trace
 
-# Выставляем лимиты по умолчанию.
-# Эти значения будут использоваться если для клиента нет собственных
-# индивидуальных лимитов.
+# Set default bandwidth limits.
+# Those values will be used if a user has no personal limits.
 bandlim.in 700kib
 bandlim.out 700kib
 
-# Максимальное количество одновременных подключений к ACL.
+# Max number of parallel active connections to a single ACL.
 acl.max.conn 150
 
-# Размер буфера для передачи данных между клиентом и удаленным узлом.
+# Size of I/O buffer for data transfer.
 acl.io.chunk_size 4kib
 
-# Список запрещенных портов, на которые клиентом запрещенно подключаться
-# на удаленных узлах.
+# A list of denied ports. Users can't connect to those ports on target hosts.
 denied_ports 25, 83, 100-110, 465, 587
 
-# Список ACL.
+# List of ACL.
 acl socks, port=3010, in_ip=127.0.0.1, out_ip=192.168.100.1
 acl socks, port=3011, in_ip=127.0.0.1, out_ip=192.168.100.1
 ```
 
-## Список команд
+## Config file commands
 
 ### acl
 
-Описывает один ACL. Каждая команда описывает новый ACL.
+Defines a single ACL. Every occurrence of ACL command defines a new ACL.
 
-Формат:
+Format:
 ```
 acl <TYPE>, <PARAMETERS>
 ```
-Где TYPE может иметь одно из следующих значений:
+Where TYPE can have one of the following values:
 
-* `auto`. Тип ACL будет определяться автоматически в зависимости от протокола, который использует клиент;
-* `socks`. ACL обслуживает только протокол SOCKS;
-* `http`. ACL обслуживает только протокол HTTP 1.1.
+* `auto`. The type of the protocol will be detected automatically;
+* `socks`. ACL will serve only SOCKS5 protocol;
+* `http`. ACL will serve only HTTP/1.1 protocol.
 
-Параметры:
+Parameters:
 
-* `port`. Номер TCP-порта, который открывается для подключения клиентов;
-* `in_ip`. IPv4-адрес, на котором ACL ждет подключений клиентов;
-* `out_ip`. IP-адрес, с которого ACL выполняет подключения к удаленным узлам. Это может быть IPv4 или IPv6 адрес.
+* `port`. TCP-port for accepting incoming connections from users;
+* `in_ip`. IPv4 address for accepting incoming connections from users;
+* `out_ip`. IP address to be used as the source for outgoing connections. It can be either an IPv4 or IPv6 address.
 
-Параметры записываются в формате `имя=значение` и разделяются запятыми.
+Parameters are specified in the format `name=value` and are separated by commas.
 
-Порядок следования параметров после TYPE не имеет значения.
+The order of parameters after TYPE isn't significant.
 
-**Примечание.** В каждой команде `acl` должна быть задана уникальная пара `in_ip` и `port`.
+**Attention.** Every `acl` command should have an unique pair `in_ip` and `port`.
 
-Пример:
+Example:
 
 ```
 acl socks, port=8000, in_ip=127.0.0.1, out_ip=192.168.100.1
@@ -116,45 +116,45 @@ acl auto, in_ip=192.168.100.1, port=3000, out_ip=192.168.100.1
 
 ### acl.io.chunk_count
 
-Задает количество буферов ввода-вывода, которые используются для обмена данными между клиентом и целевым узлом.
+Specifies a number of I/O buffers to be used for data transfer between a user and the target host.
 
-Формат:
+Format:
 ```
 acl.io.chunk_count UINT
 ```
 
-Значение не может быть нулем.
+The value can be zero.
 
-Нужно принимать во внимание что такое количество буферов создается для каждого соединения. Т.е. `chunk_count` буферов будет создано для обслуживания соединения между клиентом и arataga. И еще столько же будет создано для обслуживания соединения между arataga и целевым узлом. Фактически, при нормальной работе после установки всех соединений и после начала передачи данных, будет использоваться `chunk_count*2` буферов ввода-вывода.
+Note that this number of buffers is created for each connection. That is, `chunk_count` of buffers will be created to serve the connection between the client and arataga. And the same number will be created to serve the connection between arataga and the target node. In fact, during normal operation, after all connections have been established and after data transfer has started, `chunk_count*2` of I/O buffers will be used.
 
-Значение по умолчанию: 4.
+The default value is 4.
 
-Данная команда доступна начиная с версии 0.2.0.
+This command is available since version 0.2.0.
 
 ### acl.io.chunk_size
 
-Задает размер в байтах для буферов, которые используются для обмена данными между клиентом и целевым узом.
+Specifies the size in bytes for I/O buffers used for data transfer between a user and the target host.
 
-Формат:
+Format:
 ```
 acl.io.chunk_size UINT[suffix]
 ```
 
-где *suffix* -- это необязательный суффикс, который указывает единицы измерения:
+where *suffix* is an optional suffix that specifies the units:
 
-* если суффикса нет, то значение указывается в байтах. Например: `acl.io.chunk_size 1024000`;
-* `b`, значение указывается в байтах. Т.е., `acl.io.chunk_sise 20000` эквивалентно `acl.io.chunk_size 20000b`;
-* `kib`, значение указывается в кибибайтах (KiB, 1024 байт в кибибайте). Например, `acl.io.chunk_size 100kib` эквивалентно `acl.io.chunk_size 102400b`;
-* `mib`, значение указывается в мебибайтах (MiB, 1048576 байт в мебибайте или 1024 кибибайта). Например, `acl.io.chunk_size 5MiB` эквивалентно `acl.io.chunk_size 5242880b` или `acl.io.chunk_size 5120kib`;
-* `gib`, значение указывается в гибибайтах (GiB, 1073741824 байт в гибибайте или 1024 мебибайта).
+* if there is no suffix then the value is specified in bytes. For example: `acl.io.chunk_size 1024000`;
+* `b`, the value is specified in bytes. It means that `acl.io.chunk_sise 20000` is the same as `acl.io.chunk_size 20000b`;
+* `kib`, the value is specified in kibibytes (KiB, 1024 bytes in a kibibyte). For example, `acl.io.chunk_size 100kib` is the same as `acl.io.chunk_size 102400b`;
+* `mib`, the value is specified in mebibytes (MiB, 1048576 bytes in a mebibyte, or 1024 kibibytes). For example, `acl.io.chunk_size 5MiB` is the same as `acl.io.chunk_size 5242880b`, or `acl.io.chunk_size 5120kib`;
+* `gib`, the value is specified in gibitypes (GiB, 1073741824 bytes in a gibibyte, or 1024 mebibytes).
 
-Значение этого параметра не может быть нулевым.
+The value can't zero.
 
-**Примечание.** В процессе подключения клиента к ACL может произойти несколько обменов данными между клиентом и ACL до тех пор, пока клиент будет аутентифицирован. Во время этих обменов используются промежуточные буфера ввода-вывода, размер которых определяется исходя из протокола клиента. После того, как клиент успешно аутентифицирован и установлено соединение с удаленным узлом, ACL начинает использовать буфера ввода-вывода для основного обмена данными. И как раз размер этих буферов задается параметром `acl.io.chunk_size`.
+**Note:** During the process of connecting a client to an ACL, there may be several exchanges between the client and the ACL as long as the client is authenticated. During these exchanges, intermediate I/O buffers are used, the size of which is determined based on the client protocol. After the client is successfully authenticated and a connection to the remote host is established, the ACL begins to use the I/O buffers for the main data exchange. And just the size of these buffers is set by the `acl.io.chunk_size` parameter.
 
-Чем больше значение `acl.io.chunk_size`, тем эффективнее будет происходить передача больших объемов данных. Но тем больше памяти будет потреблять ACL при увеличении количества одновременных подключений.
+The larger the value of `acl.io.chunk_size`, the more efficiently large amounts of data will be transferred. But the more memory the ACL will consume as the number of simultaneous connections increases.
 
-Значение по умолчанию 8kib.
+The default value is 8kib.
 
 ### bandlim.in
 
