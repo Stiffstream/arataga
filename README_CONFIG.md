@@ -140,7 +140,7 @@ Format:
 acl.io.chunk_size UINT[suffix]
 ```
 
-where *suffix* is an optional suffix that specifies the units:
+where *suffix* is an optional suffix that denotes the units of measure:
 
 * if there is no suffix then the value is specified in bytes. For example: `acl.io.chunk_size 1024000`;
 * `b`, the value is specified in bytes. It means that `acl.io.chunk_sise 20000` is the same as `acl.io.chunk_size 20000b`;
@@ -165,7 +165,7 @@ Format:
 bandlim.in UINT[suffix]
 ```
 
-where *suffix* is an optional suffix that specifies the units:
+where *suffix* is an optional suffix that denoted the units of measure:
 
 * `b` for bytes per second. Thus, value `bandlim.in 300000b` means the limit 300000 bytes per second;
 * `kib` for kibibytes per second. Value `bandlim.in 30kib` means the limit 30kib or 30720 bytes per second;
@@ -191,7 +191,7 @@ Format:
 bandlim.out UINT[suffix]
 ```
 
-where *suffix* is an optional suffix that specifies units (see the description of `bandlim.in` command for more details).
+where *suffix* is an optional suffix that denotes units of measure (see the description of `bandlim.in` command for more details).
 
 Value 0 means that there is no bandwidth limit for outgoing data from a user.
 
@@ -219,7 +219,7 @@ Format:
 dns_cache_cleanup_period UINT[suffix]
 ```
 
-where *suffix* is an optional suffix that specifies units: `ms`, `s` or `min`. If *suffix* isn't present then the value is treated as being specified in seconds.
+where *suffix* is an optional suffix that denotes units of measure: `ms`, `s` or `min`. If *suffix* isn't present then the value is treated as being specified in seconds.
 
 Default value: 30s.
 
@@ -234,7 +234,7 @@ Format:
 http.limits.field_name UINT[suffix]
 ```
 
-where optional *suffix* specifies units: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
+where optional *suffix* denotes units of measure: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
 
 Default value: 2KiB.
 
@@ -249,7 +249,7 @@ Format:
 http.limits.field_value UINT[suffix]
 ```
 
-where optional *suffix* specifies units: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
+where optional *suffix* denotes units of measure: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
 
 Default value: 10KiB.
 
@@ -264,7 +264,7 @@ Format:
 http.limits.request_target UINT[suffix]
 ```
 
-where optional *suffix* specifies units: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
+where optional *suffix* denotes units of measure: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
 
 Default value: 8KiB.
 
@@ -279,7 +279,7 @@ Format:
 http.limits.status_line UINT[suffix]
 ```
 
-where optional *suffix* specifies units: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
+where optional *suffix* denotes units of measure: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
 
 Default value: 1KiB.
 
@@ -294,7 +294,7 @@ Format:
 http.limits.total_headers_size UINT[suffix]
 ```
 
-where optional *suffix* specifies units: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
+where optional *suffix* denotes units of measure: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
 
 Default value: 80KiB.
 
@@ -454,58 +454,58 @@ The default is 5min.
 
 ### timeout.protocol_detection
 
-Задает максимальное время в течении которого ACL должен определить, какой протокол будет использовать клиент.
+Specifies the maximum time for the ACL to determine which protocol a user will use.
 
-Если за указанное в `timeout.protocol_detection` время клиент не прислал достаточного количества байт, чтобы определить протокол общения, то соединение принудительно закрывается.
+If in the time specified in `timeout.protocol_detection` the client has not sent enough bytes to determine the communication protocol, the connection is forcibly closed.
 
-Данное значение защищает от ситуаций, когда клиент подключился и не присылает никаких данных. Или присылает их с очень медленной скоростью (например, по 1 байту в минуту).
+This value protects against situations where the client connects and does not send any data. Or it sends them at a very slow rate (e.g., 1 byte per minute).
 
-Формат:
+Format:
 ```
 timeout.protocol_detection UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where the optional *suffix* denotes the unit of measure in which the value is specified: `ms`, ``s` or `min`. If *suffix* is not specified, the unit is seconds.
 
-Если суффикс задан, то он должен быть записан строчными буквами (в нижнем регистре). Например: 1200ms, 15s и т.д.
+If the suffix is specified, it must be written in lowercase letters. For example: 1200ms, 15s, etc.
 
-По умолчанию 3s.
+The default is 3s.
 
 ### timeout.socks.bind
 
-Задает максимальное время, в течении которого должно быть установлено соединение с двух сторон при выполнении команды SOCKS BIND.
+Sets the maximum time that a connection from both sides must be established when the SOCKS BIND command is executed.
 
-При выполнении команды SOCKS BIND на строне ACL открывается новый серверный сокет, адрес которого возвращается клиенту. Со стороны целевого узла на этот серверный сокет должно быть сделано новое подключение. После этого команда SOCKS BIND может считаться выполненной, и клиент может производить обмен данными с удаленным узлом.
+When the SOCKS BIND command is executed, a new server socket is opened on the ACL line and its address is returned to the client. A new connection must be made from the target node to this server socket. The SOCKS BIND command can then be considered executed and the client can exchange data with the remote host.
 
-Если за указанное в `timeout.socks.bind` время со стороны целевого узла новое подключение сделано не было, то клиенту отсылается отрицательный результат команды SOCKS BIND. И соединение с клиентом принудительно закрывается.
+If the time specified in `timeout.socks.bind ` has not made a new connection from the target node, the client is sent a negative result of the command SOCKS BIND. And the connection to the client is forcibly closed.
 
-Формат:
+Format:
 ```
 timeout.socks.bind UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where the optional *suffix* denotes the unit of measure in which the value is specified: `ms`, ``s` or `min`. If *suffix* is not specified, the unit is seconds.
 
-Если суффикс задан, то он должен быть записан строчными буквами (в нижнем регистре). Например: 1200ms, 15s и т.д.
+If the suffix is specified, it must be written in lowercase letters. For example: 1200ms, 15s, etc.
 
-По умолчанию 20s.
+The default is 20s.
 
 ### timeout.socks.handshake
 
-Задает максимальное время, в течении которого клиент должен завершить процедуру подключения по протоколу SOCKS5. Т.е. должен прислать метод аутентификации, затем пройти аутентификацию и прислать команду CONNECT (или BIND).
+Specifies the maximum time for the client to complete the SOCKS5 connection procedure. That is, the client must send the authentication method, then authenticate and send the CONNECT (or BIND) command.
 
-Если за указанное в `timeout.socks.handshake` время клиент не прислал достаточного количества байт для установки нормального SOCKS-подключения, то соединение принудительно закрывается.
+If in the time specified in `timeout.socks.handshake` the client has not sent enough bytes to establish a normal SOCKS connection, the connection is forcibly closed.
 
-Данное значение защищает от ситуаций, когда клиент подключился присылает данные с очень медленной скоростью (например, по 1 байту в секунду).
+This value protects against situations where the client connected sends data at a very slow rate (e.g., 1 byte per second).
 
-Формат:
+Format:
 ```
 timeout.socks.handshake UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where the optional *suffix* denotes the unit of measure in which the value is specified: `ms`, ``s` or `min`. If *suffix* is not specified, the unit is seconds.
 
-Если суффикс задан, то он должен быть записан строчными буквами (в нижнем регистре). Например: 1200ms, 15s и т.д.
+If the suffix is specified, it must be written in lowercase letters. For example: 1200ms, 15s, etc.
 
-По умолчанию 5s.
+The default is 5s.
 
