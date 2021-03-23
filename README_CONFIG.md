@@ -148,7 +148,7 @@ where *suffix* is an optional suffix that specifies the units:
 * `mib`, the value is specified in mebibytes (MiB, 1048576 bytes in a mebibyte, or 1024 kibibytes). For example, `acl.io.chunk_size 5MiB` is the same as `acl.io.chunk_size 5242880b`, or `acl.io.chunk_size 5120kib`;
 * `gib`, the value is specified in gibitypes (GiB, 1073741824 bytes in a gibibyte, or 1024 mebibytes).
 
-The value can't zero.
+The value can't be zero.
 
 **Note:** During the process of connecting a client to an ACL, there may be several exchanges between the client and the ACL as long as the client is authenticated. During these exchanges, intermediate I/O buffers are used, the size of which is determined based on the client protocol. After the client is successfully authenticated and a connection to the remote host is established, the ACL begins to use the I/O buffers for the main data exchange. And just the size of these buffers is set by the `acl.io.chunk_size` parameter.
 
@@ -158,297 +158,299 @@ The default value is 8kib.
 
 ### bandlim.in
 
-Задает ограничение на объем данных, идущих от удаленного узла к клиенту (т.е. входящие для клиента данные). Это ограничение используется если для клиента не задан персональный лимит.
+Specifies the bandwidth limit for data from the target host to a user (incoming data for the user). That limit is used if a user hasn't the personal limit for incoming data.
 
-Формат:
+Format:
 ```
 bandlim.in UINT[suffix]
 ```
 
-где *suffix* -- это необязательный суффикс, который указывает единицы измерения:
+where *suffix* is an optional suffix that specifies the units:
 
-* `b` для байт в секунду. Так, значение `bandlim.in 300000b` будет означать ограничение в 300000 байт в секунду;
-* `kib` для кибибайт в секунду. Значение `bandlim.in 30kib` будет означать ограничение в 30kib или 30720 байт в секунду;
-* `mib` для мебибайт в секунду. Значение `bandlim.in 2mib` будет означать ограничение в 2mib (или 2040kib или 2088960 байт) в секунду;
-* `gib` для гибибайт в секунду. Значение `bandlim.in 1gib` будет означать ограничение в 1gib (или 1024mib, или 1048576kib, или 1073741824 байт) в секунду;
-* `kibps` для кибибит в секунду. Так, значение `bandlim.in 300kibps` будет означать 307200 бит/сек или 38400 байт/сек;
-* `mibps` для мебибит в секунду. Так, значение `bandlim.in 5mibps` будет означать 5242880 бит/сек или 655360 байт/сек;
-* `gibps` для гибибит в секунду. Так, значение `bandlim.in 1gibps` будет означать 1073741824 бит/сек или 134217728 байт/сек (131072 кибибайт/сек или 128 мебибайт/сек);
-* `kbps` для килобит в секунду. Значение `bandlim.in 300kpbs` будет означать 300000 бит/сек или 37500 байт/сек (~37 кибибайт/сек);
-* `mpbs` для мегабит в секунду. Значение `bandlim.in 5mpbs` будет означать 5000000 бит/сек или 625000 байт/сек (~610 кибибайт/сек);
-* `gpbs` для гигабит в секунду. Значение `bandlim.in 1gbps` будет означать 1000000000 бит/сек или 125000000 байт/сек (~122070 кибибайт/сек или ~119 мебибайт/сек).
+* `b` for bytes per second. Thus, value `bandlim.in 300000b` means the limit 300000 bytes per second;
+* `kib` for kibibytes per second. Value `bandlim.in 30kib` means the limit 30kib or 30720 bytes per second;
+* `mib` for mebibytes per second. Value `bandlim.in 2mib` means the limit 2mib (or 2040kib or 2088960 bytes) per second;
+* `gib` for gibibytes per second. Value `bandlim.in 1gib` means the limit 1gib (or 1024mib, or 1048576kib, or 1073741824 bytes) per second;
+* `kibps` for kibibits per second. Thus, value `bandlim.in 300kibps` means 307200 bits/sec or 38400 bytes/sec;
+* `mibps` for mebibits per second. Thus, value `bandlim.in 5mibps` means 5242880 bits/sec or 655360 bytes/sec;
+* `gibps` for gibibits per second. Thus, value `bandlim.in 1gibps` means 1073741824 bits/sec or 134217728 bytes/sec (131072 kibibytes/sec or 128 mebibytes/sec);
+* `kbps` for kilobits per second. Value `bandlim.in 300kpbs` means 300000 bits/sec or 37500 bytes/sec (~37 kibibytes/sec);
+* `mpbs` for megabits per second. Value `bandlim.in 5mpbs` means 5000000 bits/sec or 625000 bytes/sec (~610 kibibytes/sec);
+* `gpbs` for gigabits per second. Value `bandlim.in 1gbps` means 1000000000 bits/sec or 125000000 bytes/sec (~122070 kibibytes/sec or ~119 mebibytes/sec).
 
-Значение 0 указывает, что ограничения на объем данных от удаленного узла к клиенту нет.
+Value 0 means that there is no bandwidth limit for incoming data for a user.
 
-По умолчанию 0. Т.е. если команда `bandlim.in` не указана, то лимита для входящих данных клиента нет.
+Default value 0. It means that if `bandlim.in` isn't specified then there is no bandwidth limit for incoming data for a user.
 
 ### bandlim.out
 
-Задает ограничение на объем данных, идущих от клиента к удаленному узлу (т.е. исходящие от клиента данные). Это ограничение используется если для клиента не задан персональный лимит.
+Specifies the bandwidth limit for data from a user to the target host (outgoing data from the user). That limit is used if a user hasn't the personal limit for outgoing data.
 
-Формат:
+Format:
 ```
 bandlim.out UINT[suffix]
 ```
 
-где *suffix* -- это необязательный суффикс, который указывает единицы измерения (см. описание `bandlim.in`).
+where *suffix* is an optional suffix that specifies units (see the description of `bandlim.in` command for more details).
 
-Значение 0 указывает, что ограничения на объем данных от клиента к удаленному узлу нет.
+Value 0 means that there is no bandwidth limit for outgoing data from a user.
 
-По умолчанию 0. Т.е. если команда `bandlim.out` не указана, то лимита для исходящих данных клиента нет.
+Default value 0. It means that if `bandlim.in` isn't specified then there is no bandwidth limit for outgoing data from a user.
 
 ### denied_ports
 
-Задает перечень портов, доступ к которым на целевых узлах для клиентов запрещен.
+Specifies a list of denied ports. Users can't connect to those ports on remote hosts.
 
-В перечне могут указываться как отдельные номера, так и диапазоны. Все значения должны быть отделены друг от друга запятыми.
+The list can contain separate port numbers and ranges. All values must be separated by commas.
 
-Например:
+For example:
 ```
 denied_ports 25, 83, 100-110, 465, 587
 ```
 
-По умолчанию этот список пуст.
+This list is empty by default.
 
 ### dns_cache_cleanup_period
 
-Задает период очистки кэша с результатами поиска в DNS от старых результатов.
+Specifies the period of cleaning the cache with DNS lookup results.
 
-Формат:
+Format:
 ```
 dns_cache_cleanup_period UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where *suffix* is an optional suffix that specifies units: `ms`, `s` or `min`. If *suffix* isn't present then the value is treated as being specified in seconds.
 
-По умолчанию 30s.
+Default value: 30s.
 
 ### http.limits.field_name
 
-Задает ограничение на максимальную длину имени HTTP-заголовка.
+Specifies the max allowed length of HTTP header field name.
 
-Если при обработке HTTP-запроса или HTTP-ответа arataga обнаруживает HTTP-заголовок с именем, чья длина больше заданной в `http.limits.field_name`, то обработка такого HTTP-запроса/ответа прекращается.
+If arataga detects a HTTP header field that name is longer than the value of `http.limits.field_name` then the processing of such HTTP request/response will be cancelled.
 
-Формат:
+Format:
 ```
 http.limits.field_name UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `b`, `kib`, `mib` или `gib`. Если *suffix* не указан, то единицей измерения являются байты.
+where optional *suffix* specifies units: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
 
-По умолчанию 2KiB.
+Default value: 2KiB.
 
 ### http.limits.field_value
 
-Задает ограничение на максимальную длину значения HTTP-заголовка.
+Specifies the max allowed length of HTTP header field value.
 
-Если при обработке HTTP-запроса или HTTP-ответа arataga обнаруживает HTTP-заголовок со значением, чья длина больше заданной в `http.limits.field_value`, то обработка такого HTTP-запроса/ответа прекращается.
+If arataga detects a HTTP header field that value is longer than the value of `http.limits.field_value` then the processing of such HTTP request/response will be cancelled.
 
-Формат:
+Format:
 ```
 http.limits.field_value UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `b`, `kib`, `mib` или `gib`. Если *suffix* не указан, то единицей измерения являются байты.
+where optional *suffix* specifies units: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
 
-По умолчанию 10KiB.
+Default value: 10KiB.
 
 ### http.limits.request_target
 
-Задает ограничение на максимальную длину значения request-target в стартовой строке HTTP-запроса.
+Specifies the max allowed length of request-target in the start line of an incoming HTTP request.
 
-Если при обработке входящего HTTP-запроса arataga обнаруживает request-target со значением, чья длина больше заданной в `http.limits.request_target`, то обработка такого HTTP-запроса прекращается.
+If arataga detects a request-target that value is longer than the value of `http.limits.request_target` then the processing of such HTTP request will be cancelled.
 
-Формат:
+Format:
 ```
 http.limits.request_target UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `b`, `kib`, `mib` или `gib`. Если *suffix* не указан, то единицей измерения являются байты.
+where optional *suffix* specifies units: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
 
-По умолчанию 8KiB.
+Default value: 8KiB.
 
 ### http.limits.status_line
 
-Задает ограничение на максимальную длину status-line в HTTP-ответе.
+Specifies the max allowed length of status-line in an incoming HTTP response.
 
-Если при обработке HTTP-ответа arataga обнаруживает status-line, чья длина больше заданной в `http.limits.status_line`, то обработка такого HTTP-ответа прекращается.
+If arataga detects a status-line that value is longer than the value of `http.limits.status_line` then the processing of such HTTP response will be cancelled.
 
-Формат:
+Format:
 ```
 http.limits.status_line UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `b`, `kib`, `mib` или `gib`. Если *suffix* не указан, то единицей измерения являются байты.
+where optional *suffix* specifies units: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
 
-По умолчанию 1KiB.
+Default value: 1KiB.
 
 ### http.limits.total_headers_size
 
-Задает ограничение на общий суммарный размер всех HTTP-заголовков в HTTP-запросе или HTTP-ответе.
+Specifies the max allowed total size of all HTTP header fields.
 
-Если при обработке HTTP-запроса или HTTP-ответа arataga обнаруживает, что общая длина HTTP-заголовков больше заданной в `http.limits.total_headers_size`, то обработка такого HTTP-запроса/ответа прекращается.
+If arataga detects that the total size of all HTTP header fields is greater than the value of `http.limits.total_headers_size` then the processing of such HTTP request/response will be cancelled.
 
-Формат:
+Format:
 ```
 http.limits.total_headers_size UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `b`, `kib`, `mib` или `gib`. Если *suffix* не указан, то единицей измерения являются байты.
+where optional *suffix* specifies units: `b`, `kib`, `mib` or `gib`. If *suffix* isn't present then the value is treated as being specified in bytes.
 
-По умолчанию 80KiB.
+Default value: 80KiB.
 
 ### log_level
 
-Задает уровень логирования.
+Specifies the minimal severity level for messages to be stored in log.
 
-Сообщения, чей уровень важности совпадает или выше, чем указанный в команде, попадают в журнал. Сообщения с уровнем важности ниже, чем указанный в команде, игнорируются и в журнале не сохраняются.
+Log messages with that level or a more highest level will be stored in log,
+ all other messages will be ignored.
 
-Формат:
+Format:
 ```
 log_level <LEVEL>
 ```
-где LEVEL -- это: `trace`, `debug`, `info`, `warn`, `error`, `crit`.
 
-Специальное значение `off` отключает логирование.
+where LEVEL can be `trace`, `debug`, `info`, `warn`, `error`, `crit`.
 
-По умолчанию используется значение, которое задается в командной строке.
+Special value `off` turns the logging off.
 
-Если команда `log_level` в конфиге задана, то ее значение перекрывает заданное в командной строке значение.
+By default the value for arataga's command line is used.
+
+If `log_level` is set in the config then its value overrides the value from the command line.
 
 ### acl.max.conn
 
-Ограничение на количество одновременно принятых подключений для одного ACL.
+Specifies the max number of active parallel connections for one ACL.
 
-Формат:
+Format:
 ```
 acl.max.conn UINT
 ```
 
-Когда количество одновременно принятых подключений достигает заданного в `acl.max.conn` значения, прием новых подключений на этот ACL приостанавливается до тех пор, пока количество подключений не упадет ниже заданного в `acl.max.conn` порога.
+When the number of simultaneously accepted connections reaches the value set in `acl.max.conn`, accepting new connections to this ACL is paused until the number of connections drops below the threshold set in `acl.max.conn`.
 
-Значение не может быть нулевым.
+The value can't be zero.
 
-По умолчанию 100.
+The default value is 100.
 
 ### timeout.authentification
 
-Задает максимальное время ожидания результата аутентификации.
+Specifies the maximum time to wait for an authentication result.
 
-Если ответ на указанное в `timeout.authentification` время не поступил, то клиент считается не аутентифицированным и ему отказывают в подключении.
+If no response is received to the time specified in `timeout.authentification`, the client is considered unauthenticated and will be disconnected.
 
-Формат:
+Format:
 ```
 timeout.authentification UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where the optional *suffix* denotes the unit of measure in which the value is specified: `ms`, ``s` or `min`. If *suffix* is not specified, the unit is seconds.
 
-Если суффикс задан, то он должен быть записан строчными буквами (в нижнем регистре). Например: 1200ms, 15s и т.д.
+If the suffix is specified, it must be written in lowercase letters. For example: 1200ms, 15s, etc.
 
-По умолчанию 1500ms.
+The default is 1500ms.
 
 ### timeout.connect_target
 
-Задает максимальное время ожидания результата подключения к целевому узлу.
+Specifies the maximum time to wait for the result of connection to the target host.
 
-Если за время `timeout.connect_target` подключиться к целевому узлу не удалось, то клиенту отсылается отрицательный результат.
+If the `timeout.connect_target` timeout fails to connect to the target host, a negative result is sent to the client.
 
-Формат:
+Format:
 ```
 timeout.connect_target UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where the optional *suffix* denotes the unit of measure in which the value is specified: `ms`, ``s` or `min`. If *suffix* is not specified, the unit is seconds.
 
-Если суффикс задан, то он должен быть записан строчными буквами (в нижнем регистре). Например: 1200ms, 15s и т.д.
+If the suffix is specified, it must be written in lowercase letters. For example: 1200ms, 15s, etc.
 
-По умолчанию 5s.
+The default is 5s.
 
 ### timeout.dns_resolving
 
-Задает максимальное время ожидания результата поиска IP-адреса целевого узла.
+Sets the maximum time to wait for the result of a DNS lookup for the target host.
 
-Если за время `timeout.dns_resolving` определить IP-адрес по доменному имени не удалось, то клиенту отсылается отрицательный результат.
+If during `timeout.dns_resolving` the IP address could not be found by the domain name, a negative result is sent to the user.
 
-Формат:
+Format:
 ```
 timeout.dns_resolving UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where the optional *suffix* denotes the unit of measure in which the value is specified: `ms`, ``s` or `min`. If *suffix* is not specified, the unit is seconds.
 
-Если суффикс задан, то он должен быть записан строчными буквами (в нижнем регистре). Например: 1200ms, 15s и т.д.
+If the suffix is specified, it must be written in lowercase letters. For example: 1200ms, 15s, etc.
 
-По умолчанию 4s.
+The default is 4s.
 
 ### timeout.failed_auth_reply
 
-Задает время задержки перед отсылкой отрицательного результата аутентификации.
+Specifies the delay time before sending a negative authentication result.
 
-Если клиента аутентифицировать не удалось, то отрицательный результат может отсылаться клиенту не сразу, а по истечению заданного времени (чтобы воспрепятствовать, например, попыткам простого перебора пароля). Размер этой паузы задается командой `timeout.failed_auth_reply`.
+If the client failed to authenticate, the negative result can be sent to the client not immediately, but after a specified time (to prevent, for example, simple password brute-forcing attempts). The size of this pause is set with the `timeout.failed_auth_reply` command.
 
-Формат:
+Format:
 ```
 timeout.dns_resolving UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where the optional *suffix* denotes the unit of measure in which the value is specified: `ms`, ``s` or `min`. If *suffix* is not specified, the unit is seconds.
 
-Если суффикс задан, то он должен быть записан строчными буквами (в нижнем регистре). Например: 1200ms, 15s и т.д.
+If the suffix is specified, it must be written in lowercase letters. For example: 1200ms, 15s, etc.
 
-По умолчанию 750ms.
+The default is 750ms.
 
 ### timeout.http.headers_complete
 
-Задает максимальное время ожидания завершения чтения всех заголовков входящего HTTP-запроса от клиента.
+Specifies the maximum time to wait for the client to finish reading all headers of an incoming HTTP request.
 
-Если за отведенное время все заголовки прочитаны не были (например, клиент перестал отсылать данные со своей стороны или же шлет их с очень маленькой скоростью), то клиенту отсылается ответ 408 Request Timeout и входящее соединение закрывается.
+If all headers were not read within the allotted time (for example, the client stopped sending data from its side or sends it at a very low speed), the client is sent a 408 Request Timeout response and the incoming connection is closed.
 
-Формат:
+Format:
 ```
 timeout.http.headers_complete UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where the optional *suffix* denotes the unit of measure in which the value is specified: `ms`, ``s` or `min`. If *suffix* is not specified, the unit is seconds.
 
-Если суффикс задан, то он должен быть записан строчными буквами (в нижнем регистре). Например: 1200ms, 15s и т.д.
+If the suffix is specified, it must be written in lowercase letters. For example: 1200ms, 15s, etc.
 
-По умолчанию 5s.
+The default is 5s.
 
 ### timeout.http.negative_response
 
-Задает максимальное время записи отрицательного ответа клиенту.
+Specifies the maximum time to send a negative response to a user.
 
-Если клиент прислал запрос, который не представляется возможным обработать, то клиенту отсылается отрицательный ответ. На время записи этого ответа накладывается ограничение. Если за отведенное время ответ не был записан (например, клиент со своей стороны перестал читать данные), то соединение принудительно закрывается.
+If a user sent a request that cannot be processed, a negative response is sent to the user. A limit is imposed on the sending time of this response. If the response was not sent within the allotted time (for example, the user stopped reading the data), the connection is forcibly closed.
 
-Формат:
+Format:
 ```
 timeout.http.negative_response UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where the optional *suffix* denotes the unit of measure in which the value is specified: `ms`, ``s` or `min`. If *suffix* is not specified, the unit is seconds.
 
-Если суффикс задан, то он должен быть записан строчными буквами (в нижнем регистре). Например: 1200ms, 15s и т.д.
+If the suffix is specified, it must be written in lowercase letters. For example: 1200ms, 15s, etc.
 
-По умолчанию 2s.
+The default is 2s.
 
 ### timeout.idle_connection
 
-Задает максимальное время жизни для соединений, в которых нет активности.
+Specifies the maximum idle time for connections with no activity.
 
-Если за время, указанное в `timeout.idle_connection`, не было входящих данных ни с одной из сторон, то соединение принудительно закрывается.
+If there is no incoming data from either side during the time specified in `timeout.idle_connection`, the connection is forcibly closed.
 
-Формат:
+Format:
 ```
 timeout.idle_connection UINT[suffix]
 ```
 
-где необязательный *suffix* означает единицы измерения, в которых задано значение: `ms`, `s` или `min`. Если *suffix* не указан, то единицей измерения являются секунды.
+where the optional *suffix* denotes the unit of measure in which the value is specified: `ms`, ``s` or `min`. If *suffix* is not specified, the unit is seconds.
 
-Если суффикс задан, то он должен быть записан строчными буквами (в нижнем регистре). Например: 1200ms, 15s и т.д.
+If the suffix is specified, it must be written in lowercase letters. For example: 1200ms, 15s, etc.
 
-По умолчанию 5min.
+The default is 5min.
 
 ### timeout.protocol_detection
 
