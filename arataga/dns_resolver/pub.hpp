@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Публичная часть интерфейса агента dns_resolver.
+ * @brief The public part of dns_resolver-agent's interface.
  */
 
 #pragma once
@@ -17,25 +17,32 @@
 namespace arataga::dns_resolver
 {
 
-//! Идентификатор запроса на разрешение доменного имени.
+//! Type of ID of resolution request.
 using resolve_req_id_t = ::arataga::utils::acl_req_id_t;
 
 //
 // params_t
 //
 /*!
- * @brief Параметры, необходимые агенту для начала его работы.
+ * @brief Initial parameters for dns_resolver-agent.
  */
 struct params_t
 {
-	//! Объект io_context, который должен использовать dns_resolver.
+	//! Asio's io_context to be used by dns_resolver.
+	/*!
+	 * @note
+	 * This reference is expected to be valid for the whole lifetime
+	 * of dns_resolver-agent.
+	 */
 	asio::io_context & m_io_ctx;
 
-	//! Уникальное имя, которое должно использоваться этим агентом
-	//! для логирования.
+	//! Unique name of that agent.
+	/*!
+	 * Intended to be used for logging.
+	 */
 	std::string m_name;
 
-	//! Период, с которым нужно очищать кэш.
+	//! Cache cleanup period.
 	std::chrono::milliseconds m_cache_cleanup_period;
 };
 
@@ -93,11 +100,11 @@ operator<<( std::ostream & to, const resolve_result_t & result )
 // completion_token_t
 //
 /*!
- * @brief Интерфейс объекта, который передается в запросе на
- * разрешение имени и который должен вернуться в ответе на запрос.
+ * @brief An interface of object that is passed into a resulution
+ * request and that has to be returned back in the response.
  *
- * Предполагается, что объект, реализующий данный интерфейс,
- * будет упрощать обработку ответов в каких-то случаях.
+ * It is expected that this object will simplify the handling
+ * of resolution results.
  */
 class completion_token_t
 {
@@ -111,12 +118,12 @@ public:
 //
 // completion_token_shptr_t
 //
-//! Тип умного указателья для completion_token.
+//! An alias for shared_ptr to completion_token.
 using completion_token_shptr_t = std::shared_ptr< completion_token_t >;
 
 } // namespace forward
 
-//! Перечисление, определяющее версию IP адреса.
+//! Enumeration for available IP versions.
 enum class ip_version_t
 {
 	ip_v4,
@@ -124,14 +131,15 @@ enum class ip_version_t
 };
 
 /*!
- * @brief Функция конвертации строки в версию IP адреса.
+ * @brief Conversion of string value into ip_version enumeration.
  *
- * @param ip Строковое представление версии IP адреса.
- * @return ip_version_t Версия IP адреса в формате элемента ip_version_t-
+ * @throw std::runtime_error in the case of conversion error.
  */
 [[nodiscard]]
 inline ip_version_t
-from_string( const std::string & ip )
+from_string(
+	//! Value to be converted.
+	const std::string & ip )
 {
 	if( ip == "IPv4" )
 		return ip_version_t::ip_v4;
@@ -147,27 +155,27 @@ from_string( const std::string & ip )
 // resolve_request_t
 //
 /*!
- * @brief Сообщение с запросом на разрешение доменного имени.
+ * @brief Domain name resolution request.
  */
 struct resolve_request_t final : public so_5::message_t
 {
-	//! Идетификатор запроса.
+	//! ID of the request.
 	resolve_req_id_t m_req_id;
 
-	//! Имя ресурса, для которого нужно получить адрес.
+	//! Domain name to be resolved.
 	std::string m_name;
 
-	//! В каком виде требуется представить ответ.
+	//! IP-version for the response.
 	ip_version_t m_ip_version = ip_version_t::ip_v4;
 
-	//! Токен для завершения обработки запроса.
+	//! Completion token for that request.
 	/*!
 	 * @note
-	 * Может быть нулевым указателем.
+	 * Maybe a nullpt.
 	 */
 	forward::completion_token_shptr_t m_completion_token;
 
-	//! Mbox, на который нужно отправить ответ.
+	//! Mbox for the reply.
 	so_5::mbox_t m_reply_to;
 
 	resolve_request_t(
@@ -201,24 +209,24 @@ struct resolve_request_t final : public so_5::message_t
 // resolve_reply_t
 //
 /*!
- * @brief Сообщение с результатом  имени.
+ * @brief The reply for resolution request.
  */
 struct resolve_reply_t final : public so_5::message_t
 {
 	using completion_token_t = forward::completion_token_shptr_t;
 	using resolve_result_t = forward::resolve_result_t;
 
-	//!Идентификатор исходного запроса.
+	//! ID of the source request.
 	resolve_req_id_t m_req_id;
 
-	//! Токен для завершения обработки запроса.
+	//! Completion token from the source request.
 	/*!
 	 * @note
-	 * Может быть нулевым указателем.
+	 * Maybe a nullptr.
 	 */
 	forward::completion_token_shptr_t m_completion_token;
 
-	//! Результат разрешения доменного имени.
+	//! The result of domain name resolution.
 	forward::resolve_result_t m_result;
 
 	resolve_reply_t(
@@ -235,24 +243,24 @@ struct resolve_reply_t final : public so_5::message_t
 // introduce_dns_resolver
 //
 /*!
- * @brief Функция для создания и запуска агента dns_resolver в
- * указанном SObjectizer Environment с привязкой к указанному диспетчеру.
+ * @brief A factory for the creation of dns_resolver-agent with
+ * the binding to the specified dispatcher.
  *
- * Возвращается ID новой кооперации с агентом dns_resolver и mbox,
- * через который можно общаться с агентом dns_resolver.
+ * Returns a tuple with the ID of a new coop and mbox for interaction
+ * with dns_resolver-agent.
  */
 [[nodiscard]]
 std::tuple< so_5::coop_handle_t, so_5::mbox_t >
 introduce_dns_resolver(
-	//! SObjectizer Environment, в котором нужно работать.
+	//! SObjectizer Environment to work within.
 	so_5::environment_t & env,
-	//! Родительская кооперация.
+	//! The parent coop for a new coop with dns_resolver-agent.
 	so_5::coop_handle_t parent_coop,
-	//! Диспетчер, к которому должен быть привязан новый агент.
+	//! The dispatcher for a new dns_resolver-agent.
 	so_5::disp_binder_shptr_t disp_binder,
-	//! Контекст всего arataga.
+	//! The context of the whole application.
 	application_context_t app_ctx,
-	//! Индивидуальные параметры для нового агента.
+	//! Initial parameters for a new agent.
 	params_t params );
 
 } /* namespace arataga::resolver */

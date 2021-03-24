@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Вспомогательный метод для выполнения логирования.
+ * @brief Helpers for logging.
  */
 
 #pragma once
@@ -17,35 +17,36 @@ namespace impl
 {
 
 /*!
- * @brief Установить logger, который будет использоваться всем приложением.
+ * @brief Setup a logger for the whole application.
  *
- * Предполагается, что вызов этой функции выполняется в начале работы,
- * после того, как обработаны параметры командной строки. После чего
- * @a logger будет использоваться до завершения работы программы.
+ * It's assumed that this function is called only once at the
+ * beginning of the application. And then @a logger will be used
+ * until the finish of the application.
  */
 void
 setup_logger( std::shared_ptr< spdlog::logger > logger ) noexcept;
 
 /*!
- * @brief Удалить logger, который ранее был установлен через setup_logger.
+ * @brief Remove the logger previously set via setup_logger.
  *
- * Предполагается, что вызов этой функции выполняется в конце работы
- * приложения, когда логгер уже никому не нужен.
+ * It's assumed that this function is called at the end of the
+ * application lifetime and logger is no more needed.
  */
 void
 remove_logger() noexcept;
 
 /*!
- * @brief Получить доступ к logger-у, который ранее был установлен
- * через setup_logger.
+ * @brief Get access to logger that previously set via setup_logger.
+ *
+ * It's a UB if this function is called after remove_logger().
  */
 [[nodiscard]]
 spdlog::logger &
 logger() noexcept;
 
 /*!
- * @brief Проверить, разрешено ли логирование сообщений с указанным
- * уровнем важности.
+ * @brief Check a possibilty to log a message with specified
+ * severity level.
  */
 [[nodiscard]]
 inline bool
@@ -57,20 +58,20 @@ should_log( spdlog::level::level_enum level ) noexcept
 } /* namespace impl */
 
 /*!
- * @brief Вспомогательный класс для установки/удаления логгера в RAII стиле.
+ * @brief Helper class for setting/removing logger in RAII style.
  *
- * Вызывает impl::setup_logger() в конструкторе и impl::remove_logger()
- * в деструкторе.
+ * Calls impl::setup_logger() in the constructor, then impl::remove_logger()
+ * in the destructor.
  *
- * Пример использования:
+ * Usage example:
  * @code
  * int main(int argc, char ** argv)
  * {
- * 	... // Парсинг аргументов командной строки.
+ * 	... // Parsing of command-line args.
  * 	arataga::logging::logger_holder_t logger_holder{
  * 		spdlog::default_logger()
  * 	};
- * 	... // Остальные действия приложения.
+ * 	... // All remaining actions of the application.
  * }
  * @endcode
  */
@@ -89,20 +90,20 @@ public:
 };
 
 /*!
- * @brief Маркер, который означает, что логирование должно вестись
- * непосредственно через основной логгер.
+ * @brief Marker that tells that logging should be performed
+ * via the main logger.
  */
 struct direct_logging_marker_t {};
 
 /*!
- * @brief Маркер, который означает, что логирование будет выполняться
- * через промежуточный прокси-объект.
+ * @brief Marker that tells that logging should be performed
+ * via a proxy-object.
  */
 struct proxy_logging_marker_t {};
 
 /*!
- * @brief Специальная обертка над уровнем логирования, которая указывает,
- * что логирование ведется внутри вспомогательной функции wrap_logging.
+ * @brief A special wrapper around logging-level that tells that
+ * logging is performed from wrap_logging helper.
  */
 class processed_log_level_t
 {
@@ -123,12 +124,12 @@ public:
 };
 
 /*!
- * @brief Выполнить логирование непосредственно через логгер.
+ * @brief Perform logging via logger object directly.
  *
- * Функтор @a action вызывается только если разрешено логирование
- * сообщений с уровнем важности @a level.
+ * The functor @a action is called only if @a level is enabled
+ * for logging.
  *
- * Функтор @a action должен иметь следующий формат:
+ * The functor @a action should have the following format:
  * @code
  * void(spdlog::logger &, processed_log_level_t);
  * @endcode
@@ -148,13 +149,12 @@ wrap_logging(
 }
 
 /*!
- * @brief Выполнить логирование через какой-то прокси-объект, который
- * уже сам обратиться к логгеру.
+ * @brief Perform logging via some proxy-object.
  *
- * Функтор @a action вызывается только если разрешено логирование
- * сообщений с уровнем важности @a level.
+ * The functor @a action is called only if @a level is enabled
+ * for logging.
  *
- * Функтор @a action должен иметь следующий формат:
+ * The functor @a action should have the following format:
  * @code
  * void(processed_log_level_t);
  * @endcode

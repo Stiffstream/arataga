@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Реализация target_connector-а.
+ * @brief The implementation of target-connector.
  */
 
 #include <arataga/acl_handler/handlers/http/basics.hpp>
@@ -18,24 +18,23 @@ namespace handlers::http
 // target_connector_handler_t
 //
 /*!
- * @brief Обработчик соединения, который производит подключение
- * к удаленному узлу.
+ * @brief Connection-handler that makes a connection to the target host.
  */
 class target_connector_handler_t final : public handler_with_out_connection_t
 {
-	//! Состояние разбора исходного запроса.
+	//! HTTP-request parsing status.
 	http_handling_state_unique_ptr_t m_request_state;
 
-	//! Дополнительная информация о запросе.
+	//! Additional info for the request.
 	request_info_t m_request_info;
 
-	//! Адрес, на который нужно подключаться.
+	//! Address of the target host.
 	asio::ip::tcp::endpoint m_target_endpoint;
 
-	//! Ограничитель трафика для этого клиента.
+	//! Traffic-limiter for the user.
 	traffic_limiter_unique_ptr_t m_traffic_limiter;
 
-	//! Время, когда DNS lookup начался.
+	//! Timepoint at that connection attempt was started.
 	std::chrono::steady_clock::time_point m_created_at;
 
 public:
@@ -79,7 +78,6 @@ protected:
 				delete_protector,
 				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 				{
-					// Осталось только отослать ответ и закрыть соединение.
 					send_negative_response_then_close_connection(
 							delete_protector,
 							can_throw,
@@ -106,8 +104,7 @@ private:
 		{
 			asio::error_code ec;
 
-			// Вспомогательная локальная функция для того, чтобы не дублировать
-			// одно и тоже по несколько раз.
+			// Helper local function to avoid data duplication.
 			const auto finish_on_failure =
 				[this, &delete_protector, &can_throw](
 					std::string_view message ) -> void
@@ -129,7 +126,7 @@ private:
 						ec.message() ) );
 			}
 
-			// Новый сокет должен начать работать в неблокирующем режиме.
+			// New socket should work in non-blocking mode.
 			m_out_connection.non_blocking( true, ec );
 			if( ec )
 			{
@@ -138,11 +135,9 @@ private:
 						ec.message() ) );
 			}
 
-			// Подключаться нужно с внешнего IP, поэтому привяжем исходящий сокет
-			// к этому IP.
+			// We have to bind new socket to ACL's external address.
 			m_out_connection.bind(
-					// Указываем 0 в качестве номера порта для того,
-					// чтобы порт выделила ОС.
+					// Use 0 as port number, the OS will assign actual number.
 					asio::ip::tcp::endpoint{ context().config().out_addr(), 0u },
 					ec );
 			if( ec )
@@ -166,7 +161,7 @@ private:
 										m_out_connection.local_endpoint() ) );
 					} );
 
-			// Осталось только выполнить подключение.
+			// Now we can initiate the connection.
 			m_out_connection.async_connect(
 					m_target_endpoint,
 					with<const asio::error_code &>().make_handler(
@@ -231,8 +226,6 @@ private:
 	{
 		if( ec )
 		{
-			// Если это не отмена операции, то проблему нужно залогировать,
-			// а клиенту следует отослать отрицательный ответ.
 			if( asio::error::operation_aborted != ec )
 			{
 				log_problem_then_send_negative_response(
@@ -262,9 +255,8 @@ private:
 										m_out_connection.local_endpoint() ) );
 					} );
 
-			// Создадим обработчик для запроса в соответствии с методом
-			// в HTTP-запросе. Особого внимания на данный момент требует
-			// метод CONNECT, все остальные обрабатываются обычным образом.
+			// New connection-handler depends on HTTP-method from the request.
+			// At the moment only CONNECT method requires a special handler.
 			const auto factory = (HTTP_CONNECT == m_request_info.m_method ?
 					&make_connect_method_handler :
 					&make_ordinary_method_handler);

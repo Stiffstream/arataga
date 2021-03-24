@@ -1,7 +1,6 @@
 /*!
  * @file
- * @brief Различные вспомогательные инструменты для работы с
- * административным HTTP-входом.
+ * @brief Various helpers for working with admin HTTP-entry.
  */
 
 #pragma once
@@ -19,22 +18,20 @@ namespace arataga::admin_http_entry
 {
 
 /*!
- * @brief Вспомогательная функция для синхронной обработки запроса
- * от административного HTTP-входа.
+ * @brief Helper function for synchronous processing of a request
+ * from HTTP-entry.
  *
- * Эта функция должна использоваться в случае, когда ответ на запрос
- * должен быть сформирован прямо во время обработки запроса.
+ * This function should be used in the case when the response has
+ * to be produced right inside the request processing.
  *
- * Саму обработку запроса должна выполнять лямбда-функция @a lambda.
- * 
- * Исключения, которые выпускает @a lambda наружу перехватываются.
- * В случае перехвата исключений автоматически формируется отрицательный
- * ответ на запрос.
+ * The request processing is performed by the lambda-function @a lambda.
  *
- * @tparam Lambda Тип лямбда-функции (функтора). Эта лямбда функция вызывается
- * внутри envelope_sync_request_handling и она должна возвратить ответ на
- * запрос.
- * Формат этой лямбда функции:
+ * If @a lambda throws then exceptions are caught and negative
+ * response is sent back.
+ *
+ * @tparam Lambda Type of lambda-function (functor). That lambda-function
+ * is called inside envelope_sync_request_handling and it should return
+ * the response. That lambda-function should have the following format:
  * @code
  * replier_t::reply_params_t lambda();
  * @endcode
@@ -42,22 +39,20 @@ namespace arataga::admin_http_entry
 template< typename Lambda >
 void
 envelope_sync_request_handling(
-	//! Описание контекста, в котором происходит обработка запроса.
-	//! Это описание затем будет использовано для выдачи отрицательного
-	//! ответа в случае возникновения исключений.
+	//! The description of the context where the processing is initiated.
+	//! That description will be used for a negative response in the
+	//! case of an exception.
 	std::string_view context_description,
-	//! Объект для отсылки ответа в HTTP-вход.
+	//! The replier for the incoming request.
 	replier_t & replier,
-	//! Статус для отрицательного ответа, который будет использован
-	//! при возникновении исключения.
+	//! Negative status to be used in the case of an exception.
 	status_t failure_status,
-	//! Лямбда-функция (функтор), которая и будет выполнять обработку запроса.
+	//! Lambda-function for actual request processing.
 	Lambda && lambda )
 {
 	std::optional< replier_t::reply_params_t > reply_data;
 
-	// Возникшие при выполнении этой операции исключения критичными
-	// не считаем.
+	// We don't consider exceptions from lambda() as critical.
 	try
 	{
 		reply_data = lambda();
@@ -73,36 +68,34 @@ envelope_sync_request_handling(
 		};
 	}
 
-	// В принципе, не должно быть так, что в reply_data нет значения.
-	// Но на всякий случай перестраховываемся.
+	// Don't expect that reply_data can be empty. But do additional check
+	// for safety.
 	if( reply_data )
 		replier.reply( std::move(*reply_data) );
 	else
 		replier.reply(
 				status_internal_server_error,
 				fmt::format( "{} doesn't provide "
-						"a description of new_config handling result\r\n",
+						"a description of request processing result\r\n",
 						context_description ) );
 }
 
 /*!
- * @brief Вспомогательная функция для асинхронной обработки запроса
- * от административного HTTP-входа.
+ * @brief Helper function for asynchronous processing of incoming requests.
  *
- * Эта функция должна использоваться в случае, когда ответ на запрос
- * не может быть сформирован прямо во время обработки запроса.
- * А будет получен и отослан в HTTP-вход когда-то в будущем, уже
- * после возврата из envelope_async_request_handling.
+ * This function should be used when the response can't be created
+ * right inside the request handler. In that case the response will
+ * be made and sent back to HTTP-entry some time after the return
+ * from envelope_async_request_handling.
  *
- * Саму обработку запроса должна выполнять лямбда-функция @a lambda.
- * 
- * Исключения, которые выпускает @a lambda наружу перехватываются.
- * В случае перехвата исключений автоматически формируется отрицательный
- * ответ на запрос.
+ * The request processing is performed by the lambda-function @a lambda.
  *
- * @tparam Lambda Тип лямбда-функции (функтора). Эта лямбда функция
- * вызывается внутри envelope_async_request_handling.
- * Формат этой лямбда функции:
+ * If @a lambda throws then exceptions are caught and negative
+ * response is sent back.
+ *
+ * @tparam Lambda Type of lambda-function (functor). That lambda-function
+ * is called inside envelope_async_request_handling. That lambda-function
+ * should have the following format:
  * @code
  * void lambda();
  * @endcode
@@ -110,22 +103,20 @@ envelope_sync_request_handling(
 template< typename Lambda >
 void
 envelope_async_request_handling(
-	//! Описание контекста, в котором происходит обработка запроса.
-	//! Это описание затем будет использовано для выдачи отрицательного
-	//! ответа в случае возникновения исключений.
+	//! The description of the context where the processing is initiated.
+	//! That description will be used for a negative response in the
+	//! case of an exception.
 	std::string_view context_description,
-	//! Объект для отсылки ответа в HTTP-вход.
+	//! The replier for the incoming request.
 	replier_t & replier,
-	//! Статус для отрицательного ответа, который будет использован
-	//! при возникновении исключения.
+	//! Negative status to be used in the case of an exception.
 	status_t failure_status,
-	//! Лямбда-функция (функтор), которая и будет выполнять обработку запроса.
+	//! Lambda-function for actual request processing.
 	Lambda && lambda )
 {
 	std::optional< replier_t::reply_params_t > reply_data;
 
-	// Возникшие при выполнении этой операции исключения критичными
-	// не считаем.
+	// We don't consider exceptions from lambda() as critical.
 	try
 	{
 		lambda();

@@ -304,7 +304,7 @@ TEST_CASE("close target-end after headers") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны дочитать до "\r\n\r\n".
+	// Have to read until "\r\n\r\n".
 	{
 		std::string data;
 		REQUIRE_NOTHROW(
@@ -313,7 +313,7 @@ TEST_CASE("close target-end after headers") {
 						"\r\n\r\n" ) );
 	}
 
-	// А вот следующая попытка чтения должна привести к ошибке EOF.
+	// The next read attempt should lead to EOF.
 	{
 		std::array< char, 16 > data;
 		asio::error_code ec;

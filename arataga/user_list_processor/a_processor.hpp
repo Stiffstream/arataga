@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Агент для обработки списка пользователей.
+ * @brief Agent for handling user-list.
  */
 
 #pragma once
@@ -17,18 +17,18 @@ namespace arataga::user_list_processor
 // a_processor_t
 //
 /*!
- * @brief Агент для работы со списком пользователей.
+ * @brief Agent for handling user-list.
  */
 class a_processor_t : public so_5::agent_t
 {
 public:
-	//! Основной конструктор.
+	//! Initializing constructor.
 	a_processor_t(
-		//! SOEnv и параметры для агента.
+		//! SObjectizer-related parameters.
 		context_t ctx,
-		//! Контекст всего arataga.
+		//! The context of the whole application.
 		application_context_t app_ctx,
-		//! Индивидуальные параметры для этого агента.
+		//! Initial parameters for the agent.
 		params_t params );
 
 	void
@@ -38,56 +38,53 @@ public:
 	so_evt_start() override;
 
 private:
-	//! Контекст всего arataga.
+	//! The context of the whole application.
 	const application_context_t m_app_ctx;
 
-	//! Индивидуальные параметры для агента.
+	//! Initial parameters for the agent.
 	const params_t m_params;
 
-	//! Имя файла с локальной копией списка пользователей.
+	//! Name of the file with local copy of user-list.
 	const std::filesystem::path m_local_user_list_file_name;
 
-	//! Реакция на получение нового списка пользователей от HTTP-входа.
+	//! Handler for a new incoming user-list.
 	void
 	on_new_user_list(
 		mhood_t< new_user_list_t > cmd );
 
-	//! Попытка загрузить список из локального файла при старте агента.
+	//! Attempt to load user-list from the local copy at the start of agent.
 	void
 	try_load_local_user_list_first_time();
 
-	//! Попытка обработать новый список пользователей, полученный
-	//! из административного HTTP-входа.
+	//! Attempt to handle a new incoming user-list.
 	void
 	try_handle_new_user_list_from_post_request(
 		std::string_view content );
 
-	//! Пытается загрузить содержимое локального файла.
+	//! Attempt to load user-list from the local copy.
 	/*!
-	 * Обрабатывает исключения, которые при этом возникают.
+	 * Handles exceptions thrown during loading of file content.
 	 *
-	 * Если при загрузке возникла ошибка, то возвращается пустой optional.
+	 * If there is an error then empty value is returned.
 	 */
 	std::optional< ::arataga::user_list_auth::auth_data_t >
 	try_load_local_user_list_content();
 
-	//! Отсылка обновленного списка пользователей.
+	//! Distribution of a new user-list to subscribers of that notification.
 	/*!
-	 * Этот метод помечен как noexcept потому, что он перехватывает
-	 * все исключения, логирует их и аварийно завершает работу приложения,
-	 * поскольку если обновленный список пользователей отослать не
-	 * удалось, то продолжать работу нет смысла. И не важно, что это
-	 * за ошибка. Что-то явно идет не так.
+	 * This method is marked as noexcept because it intercepts all
+	 * exceptions, logs them, and terminates the application.
+	 * This logic is implemented because unability to spread a new
+	 * user-list is a fatal error that can't be recovered.
 	 */
 	void
 	distribute_updated_user_list(
 		::arataga::user_list_auth::auth_data_t auth_data ) noexcept;
 
-	//! Сохранение нового списка пользователей в локальный файл.
+	//! Storing of a new user-list to local file.
 	/*!
 	 * @note
-	 * Возникшие при выполнении этой операции исключения логируются,
-	 * но не выпускаются наружу.
+	 * Exceptions are caught, logged and suppressed.
 	 */
 	void
 	store_new_user_list_to_file(

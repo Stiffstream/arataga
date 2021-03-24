@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief connection_handler, который определяет тип протокола клиента.
+ * @brief connection_handler for the detection of user protocol.
  */
 
 #include <arataga/acl_handler/connection_handler_ifaces.hpp>
@@ -17,10 +17,10 @@ namespace handlers::protocol_detection
 
 class handler_t : public connection_handler_t
 {
-	//! Время, когда соединение было принято.
+	//! A time when the connection was accepted.
 	std::chrono::steady_clock::time_point m_created_at;
 
-	//! Буфер в который будет происходить чтение первой порции данных.
+	//! The buffer for the first portion of data.
 	in_buffer_fixed_t< 512 > m_in_buffer;
 
 public :
@@ -39,10 +39,10 @@ protected:
 		wrap_action_and_handle_exceptions(
 			delete_protector,
 			[this]( delete_protector_t, can_throw_t can_throw ) {
-				// Отмечаем в статистике появление еще одного подключения.
+				// A new connection has to be reflected in the stats.
 				context().stats_inc_connection_count( connection_type_t::generic );
 
-				// Нужно прочитать и проанализировать первую порцию данных.
+				// The first part of data has to be read and analyzed.
 				read_some(
 						can_throw,
 						m_connection,
@@ -93,8 +93,7 @@ private:
 		connection_handler_shptr_t m_handler;
 	};
 
-	// Тип, который должен использоваться методами try_accept_*_connection
-	// в качестве возвращаемого значения.
+	// Type to be used as the result on try_accept_*_connection methods.
 	using detection_result_t = std::variant<
 			unknown_protocol_t,
 			connection_accepted_t
@@ -107,8 +106,7 @@ private:
 	{
 		detection_result_t detection_result{ unknown_protocol_t{} };
 
-		// Запускаем только те try_accept_*_connection(), которые разрешены
-		// для этого типа ACL.
+		// Run only those try_accept_*_connection that enabled for the ACL.
 		const auto acl_protocol = context().config().acl_protocol();
 		if( acl_protocol_t::autodetect == acl_protocol )
 		{
@@ -127,22 +125,22 @@ private:
 			detection_result = try_accept_http_connection( can_throw );
 		}
 
-		// Осталось понять, приняли ли мы что-нибудь.
+		// Analyze the result of acception attempt.
 		std::visit( ::arataga::utils::overloaded{
 				[this, delete_protector, can_throw]
 				( connection_accepted_t & accepted )
 				{
-					// Обновляем статистику. Делать это нужно сейчас,
-					// поскольку в случае HTTP может использоваться
-					// keep-alive соединение, которое должно быть подсчитано
-					// всего лишь один раз (а если делать это в
-					// http::initial_http_handler, то статистика будет обновляться
-					// каждый раз при создании initial_http_handler (т.е. при
-					// обработке нового входящего запроса).
+					// Update the stats. It should be done now because
+					// in the case of HTTP keep-alive connection can be used.
+					// In the case of HTTP keep-alive the connection should be
+					// counted only once. If we'll update the stats in
+					// http::initial_http_handler then the stats will be updated
+					// for every incoming request (there could be many
+					// requests in a single keep-alive connection).
 					context().stats_inc_connection_count(
 							accepted.m_connection_type );
 
-					// Теперь можно заменять обработчик.
+					// The handler can be changed now.
 					replace_handler(
 							delete_protector,
 							can_throw,
@@ -153,8 +151,7 @@ private:
 				[this, delete_protector, can_throw]
 				( const unknown_protocol_t & )
 				{
-					// Соединение нужно закрыть, т.к. мы не знаем,
-					// что это за протокол.
+					// We don't know the protocol, the connection has to be closed.
 					log_and_remove_connection(
 							delete_protector,
 							can_throw,
@@ -174,7 +171,7 @@ private:
 
 		if( socks5_protocol_first_byte == m_in_buffer.read_byte() )
 		{
-			// Нужно создавать обработчик для SOCKS5.
+			// Assume that is SOCKS5.
 			return {
 					connection_accepted_t{
 							connection_type_t::socks5,
@@ -198,17 +195,17 @@ private:
 
 		buffer_read_trx_t read_trx{ m_in_buffer };
 
-		// Считаем, что к нам подключаются по HTTP, если первый символ
-		// это заглавная латинская буква (потому что методы в HTTP
-		// записываются заглавными буквами).
+		// Assume that this is HTTP if the first byte is a capital
+		// latin letter (it is because methods in HTTP are identified
+		// by capital letters).
 		//
-		// Даже если это не так, то затем выскочит ошибка парсинга
-		// HTTP-заголовка и соединение все равно будет закрыто.
+		// Even if we've made a mistake the consequent parsing of HTTP
+		// will fail and the connection will be closed.
 		//
 		const auto first_byte = m_in_buffer.read_byte();
 		if( std::byte{'A'} <= first_byte && first_byte <= std::byte{'Z'} )
 		{
-			// Нужно создавать обработчик для HTTP.
+			// Assume that it's HTTP protocol.
 			return {
 					connection_accepted_t{
 							connection_type_t::http,

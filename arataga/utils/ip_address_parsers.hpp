@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Повторно используемые средства для разбора значений IP-адресов.
+ * @brief Helpers for parsing IP-addresses.
  */
 
 #pragma once
@@ -16,8 +16,8 @@ namespace arataga::utils::parsers
 // is_ip_address_char_predicate_t
 //
 /*!
- * @brief Предикат для easy_parser-а, который распознает разрешенные
- * для использования в IP-адресах символы.
+ * @brief A predicate for easy_parser that detects symbols enabled
+ * to be used in IP-addresses.
  */
 struct is_ip_address_char_predicate_t
 {
@@ -36,8 +36,8 @@ struct is_ip_address_char_predicate_t
 // ip_address_char_p
 //
 /*!
- * @brief Продюсер для easy_parser-а, который извлекает разрешенные
- * для использования в IP-адресах символы.
+ * @brief A producer for easy_parser that extracts symbols enabled
+ * to be used in IP-addresses.
  */
 [[nodiscard]]
 inline auto
@@ -51,10 +51,10 @@ ip_address_char_p() noexcept
 // ip_address_char_seq_p
 //
 /*!
- * @brief Продюсер для easy_parser-а, который извлекает последовательность
- * разрешенных для использования в IP-адресах символов.
+ * @brief A producer for easy_parser that extracts a sequence of
+ * symbols enabled to be used in IP-addresses.
  *
- * Этот продюсер производит экземпляр std::string.
+ * Produces an instance of std::string.
  */
 [[nodiscard]]
 inline auto
@@ -71,9 +71,9 @@ ip_address_char_seq_p() noexcept
 // ipv4_address_p
 //
 /*!
- * @brief Продюсер для easy_parser-а, который извлекает значение IPv4-адреса.
+ * @brief A procuder for easy_parser that extracts IPv4-address.
  *
- * Этот продюсер производит экземпляр asio::ip::address_v4.
+ * Produces an instance of asio::ip::address_v4.
  */
 [[nodiscard]]
 inline auto
@@ -100,11 +100,12 @@ ipv4_address_p() noexcept
 // ip_address_p
 //
 /*!
- * @brief Продюсер для easy_parser-а, который извлекает значение IP-адреса.
+ * @brief A producer for easy_parser that extracts IP-address regardless of
+ * its version.
  *
- * Этот продюсер производит экземпляр asio::ip::address.
+ * Produces an instance of asio::ip::address.
  *
- * Сам IP-адрес может быть как IPv4, так и IPv6.
+ * Can handle IPv4 and IPv6 addresses.
  */
 [[nodiscard]]
 inline auto

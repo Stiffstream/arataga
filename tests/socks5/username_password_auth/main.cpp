@@ -42,7 +42,7 @@ TEST_CASE("no auth PDU") {
 		REQUIRE( 0x2u == response[ 1 ] );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -105,7 +105,7 @@ TEST_CASE("no auth PDU (one byte per second)") {
 		REQUIRE( 0x2u == response[ 1 ] );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -159,7 +159,7 @@ TEST_CASE("wrong auth PDU version") {
 		REQUIRE( data.size() == written );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -261,7 +261,7 @@ TEST_CASE("partial auth PDU") {
 		REQUIRE( data.size() == written );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;
@@ -315,7 +315,7 @@ TEST_CASE("garbage after auth PDU") {
 		REQUIRE( data.size() == written );
 	}
 
-	// Соединение должно быть закрыто на другой стороне.
+	// The connection has to be closed on the other side.
 	{
 		std::array< std::uint8_t, 20 > data;
 		asio::error_code ec;

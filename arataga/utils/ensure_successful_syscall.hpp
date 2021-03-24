@@ -1,7 +1,7 @@
 /*!
  * @file
- * @brief Вспомогательная функция для выброса исключения, если
- * системный вызов вернул ошибку.
+ * @brief Helper function that throws an exception if some
+ * system call returns an error.
  */
 
 #pragma once

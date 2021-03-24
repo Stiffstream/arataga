@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Описание данных, которые содержатся в user-list.
+ * @brief Description of data in a user-list.
  */
 
 #pragma once
@@ -22,7 +22,7 @@ namespace arataga::user_list_auth {
 //
 // ipv4_address_t
 //
-//! Тип IPv4 адреса, который будет использоваться в user_list_auth_data.
+//! Type of IPv4 address that will be used in user_list_auth_data.
 using ipv4_address_t = asio::ip::address_v4;
 
 //
@@ -33,24 +33,24 @@ using ip_port_t = std::uint16_t;
 //
 // user_id_t
 //
-//! Тип идентификатора для пользователя.
+//! Type of user ID.
 using user_id_t = std::uint_least32_t;
 
 //
 // auth_by_ip_key_t
 //
 /*!
- * @brief Параметры аутентификации пользователя по IP-адресу.
+ * @brief Parameters for authentification by IP-address.
  */
 struct auth_by_ip_key_t {
-	//! IP-адрес прокси.
+	//! Proxy ID-address.
 	/*!
-	 * Это in_addr для ACL.
+	 * It's in_addr for ACL.
 	 */
 	ipv4_address_t m_proxy_in_addr;
-	//! TCP-порт прокси.
+	//! Proxy TCP-port.
 	ip_port_t m_proxy_port;
-	//! IP-адрес пользователя.
+	//! User IP-address.
 	ipv4_address_t m_user_ip;
 };
 
@@ -88,20 +88,20 @@ operator==(
 // auth_by_login_key_t
 //
 /*!
- * @brief Параметры аутентификации пользователя по login/password.
+ * @brief Parameters for authentification by login/password.
  */
 struct auth_by_login_key_t
 {
-	//! IP-адрес прокси.
+	//! Proxy IP-address.
 	/*!
-	 * Это in_addr для ACL.
+	 * It's in_addr for ACL.
 	 */
 	ipv4_address_t m_proxy_in_addr;
-	//! TCP-порт прокси.
+	//! Proxy TCP-port.
 	ip_port_t m_proxy_port;
-	//! login пользователя.
+	//! User's login.
 	std::string m_username;
-	//! Пароль пользователя.
+	//! User's password.
 	std::string m_password;
 };
 
@@ -143,17 +143,17 @@ operator==(
 // user_data_t
 //
 /*!
- * @brief Дополнительные данные для клиента.
+ * @brief Additional data for a user.
  */
 struct user_data_t
 {
-	//! Ограничения на пропускную способность для клиента.
+	//! Main band-limits for a user.
 	bandlim_config_t m_bandlims;
 
-	//! Идентификатор дополнительных лимитов для пользователя.
+	//! ID of additional band-limits for a user.
 	std::uint32_t m_site_limits_id;
 
-	//! Идентификатор пользователя.
+	//! User's ID.
 	user_id_t m_user_id;
 };
 
@@ -175,7 +175,7 @@ operator==(
 // site_limits_key_t
 //
 /*!
- * @brief Тип ключа в словаре индивидуальных лимитов.
+ * @brief Type of the key in a dictionary of personal limits.
  */
 struct site_limits_key_t
 {
@@ -204,10 +204,10 @@ operator==(
 // domain_name_t
 //
 /*!
- * @brief Специальное представление доменного имени.
+ * @brief Special representation of domain name.
  *
- * Имя преобразуется в нижний регистр.
- * Лидирующие '.' удаляются.
+ * Name is stored in lower case.
+ * All leading '.' are removed.
  */
 class domain_name_t
 {
@@ -252,10 +252,10 @@ operator<<(std::ostream & to, const domain_name_t & name);
 // is_subdomain_of
 //
 /*!
- * @brief Вспомогательная функция, которая позволяет определить
- * является ли один домен поддоменом другого домена.
+ * @brief A helper function that allows to detect is one domain
+ * is a subdomain of another domain.
  *
- * @return true если @a full_name является поддоменом @a domain_name.
+ * @return true if @a full_name is a subdomain of @a domain_name.
  */
 [[nodiscard]]
 bool
@@ -267,19 +267,19 @@ is_subdomain_of(
 // site_limits_data_t
 //
 /*!
- * @brief Описание одного персонального лимита.
+ * @brief Description of one personal limit.
  *
- * Один персональный лимит может содержать перечень доменов с
- * ограничениями пропускной способности по каждому из них.
+ * One personal limit can contain a list of domain with
+ * individual limits for each of them.
  */
 struct site_limits_data_t
 {
-	//! Описание лимита для одного домена.
+	//! Description of a limit for one domain.
 	struct one_limit_t
 	{
-		//! Имя домена.
+		//! Domain name.
 		domain_name_t m_domain;
-		//! Лимит для домена.
+		//! The limit for the domain.
 		bandlim_config_t m_bandlims;
 
 		[[nodiscard]]
@@ -293,22 +293,21 @@ struct site_limits_data_t
 		}
 	};
 
-	//! Тип контейнера для хранения индивидуальных лимитов по доменам.
+	//! Type of container for holding domains' limits.
 	using limits_container_t = std::vector<one_limit_t>;
 
-	//! Список доменов с их индивидуальными лимитами.
+	//! List of domains with individual limits.
 	limits_container_t m_limits;
 
-	//! Найти огpаничение для конкретного домена.
+	//! Find the limit for a particular domain.
 	/*!
-	 * Возвращается пустой optional, если для домена ограничение
-	 * задано не было.
+	 * Returns an empty `optional` if there is no limit for the domain. 
 	 *
-	 * Если в m_limits есть сразу несколько доменов, для которых
-	 * @a host является поддоменом, то выбирается домен с наиболее
-	 * длинным именем. Так, если в m_limits указаны "v2.api.vk.com",
-	 * "api.vk.com" и "vk.com", а в @a host задан "v1.api.vk.com",
-	 * то будет выбран лимит для "api.vk.com".
+	 * If there are several domain for those @a host is a subdomain,
+	 * then a domain with longest name is selected. For example,
+	 * if m_limits contains "v2.api.vk.com", "api.vk.com" and
+	 * "vk.com", and @a host contains "v1.api.vk.com" then
+	 * the limit for "api.vk.com" will be selected.
 	 */
 	[[nodiscard]]
 	std::optional< one_limit_t >
@@ -328,29 +327,29 @@ operator==(
 // auth_data_t
 //
 /*!
- * @brief Тип хранилища информации для аутентификации клиентов.
+ * @brief Type of storage for authentification info.
  */
 struct auth_data_t
 {
-	//! Тип словаря для аутентификации клиента по IP.
+	//! Type of a dictionary for authentification by IP.
 	using by_ip_map_t =
 			std::map<auth_by_ip_key_t, user_data_t>;
 
-	//! Тип словаря для аутентификации клиента по паре login/password.
+	//! Type of a dictionary for authentification by login/password.
 	using by_login_map_t =
 			std::map<auth_by_login_key_t, user_data_t>;
 
-	//! Тип словаря персональных лимитов.
+	//! Type of a dictionary for personal limits.
 	using site_limits_map_t =
 			std::map<site_limits_key_t, site_limits_data_t>;
 
-	//! Информация для аутентификации клиентов по IP.
+	//! Info for authentification by IP.
 	by_ip_map_t m_by_ip;
 
-	//! Информация для аутентификации клиентов по паре login/password.
+	//! Info for authentification by login/password.
 	by_login_map_t m_by_login;
 
-	//! Словарь персональных лимитов.
+	//! The dictionary of personal limits.
 	site_limits_map_t m_site_limits;
 };
 
@@ -358,9 +357,9 @@ struct auth_data_t
 // parse_auth_data
 //
 /*!
- * @brief Разбор загруженного в память содержимого списка пользователей.
+ * @brief Parsing of already loaded content of user-list file.
  *
- * @throw std::runtime_error При возникновении ошибок парсинга.
+ * @throw std::runtime_error In the case of parsing error.
  */
 [[nodiscard]]
 auth_data_t
@@ -371,9 +370,9 @@ parse_auth_data(
 // load_auth_data
 //
 /*!
- * @brief Загрузка информации об аутентификации из указанного файла.
+ * @brief Load and parse content of user-list file.
  *
- * @throw std::runtime_error При возникновении ошибок загрузки.
+ * @throw std::runtime_error In the case of loading/parsing errors.
  */
 [[nodiscard]]
 auth_data_t

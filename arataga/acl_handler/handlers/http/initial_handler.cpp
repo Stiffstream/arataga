@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Реализация initial_http_handler-а.
+ * @brief The implementation of initial_http_handler.
  */
 
 #include <arataga/acl_handler/handlers/http/basics.hpp>
@@ -26,82 +26,87 @@ namespace handlers::http
 // initial_http_handler_t
 //
 /*!
- * @brief Первоначальный обработчик HTTP-соединения.
+ * @brief The initial handler of HTTP-connection.
  *
- * Этот обработчик решает что с соединением делать дальше.
+ * This handler makes a decision about further processing of the connection.
  */
 class initial_http_handler_t final : public basic_http_handler_t
 {
-	// Специальный индикатор того, что мы находимся в правильном
-	// состоянии перед сменой connection-handler-а.
+	// A special marker that indicates that we are in valid state
+	// before the change of connection-handler.
 	struct valid_state_t {};
 
-	// Специальный индикатор того, что состояние initial_http_handler-а
-	// перед сменой connection-handler-а некорректно и смену делать
-	// нельзя. Вместо этого нужно отослать отрицательный ответ и
-	// закрыть соединение.
+	// Special marker that indicates that we are in an invalid state and
+	// can't do the replacement of connection-handler.
+	// A negative response should be sent instead, then the connection
+	// should be stopped.
 	struct invalid_state_t
 	{
-		//! Содержимое отрицательного ответа, который нужно отослать клиенту.
+		//! Description that should be sent to the user.
 		std::string_view m_response;
 	};
 
-	//! Тип результата проверки валидности полученного запроса.
+	//! The result of validity check of the incoming request.
 	using validity_check_result_t = std::variant<
 			valid_state_t, invalid_state_t >;
 
-	//! Состояние обработки исходного запроса.
+	//! The state of HTTP-request processing.
 	http_handling_state_unique_ptr_t m_request_state;
 
-	//! Дополнительная информация, которая будет накапливаться в
-	//! процессе разбора исходного запроса.
+	//! Additional info for the HTTP-request that will be collected
+	//! during the parsing of the request.
 	request_info_t m_request_info;
 
-	//! Свойства для HTTP-парсера.
+	//! Settings for the HTTP-parser.
 	http_parser_settings m_http_parser_settings;
 
-	//! Признак того, что начался разбор входящего запроса.
+	//! Flag that indicates that the parsing of the incoming request started.
 	/*!
-	 * Если клиент использует keep-alive соединения, то может оказаться
-	 * так, что клиент присылает первый запрос, этот запрос обрабатывается,
-	 * клиенту отсылают ответ. После чего для этого же соединения создается
-	 * новый connection-handler. Но больше в это соединение клиент ничего
-	 * не присылает.
+	 * If the user uses keep-alive connection that the following
+	 * scenario can happen:
 	 *
-	 * В таком случае соединение с клиентом после истечения тайм-аута
-	 * нужно просто закрывать, ничего не отсылая в сторону клиента.
-	 * А для этого нужно знать, начался ли разбор сообщения или нет
+	 * - the user send the first request;
+	 * - the request will be processed and the response will be sent to
+	 *   the user;
+	 * - a new connection-handler will be created for the connection for
+	 *   waiting for a new incoming request;
+	 * - the user doesn't send anything new.
 	 *
-	 * Для чего и нужен данный флаг, который будет устанавливаться
-	 * в on_message_begin().
+	 * In that scenarion the connection has to be closed after a timeout
+	 * without sending anything to the client. But we should know was
+	 * something received from the client or not.
+	 *
+	 * This flag tells us about presence of some incoming data from the
+	 * client.
+	 *
+	 * It'll be set in on_message_begin().
 	 */
 	bool m_incoming_message_started{ false };
 
-	//! Признак того, что нужно переходить к созданию следующего
-	//! connection-handler-а.
+	//! The flag that tells that we have to create the next
+	//! connection-handler.
 	bool m_should_next_handler_be_created{ false };
 
-	//! Время, когда соединение было принято.
+	//! The timepoint when the connection was accepted.
 	std::chrono::steady_clock::time_point m_created_at;
 
-	//! Промежуточный объект для накопления значения имени
-	//! текущего HTTP-заголовка.
+	//! Object for collecting a name of the current HTTP header field.
 	std::string m_current_http_field_name;
-	//! Промежуточный объект для накопления значения текущего HTTP-заголовка.
+	//! Object for collecting a value of the current HTTP header field.
 	std::string m_current_http_field_value;
-	//! Признак того, что значение заголовка было извлечено.
+	//! The flag that tells that the value of the current HTTP header field
+	//! has been extracted.
 	bool m_on_header_value_called{ false };
-	//! Общий объем накопленных заголовков.
+	//! The total size of all HTTP header fields.
 	std::size_t m_total_headers_size{ 0u };
 
-	//! Сколько всего байт было разобрано при обработке входящего запроса.
+	//! How many bytes were parsed during the request processing.
 	/*!
-	 * Это значение будет использоваться при обработке ошибок чтения
-	 * данных из входящего сокета.
+	 * This value will be used during error handling for I/O errors.
 	 *
-	 * Если сокет закрылся, а ранее из него вообще ничего извлечено
-	 * не было, то такую ситуацию нельзя рассматривать как ошибочную
-	 * и не нужно ее логировать с уровнями warning или выше.
+	 * If socket has been closed on remote side but nothing was read
+	 * from it then it isn't an error and this case can't be logged
+	 * with `warning` or higher levels.
 	 */
 	std::size_t m_total_bytes_parsed{ 0u };
 
@@ -122,7 +127,7 @@ public:
 	{
 		m_request_state->m_parser.data = this;
 
-		// Свойства для HTTP-парсера так же должны быть пронициализированы.
+		// Settings for HTTP-parser should also be initialized here.
 		initialize_http_parser_settings();
 	}
 
@@ -134,7 +139,7 @@ protected:
 			delete_protector,
 			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 			{
-				// Пытаемся разобрать то, что уже есть в буфере.
+				// Try to parse existing data.
 				try_handle_data_read( delete_protector, can_throw );
 			} );
 	}
@@ -164,9 +169,9 @@ public:
 	}
 
 private:
-	// Либо просто удаляет connection-handler, если клиент вообще
-	// не прислал запроса. Либо же отсылает отрицательный ответ из-за
-	// того, что запрос от клиента идет слишком долго.
+	// Just delete connection-handler if the user didn't sent anything.
+	// Or sends a negative response because of long time of waiting
+	// the completeness of the request.
 	void
 	handle_headers_complete_timeout(
 		delete_protector_t delete_protector,
@@ -174,8 +179,8 @@ private:
 	{
 		if( m_incoming_message_started )
 		{
-			// Поскольку клиент начал отсылку запроса, то он должен
-			// получить отрицательный ответ с нашей стороны.
+			// Client started the request.
+			// In that case we should send a response.
 			::arataga::logging::wrap_logging(
 					proxy_logging_mode,
 					spdlog::level::warn,
@@ -187,7 +192,6 @@ private:
 								"http_headers_complete timed out" );
 					} );
 
-			// Осталось только отослать ответ и закрыть соединение.
 			send_negative_response_then_close_connection(
 					delete_protector,
 					can_throw,
@@ -196,8 +200,8 @@ private:
 		}
 		else
 		{
-			// Т.к. запроса не было, то и отсылать ничего не нужно.
-			// Достаточно просто закрыть соединение.
+			// There was no incoming data. No need to send a response.
+			// Just close the connection.
 			log_and_remove_connection(
 					delete_protector,
 					can_throw,
@@ -207,15 +211,14 @@ private:
 		}
 	}
 
-	// Смысл возвращаемого значения такой же, как и в callback-ах
-	// для http_parser.
+	// The return value the same as for http_parser's callbacks.
 	[[nodiscard]]
 	int
 	complete_current_field_if_necessary( can_throw_t can_throw )
 	{
 		if( m_on_header_value_called )
 		{
-			// Это начало нового заголовка.
+			// This is the start of a new header field.
 			m_total_headers_size +=
 					m_current_http_field_name.size() +
 					m_current_http_field_value.size();
@@ -254,21 +257,21 @@ private:
 	}
 
 	/*!
-	 * @name Callback-и для HTTP-парсера.
+	 * @name http_parser's callbacks.
 	 * @{
 	 */
 	int
 	on_message_begin( can_throw_t /*can_throw*/ )
 	{
-		// Нужно зафиксировать, что новый HTTP-запрос к нам начал доходить.
-		// Без этого мы не сможем правильно обрабатывать тайм-ауты.
+		// Set the flag of the start of processing of new HTTP-request.
+		// We can't handle time-outs right way without that flag.
 		m_incoming_message_started = true;
 
 		m_request_info.m_method = static_cast<http_method>(
 				m_request_state->m_parser.method);
 
-		// Если у нас HTTP-метод без body, то часть callback-ов должна
-		// быть заменена.
+		// If we have bodyless HTTP method then a part of callbacks has
+		// to be changed.
 		if( helpers::is_bodyless_method( m_request_info.m_method ) )
 		{
 			m_http_parser_settings.on_headers_complete =
@@ -325,7 +328,7 @@ private:
 	int
 	on_status( can_throw_t can_throw, const char *, std::size_t )
 	{
-		// Мы не ждем status-а на входящем запросе.
+		// Don't expect a status on incoming request.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::err,
@@ -419,12 +422,11 @@ private:
 			return rc;
 		}
 
-		// Нужно ставить разбор HTTP-пакета на паузу и переходить
-		// к анализу того, что мы уже получили.
+		// Have to pause the parsing and start the analysis of
+		// already parsed part of the HTTP-request.
 		http_parser_pause( &(m_request_state->m_parser), 1 );
 
-		// Для методов, у которых есть BODY, уже можно переходить
-		// к созданию следующего обработчика.
+		// We can create the next handler for the request with a body.
 		m_should_next_handler_be_created = true;
 
 		return 0;
@@ -447,7 +449,7 @@ private:
 	on_body_for_bodyful_method(
 		can_throw_t can_throw, const char *, std::size_t )
 	{
-		// На этой стадии мы не должны извлекать тело запроса.
+		// We shouldn't extract body on this stage of request processing.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::err,
@@ -467,8 +469,7 @@ private:
 	on_body_for_bodyless_method(
 		can_throw_t can_throw, const char *, std::size_t )
 	{
-		// У метода, который не предполагает наличия тела запроса, это
-		// самое тело запроса нашлось.
+		// A body for bodyless method, this is an error.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::err,
@@ -490,7 +491,7 @@ private:
 	on_message_complete_for_bodyful_method(
 		can_throw_t can_throw )
 	{
-		// На этой стадии мы не должны достичь конца тела HTTP-сообщения.
+		// Don't expect the end of the HTTP-request for method with a body.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::err,
@@ -509,8 +510,7 @@ private:
 	int
 	on_message_complete_for_bodyless_method( can_throw_t /*can_throw*/ )
 	{
-		// Для HTTP-методов, у которых нет BODY, уже можно переходить
-		// к созданию следующего handler-а.
+		// We can create the next handler for HTTP method without a body.
 		m_should_next_handler_be_created = true;
 
 		return 0;
@@ -520,7 +520,7 @@ private:
 	on_chunk_header_for_bodyful_method(
 		can_throw_t can_throw )
 	{
-		// На этой стадии мы не должны иметь дел с chunk-ами.
+		// Don't expect chunks on that stage.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::err,
@@ -540,8 +540,7 @@ private:
 	on_chunk_header_for_bodyless_method(
 		can_throw_t can_throw )
 	{
-		// У метода, который не предполагает наличия тела запроса, это
-		// самое тело запроса нашлось.
+		// Don't expect a chunk for HTTP-method without a body.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::err,
@@ -563,7 +562,7 @@ private:
 	on_chunk_complete_for_bodyful_method(
 		can_throw_t can_throw )
 	{
-		// На этой стадии мы не должны иметь дел с chunk-ами.
+		// Do not deal with chunks on that stage.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::err,
@@ -583,8 +582,7 @@ private:
 	on_chunk_complete_for_bodyless_method(
 		can_throw_t can_throw )
 	{
-		// У метода, который не предполагает наличия тела запроса, это
-		// самое тело запроса нашлось.
+		// Don't expect chunks on that stage.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::err,
@@ -684,8 +682,8 @@ private:
 							);
 					} );
 
-			// Возникла ошибка, которая не позволяет нам продолжать
-			// обработку этого соединения.
+			// We encounter an error that doesn't allow us to continue
+			// the processing.
 			return send_negative_response_then_close_connection(
 					delete_protector,
 					can_throw,
@@ -695,7 +693,7 @@ private:
 
 		m_total_bytes_parsed += bytes_parsed;
 
-		// Возможно, уже пришло время переходить к следующей стадии.
+		// Can we go to the next handler?
 		if( m_should_next_handler_be_created )
 		{
 			return initiate_switch_to_next_handler(
@@ -703,11 +701,11 @@ private:
 					can_throw );
 		}
 
-		// Если мы все еще здесь, значит данных во входящем буфере
-		// недостаточно и нужно читать следующую порцию.
-		// Но на всякий случай проверим, так ли это.
+		// If we're still here then there is no enough data in
+		// the incoming buffer.
+		// But check that again for the safety.
 
-		// Все данные должны быть разобраны. Если нет, то это проблема.
+		// All the data have to be parsed. If not we have a problem.
 		if( bytes_to_parse != bytes_parsed )
 		{
 			throw acl_handler_ex_t{
@@ -717,11 +715,9 @@ private:
 			};
 		}
 
-		// Все, что нам остается -- это инициировать чтение следующей порции
-		// данных.
+		// All that we can do is to initiate next read.
 		m_request_state->m_incoming_data_size = 0u;
-		// Используем async_read_some для того, чтобы самостоятельно
-		// обрабатывать ситуацию с EOF.
+		// Use async_read_some to handle EOF by ourselves.
 		auto buffer = asio::buffer(
 				&(m_request_state->m_incoming_data[0]),
 				m_request_state->m_incoming_data.size() );
@@ -738,7 +734,7 @@ private:
 			);
 	}
 
-	// Обработка заголовков типа Connection и Proxy-Connection.
+	// Handling of Connection and Proxy-Connection header fields.
 	std::optional< invalid_state_t >
 	handle_connection_header(
 		can_throw_t can_throw,
@@ -748,8 +744,7 @@ private:
 
 		using namespace restinio::http_field_parsers;
 
-		// Сперва соберем значения из всех заголовков Connection
-		// в одно место.
+		// Collect all values of Connection into one place.
 		connection_value_t aggregated;
 		m_request_info.m_headers.for_each_value_of(
 				field_name,
@@ -764,7 +759,7 @@ private:
 					}
 					else
 					{
-						// Возникла ошибка разбора очередного заголовка.
+						// There is an error of parsing a header field.
 						::arataga::logging::wrap_logging(
 								proxy_logging_mode,
 								spdlog::level::err,
@@ -787,33 +782,31 @@ private:
 								response_bad_request_parse_error_detected
 							};
 
-						// Идти дальше нет смысла.
+						// There is no sense to continue.
 						return restinio::http_header_fields_t::stop_enumeration();
 					}
 				} );
 
-		// Теперь осталось пройтись по полученным значениям и обработать
-		// их должным образом.
+		// Now we can examine and handle collected values.
 		for( const auto & v : aggregated.values )
 		{
 			if( "close" == v )
-				// Соединение с клиентом должно быть закрыто после обработки
-				// запроса.
+				// The connection should be closed after the processing.
 				m_request_info.m_keep_user_end_alive = false;
 			else
 			{
-				// Все остальные значения воспринимаем как имена заголовков,
-				// которые нужно удалить.
-				// Однако, заголовок Transfer-Encoding нужно оставить, т.к.
-				// мы не производим трансформацию содержимого тела запроса,
-				// а отдаем на целевой узел все именно так, как оно пришло
-				// от клиента.
+				// All other values are treated as names of header fields
+				// to be deleted.
+				//
+				// But the Transfer-Encoding field should be kept, because
+				// we don't do the transformation of the request's body, but
+				// just transfer the data as is.
 				if( "transfer-encoding" != v )
 					m_request_info.m_headers.remove_all_of( v );
 			}
 		}
 
-		// Заголовок Connection так же нужно удалить.
+		// The Connection header should also be deleted.
 		m_request_info.m_headers.remove_all_of( field_name );
 
 		return opt_error;
@@ -823,17 +816,16 @@ private:
 	remove_hop_by_hop_headers()
 	{
 		using namespace std::string_view_literals;
-		// Выбрасываем заголовки, которые являются hop-to-hop
-		// заголовками и не должны уходить из прокси на целевой узел.
+
+		// Remove all the fields those are hop-to-hop fields and should
+		// not go from proxy to the target host.
 		//
-		// ПРИМЕЧАНИЕ: выбрасываем не все заголовки. Так, оставляем
-		// следующие заголовки:
-		// - Proxy-Authorization, т.к. он потребуется на следующем шаге
-		// и будет удален впоследствии;
-		// - Transfer-Encoding, т.к. мы отдаем содержимое именно в том
-		// виде, в котором получаем от клиента.
+		// NOTE: some fields have to be kept. Thus, we kept:
+		// - Proxy-Authorization, because it is required on the next
+		// step and will be removed later;
+		// - Transfer-Encoding, because we transfer the data in its source form.
 		//
-		// Перечень hop-to-hop заголовков найден здесь:
+		// A list of hop-to-hop headers was found here:
 		// https://nathandavison.com/blog/abusing-http-hop-by-hop-request-headers
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
 		static constexpr std::initializer_list< std::string_view >
@@ -845,11 +837,11 @@ private:
 			m_request_info.m_headers.remove_all_of( h );
 	}
 
-	// Выполнение необходимых модификаций в заголовках полученного
-	// запроса.
-	// Может возвращаться invalid_state_t если в процессе обработки
-	// заголовков обнаружится какая-то ошибка в значении заголовка или
-	// возникнет ошибка разбора содержимого заголовка.
+	// Performs the necessary modifications in header fields of
+	// the HTTP-request.
+	//
+	// A value of invalid_state_t can be returned if some error
+	// will be detected during the processing.
 	std::optional< invalid_state_t >
 	try_modify_request_headers( can_throw_t can_throw )
 	{
@@ -871,9 +863,9 @@ private:
 	validity_check_result_t
 	ensure_valid_state_before_switching_handler( can_throw_t can_throw )
 	{
-		// Если мы сейчас обрабатываем HTTP CONNECT, то нужно убедиться
-		// в том, что входной буфер пуст и после самого запроса там
-		// ничего не осталось.
+		// If we're handling HTTP CONNECT then we have to check that
+		// incoming buffer is empty and there is nothing behind the
+		// request itself.
 		if( HTTP_CONNECT == m_request_info.m_method )
 		{
 			if( m_request_state->m_incoming_data_size
@@ -915,7 +907,6 @@ private:
 		delete_protector_t delete_protector,
 		can_throw_t can_throw )
 	{
-		// Логирование для облегчения последующих разбирательств по логам.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::info,
@@ -932,12 +923,12 @@ private:
 						);
 				} );
 
-		// Перед переходом к другому обработчику нужно убедится,
-		// что нигде не осталось никакого мусора.
+		// Check the state before changing the connection-handler.
 		std::visit(
 			::arataga::utils::overloaded{
 				[&]( const valid_state_t & ) {
-					// Далее работу будет выполнять другой обработчик.
+					// Everything is fine, can delegate processing to the next
+					// connection-handler.
 					replace_handler(
 							delete_protector,
 							can_throw,
@@ -973,19 +964,18 @@ private:
 		{
 			remove_reason_t reason = remove_reason_t::io_error;
 
-			// Нам в любом случае нужно удалять самих себя, но нужно
-			// выяснить, с какой именно диагностикой это следует делать.
+			// We have to delete ourselves anyway, but it is necessary
+			// to select the right diagnostic.
 			if( asio::error::operation_aborted == ec )
 				reason = remove_reason_t::current_operation_canceled;
 			else if( asio::error::eof == ec )
 			{
 				reason = remove_reason_t::user_end_closed_by_client;
 
-				// Если мы вообще еще ничего не начали разбирать, то закрытие
-				// соединения на стороне пользователя -- это не проблема.
-				// Такое может происходить при keep-alive соединениях,
-				// когда пользователь выполняет всего один запрос, затем
-				// закрывает соединение после получения ответа.
+				// If there is no any incoming data then the closed connection
+				// isn't a problem. That can happen in keep-alive connections,
+				// when a user sends a single request and then closes
+				// the connection.
 				if( m_total_bytes_parsed )
 				{
 					::arataga::logging::wrap_logging(
@@ -1004,8 +994,8 @@ private:
 				}
 			}
 
-			// Если это все-таки ошибка ввода-вывода, то сей факт
-			// должен быть залогирован перед закрытием соединения.
+			// If this is an I/O error then this fact should be logged
+			// before removal of the connection-handler.
 			if( remove_reason_t::io_error == reason )
 				log_and_remove_connection_on_io_error(
 						delete_protector,
@@ -1013,12 +1003,12 @@ private:
 						ec,
 						"reading incoming HTTP-request" );
 			else
-				// Просто удаляем самих себя.
+				// Just delete ourselves.
 				remove_handler( delete_protector, reason );
 		}
 		else
 		{
-			// Ошибок нет, обрабатываем прочитанные данные.
+			// There is no errors. Can handle the data read.
 			on_data_read( delete_protector, can_throw, bytes_transferred );
 		}
 	}
@@ -1031,8 +1021,8 @@ private:
 	{
 		m_request_state->m_incoming_data_size = bytes_transferred;
 
-		// Разбор нужно вести с самого начала буфера, поскольку все
-		// содержимое буфера было полностью заменено.
+		// The parsing should start from the beginning of the buffer
+		// because all previous content was already parsed.
 		m_request_state->m_next_execute_position = 0u;
 
 		try_handle_data_read( delete_protector, can_throw );

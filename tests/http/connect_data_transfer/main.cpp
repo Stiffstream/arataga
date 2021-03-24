@@ -105,7 +105,7 @@ TEST_CASE("serie of large blocks") {
 				asio::buffer(outgoing_request)) );
 	}
 
-	// Должны прочитать положительный ответ.
+	// A positive response is expected.
 	{
 		std::string first_resp_part;
 		REQUIRE_NOTHROW(
@@ -115,7 +115,7 @@ TEST_CASE("serie of large blocks") {
 						"HTTP/1.1 200 Ok\r\n\r\n" ) );
 	}
 
-	// Должны прочитать то, что нам отсылает удаленная сторона.
+	// We have to read data from the other side.
 	{
 		std::array< char, block_size > data;
 		std::size_t i = 0u;

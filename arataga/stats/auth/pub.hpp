@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Средства для сбора статистики по аутентификациям.
+ * @brief Stuff for collecting authentification-related stats.
  */
 
 #pragma once
@@ -15,22 +15,28 @@ namespace arataga::stats::auth
 //
 // auth_stats_t
 //
-//! Статистика по одному агенту-authentificator-у.
+//! Stats for one authentificator-agent.
 struct auth_stats_t
 {
-	//! Общее количество операций аутентификации.
+	//! Total count of auth operations.
 	std::atomic< std::uint64_t > m_auth_total_count{};
-	//! Общее количество аутентификаций по IP.
+	//! Total count of authentifications by IP-address.
+	/*!
+	 * Including successful and failed authentifications.
+	 */
 	std::atomic< std::uint64_t > m_auth_by_ip_count{};
-	//! Количество неудачных аутентификаций по IP.
+	//! Count of failed authentifications by IP-address.
 	std::atomic< std::uint64_t > m_failed_auth_by_ip_count{};
-	//! Общее количество аутентификаций по login/password.
+	//! Total count of authentifications by login/password.
+	/*!
+	 * Including successful and failed authentifications.
+	 */
 	std::atomic< std::uint64_t > m_auth_by_login_count{};
-	//! Количество неудачных аутентификаций по login/password.
+	//! Count of failed authentifications by login/password.
 	std::atomic< std::uint64_t > m_failed_auth_by_login_count{};
 
-	//! Количество неудачных авторизаций из-за блокировки порта на
-	//! целевом узле.
+	//! Count of failed authentifications because of denied port
+	//! on the target host.
 	std::atomic< std::uint64_t > m_failed_authorization_denied_port{};
 };
 
@@ -100,14 +106,13 @@ lambda_as_enumerator( Lambda && lambda )
 // auth_stats_reference_manager_t
 //
 /*!
- * @brief Интерфейс хранителя ссылок на объекты auth_stats_t.
+ * @brief An interface of holder of references to auth_stats objects.
  *
- * Объет auth_stats_t является собственностью агента authentificator.
- * Но ссылки на существующие auth_stats-объекты должны быть
- * доступны stats_collector-у. Для чего агент authentificator при начале
- * своей работы сохраняет ссылку на свой auth_stats-объект в
- * auth_stats_reference_manager. А перед уничтожением агент
- * authentificator уничтожает эту ссылку.
+ * An object of auth_stats_t is owned by authentificator-agent.
+ * But a reference to that object should be available to stats_collector.
+ * Authentificator-agent passes that reference to
+ * auth_stats_reference_manager at the beginning, then removes that
+ * references at the end.
  */
 class auth_stats_reference_manager_t
 {
@@ -115,26 +120,28 @@ public:
 	auth_stats_reference_manager_t();
 	virtual ~auth_stats_reference_manager_t();
 
-	// Объекты этого типа нельзя ни копировать, ни перемещать.
+	// Objects of that type can't be moved or copied.
 	auth_stats_reference_manager_t(
 		const auth_stats_reference_manager_t & ) = delete;
 	auth_stats_reference_manager_t(
 		auth_stats_reference_manager_t && ) = delete;
 
-	//! Добавить очередной auth_stats_t в хранилище.
+	//! Add a new auth_stats to the storage.
 	virtual void
 	add( auth_stats_t & stats_object ) = 0;
 
-	//! Изъять auth_stats_t из хранилища.
+	//! Remove auth_stats from the storage.
 	virtual void
 	remove( auth_stats_t & stats_object ) noexcept = 0;
 
-	//! Пробежаться по всем элементам в хранилище.
+	//! Enumerate all objects from the storage.
 	/*!
-	 * Для обеспечения exception-safety хранилище будет заблокировано
-	 * на время выполнения итерации. До тех пор пока enumerate не вернет
-	 * управление вызовы add() и remove() будут блокировать вызывающую
-	 * сторону. Поэтому делать вызовы add/remove внутри enumerate нельзя.
+	 * For the safety purposes the storage will be blocked to the end
+	 * of the enumeration. It means that add() and remove() will block
+	 * the caller until enumerate() completes.
+	 *
+	 * It also means that calls to add()/remove() from inside enumerate()
+	 * are prohibited.
 	 */
 	virtual void
 	enumerate( auth_stats_enumerator_t & enumerator ) = 0;
@@ -144,8 +151,8 @@ public:
 // auto_reg_t
 //
 /*!
- * @brief Вспомогательный класс для добавления и удаления ссылки
- * на auth_stats объект в auth_stats_reference_manager в стиле RAII.
+ * @brief Helper for adding/removing references to auth_stats
+ * objects in RAII style.
  */
 class auto_reg_t
 {
@@ -166,7 +173,7 @@ public:
 		m_manager->remove( m_stats );
 	}
 
-	// Копирование и перемещение этих объектов запрещено.
+	// Objects of that class can't be copied or moved.
 	auto_reg_t( const auto_reg_t & ) = delete;
 	auto_reg_t( auto_reg_t && ) = delete;
 };

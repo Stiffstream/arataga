@@ -1,61 +1,62 @@
-# Описание структуры и содержимого файл со списком пользователей
+# The description of the structure and content of user-list file
 
-**Примечание.** Формат файла со списком пользователей предназначался для автоматической генерации, поэтому он может выглядеть плохо приспособленным для работы с ним вручную.
+**Note.** The user-list file format was designed for automatic generation, so it may not look well suited for manual editing.
 
-## Пустые строки, комментарии и команды
+## Empty lines, commends and descriptions
 
-Файл со списком пользователей обрабатывается построчно. Каждая строка может быть:
+The user-list file is processed line-by-line. Each line can be:
 
-* пустой строкой. Т.е. не содержит ничего кроме пробельных символов;
-* комментарием. Комментарием считается строка, у которой первый непробельный символ -- это символ решетка ('#').
-* описанием (пользователя или доменных лимитов). Строка, первый непробельный символ в которой отличается от символа решетка ('#') считается описанием.
+* an empty line. Doesn't contain anything except whitespace symbols;
+* a comment. Comment is a line that has `#` as the first non-whitespace symbol;
+* a description of a user or domain limit. If the first non-whitespace symbol is not `#` then the line is treated as a description;
 
+For example:
 Например:
 
 ```
-# Комментарий, после которого идет несколько пустых строк.
+# A comment with several empty lines below.
 
 
-   # Это также комментарий, т.к. перед решеткой только пробелы.
-	  # # # ##### И это комментарий.
+   # This is also a comment.
+	  # # # ##### And this is a comment too.
 
-# Следующая строка является описанием (пользователя).
+# The next line is a description of a user.
 192.168.1.1 3000 user 12345 = 0 0 3 34567
-# Эта строка так же является описанием (пользователя).
+# The next line is a description of a user too.
 3232235777 3003 3232235777 = 1024000 1024000 0 34568
 
-# Эта строка является описанием (доменных лимитов).
+# The next line is a description of domain limits.
 3 = vk.com 5mibps 5mibps facebook.com 10mibps 8mibps youtube.com 4mib 2mib
 ```
 
-Примечание. Комментарий должен занимать всю строку. Нельзя указывать комментарии в той же строке, где указано описание. Например, вот правильный комментарий:
+Note. Comments must occupy the entire line. You can't put comments on the same line as the description. For example, here is a valid comment:
 
 ```
-# Для этого пользователя нет ограничений
+# There are no limits for a user.
 192.168.1.1 3000 vip-client 12345 = 0 0 0 11111
 ```
 
-Тогда как вот это неправильно:
+But this is a mistake:
 
 ```
-192.168.1.1 3000 vip-client 12345 = 0 0 0 11111 # Для этого пользователя нет ограничений
+192.168.1.1 3000 vip-client 12345 = 0 0 0 11111 # There are no limits for a user.
 ```
 
-т.к. в этом случае часть `Для этого пользователя нет ограничений` относится к описанию конкретного пользователя и вызовет ошибку разбора.
+because in that case `# There are no limits for a user.` is treated as a part of user description, and will lead to a parsing error.
 
-## Описание пользователя
+## Description of a user
 
-Описание пользователя посредством одной строки, переносы на новую строку не допускаются.
+The user description is done on a single line, no hyphenation is allowed.
 
-Пользователи в arataga могут аутентифицироваться двумя разными способами. Под каждый способ требуется собственное описание пользователя.
+Users in arataga can be authenticated in two different ways. Each method requires its own user description.
 
-Если пользователь аутентифицируется по login/password, то описание этого пользователя задается в виде:
+If the user is authenticated by login/password, the description of the user is in the form:
 
 ```
 IN_IPv4 IN_PORT LOGIN PASSWORD = BANDLIM_IN BANDLIM_OUT DOMAIN_LIM_ID ID
 ```
 
-Если пользователь аутентифицируется по своему IP-адресу, то описание этого пользователя задается в виде:
+If a user is authenticated by his/her IP address, the description of this user is set in the form:
 
 ```
 IN_IPv4 IN_PORT USER_IPv4 = BANDLIM_IN BANDLIM_OUT DOMAIN_LIM_ID ID
@@ -63,92 +64,92 @@ IN_IPv4 IN_PORT USER_IPv4 = BANDLIM_IN BANDLIM_OUT DOMAIN_LIM_ID ID
 
 Где:
 
-* `IN_IPv4` -- это IPv4 адрес точки входа в arataga. Может задаваться как в виде целого десятичного числа, так и в привычной цифро-точечной нотации;
-* `IN_PORT` -- это TCP-порт точки входа в arataga. Задается в виде целого десятичного числа;
-* `LOGIN` -- имя пользователя (последовательность непробельных символов);
-* `PASSWORD` -- пароль пользователя (последовательность непробельных символов);
-* `USER_IPv4` -- это IPv4 адрес, с которого пользователю разрешается подключаться к arataga без предъявления login/password. Может задаваться как в виде целого десятичного числа, так и в привычной цифро-точечной нотации;
-* `BANDLIM_IN` -- лимит пропускной способности для данных, которые пользователь скачивает с целевых узлов. Значение 0 указывает на отсутствие лимита;
-* `BANDLIM_OUT` -- лимит пропускной способности для данных, которые пользователь загружает на целевые узлы. Значение 0 указывает на отсутствие лимита;
-* `DOMAIN_LIM_ID` -- идентификатор описания доменных лимитов. Целое десятичное число. Отсутствие такого описания ошибкой не считается, в таком случае принимается, что для пользователя доменные лимиты не заданы;
-* `ID` -- идентификатор пользователя. Целое десятичное число.
+* `IN_IPv4` is the IPv4 address of the arataga entry point. It can be specified either as an integer decimal number or in the familiar dotted-decimal notation;
+* `IN_PORT` is the TCP port of the arataga entry point. It is set as an integer decimal number;
+* `LOGIN` -- username (a sequence of non-space characters);
+* `PASSWORD` -- user password (a sequence of non-space characters);
+* `USER_IPv4` -- This is the IPv4 address from which the user is allowed to connect to arataga without a login/password. It can be specified either as an integer decimal number or in the usual dotted-decimal notation;
+* `BANDLIM_IN` -- bandwidth limit for data the user downloads from target nodes. A value of 0 indicates that there is no limit;
+* `BANDLIM_OUT` -- bandwidth limit for data that the user downloads to the target nodes. A value of 0 indicates that there is no limit;
+* `DOMAIN_LIM_ID` -- Domain limit description identifier. Integer decimal number. The absence of such a description is not considered an error, in this case it is assumed that no domain limits are set for the user;
+* `ID` - user ID. Integer decimal number.
 
-Примеры:
+Examples:
 
 ```
-# Вход для клиента на 192.168.1.1:3000 по login/password.
-# Лимитов для клиента нет.
+# Entry point at 192.168.1.1:3000 with auth by login/password.
+# There is no limits for the user.
 192.168.1.1 3000 vip-client 12345 = 0 0 0 11111
 
-# Вход для клиента на 192.168.1.1:3000 по login/password.
-# IP-адрес точки входа задан в виде integer.
-# Лимитов для клиента нет.
+# Entry point at 192.168.1.1:3000 with auth by login/password.
+# IP-address is specified as an integer.
+# There is no limits for the user.
 3232235777 3000 another-client 34567 = 0 0 0 11111
 
-# Вход для клиента на 192.168.1.1:3003 с IP-адреса 192.168.1.2.
-# Лимитов для клиента нет.
+# Entry point at 192.168.1.1:3003 from IP-address 192.168.1.2.
+# There is no limits for the user.
 3232235777 3003 3232235778 = 0 0 0 11111
 
-# Вход для клиента на 192.168.1.1:3003 с IP-адреса 192.168.1.3.
-# Лимитов для клиента нет.
+# Entry point at 192.168.1.1:3003 from IP-address 192.168.1.3.
+# There is no limits for the user.
 192.168.1.1 3003 3232235779 = 0 0 0 11111
 
-# Вход для клиента на 192.168.1.1:3003 с IP-адреса 192.168.1.100.
-# Лимитов для клиента нет.
+# Entry point at 192.168.1.1:3003 from IP-address 192.168.1.100.
+# There is no limits for the user.
 3232235777 3003 192.168.1.100 = 0 0 0 11111
 
-# Вход для клиента на 192.168.1.1:3000 по login/password.
-# Для клиента заданы лимиты.
+# Entry point at 192.168.1.1:3000 with auth by login/password.
+# There are limits for the user.
 192.168.1.1 3000 user 12345 = 1024000 512000 0 1234567
 
-# Вход для клиента на 192.168.1.1:3003 с IP-адреса 192.168.1.100.
-# Для клиента заданы лимиты.
+# Entry point at 192.168.1.1:3003 from IP-address 192.168.1.100.
+# There are limits for the user.
 3232235777 3003 192.168.1.100 = 100kib 75kib 0 1234567
 
-# Вход для клиента на 192.168.1.1:3005 с IP-адреса 192.168.1.100.
-# Для клиента не заданы собственные лимиты, но есть доменные лимиты.
+# Entry point at 192.168.1.1:3005 from IP-address 192.168.1.100.
+# There is no pesonal limits for the user, but domain limits are applied.
 192.168.1.1 3005 192.168.1.100 = 0 0 15 1234567
 
-# Вход для клиента на 192.168.1.1:3007 по login/password.
-# Для клиента заданы и собственные, и доменные лимиты.
+# Entry point at 192.168.1.1:3007 with auth by login/password.
+# The user has personal limits, the domain limits are also applied.
 192.168.1.1 3007 user 12345 = 1024000 512000 15 1234567
 ```
 
-## Описание доменных лимитов
+## Description of domain limits
 
-Описание доменных лимитов выполняется в одну строку, переносы описания на новую строку не допускаются.
+The description of one domain limit should be done in one line, the description can't be splitted into several lines.
 
-Каждый доменный лимит должен иметь собственный уникальный целочисленный идентификатор.
+Every domain limits must have a unique numeric ID.
 
-Описание доменных лимитов имеет следующий формат:
+The description of one domain limit has the following format:
 
 ```
 DOMAIN_LIM_ID = DOMAIN1 BANDLIM_IN1 BANDLIM_OUT1 [DOMAIN2 BANDLIM_IN2 BANDLIM_OUT2 [...]]
 ```
 
-(здесь квадратные скобки обозначают необязательную часть, т.е. то, что может отсутствовать),
+(square brackets denote optional parts that can be missed),
 
-где:
+where:
 
-* `DOMAIN_LIM_ID` -- это целочисленный идентификатор лимита в десятичном виде;
-* `DOMAIN(i)` -- это имя домена, для которого задаются лимиты;
-* `BANDLIM_IN(i)` -- это лимит для данных, которые пользователь скачивает с указанного домена (и его поддоменов). Значение 0 указывает на отсутствие лимита;
-* `BANDLIM_OUT(i)` -- это лимит для данных, которые пользователь загружает на указанный домен (и его поддомены). Значение 0 указывает на отсутствие лимита.
+* `DOMAIN_LIM_ID` -- a numeric ID for the limit in decimal notation;
+* `DOMAIN(i)` -- the domain name for that the limits are specified;
+* `BANDLIM_IN(i)` -- bandwidth limit for data that a user downloads from the domain (and its subdomains). Value 0 means that there is no download limit;
+* `BANDLIM_OUT(i)` -- bandwidth limit for data that a user uploads to the domain (and its subdomains). Value 0 means that there is no upload limit.
 
-Например:
+For example:
 
 ```
-# Всего один домен в лимитах.
+# Just one domain in limits.
 15 = vk.com 5mib 3mib
 
-# Несколько доменов в лимитах.
+# Several domains in limits.
 16 = vk.com 10mib 5mib facebook.com 7mib 4mib youtube.com 10mib 2mib
 ```
 
-Можно задавать и лимит для домена, и лимит для конкретного поддомена. Например:
+It's possible to specify a limit for a domain, and another limit for a subdomain for that domain, for example:
 
 ```
-# Для vk.com и любых поддоменов за исключением static.vk.com будет лимит 10/5mib.
-# Для домена static.vk.com и его поддоменов будет лимит 20/1mib.
+# For vk.com and all its subdomain (excepts static.vk.com) there is a limit 10/5mib.
+# The limit for static.vk.com is 20/1mib.
 17 = vk.com 10mib 5mib static.vk.com 20mib 1mib
 ```

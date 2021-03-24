@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Менеджер лимитов по подключениям одного пользователя.
+ * @brief Bandwidth limit manager for a single user.
  */
 
 #include <arataga/acl_handler/bandlim_manager.hpp>
@@ -61,8 +61,8 @@ bandlim_manager_t::bandlim_manager_t(
 	,	m_sequence_number{}
 	,	m_last_update_at{ std::chrono::steady_clock::now() }
 {
-	// На текущий такт для всех подключений (которые еще только должны
-	// появится) выставим значение из general_limits.
+	// Set a value from general_limits for all connections (those would appear
+	// in the future).
 	m_general_traffic = make_new_channel_limits_data(
 			m_sequence_number,
 			m_general_limits );
@@ -77,11 +77,11 @@ bandlim_manager_t::update_personal_limits(
 	m_general_limits = make_personal_limits_with_respect_to_defaults(
 			personal_limits, default_limits );
 
-	// Должны так же поменять значения для общего счетчика трафика.
+	// Values for general traffic should be changed too.
 	m_general_traffic.m_directive_values = m_general_limits;
 
-	// Изменения в текущие счетчики сейчас не вносим. Оставляем это
-	// до наступления следующего такта.
+	// Do not change other counters. Keep that for the beginning
+	// of the next turn.
 }
 
 void
@@ -91,11 +91,11 @@ bandlim_manager_t::update_default_limits(
 	m_general_limits = make_personal_limits_with_respect_to_defaults(
 			m_directive_personal_limits, default_limits );
 
-	// Должны так же поменять значения для общего счетчика трафика.
+	// Values for general traffic should be changed too.
 	m_general_traffic.m_directive_values = m_general_limits;
 
-	// Изменения в текущие счетчики сейчас не вносим. Оставляем это
-	// до наступления следующего такта.
+	// Do not change other counters. Keep that for the beginning
+	// of the next turn.
 }
 
 bandlim_manager_t::channel_limits_data_t &
@@ -118,23 +118,22 @@ bandlim_manager_t::make_domain_limits(
 	auto it = m_domain_traffic.find( domain );
 	if( it == m_domain_traffic.end() )
 	{
-		// Нужно создавать новый элемент. Для которого нужно подготовить
-		// новый лимит.
+		// Have to create a new item.
+		// A new limit has to be prepared for it.
 		it = m_domain_traffic.emplace(
 				std::move(domain),
 				domain_traffic_data_t{
-						// Сразу же учитываем новое подключение.
+						// Count the new connection right now.
 						1u,
 						make_new_channel_limits_data( m_sequence_number, limits )
 				} ).first;
 	}
 	else
 	{
-		// Нужно учесть добавление нового подключения.
+		// Count the new connection for the existing item.
 		it->second.m_connection_count += 1u;
 
-		// Нужно учесть так же и то, что limits могут содержать
-		// новые значения.
+		// Limits can have new values, we have take that into account.
 		it->second.m_traffic.m_directive_values = limits;
 	}
 
@@ -157,12 +156,11 @@ bandlim_manager_t::update_traffic_counters_for_new_turn() noexcept
 {
 	using namespace std::chrono;
 
-	// Т.к. таймерное сообщение может приходить нерегулярно,
-	// то нам нужно учитывать эту нерегулярность и пересчитывать
-	// квоты с учетом возможных подвижек туда-сюда.
+	// Timer could be not a very precise.
+	// We have to take that inaccuracy into the account.
 	const auto update_at = steady_clock::now();
-	// Есть большая вероятность того, что разница между m_last_update_at
-	// и update_at всегда будет помещаться в double.
+	// We belive that difference betwen m_last_update_at and
+	// update_at will always fit into double type.
 	const auto diff_ms = static_cast<double>(
 			duration_cast< milliseconds >( update_at - m_last_update_at ).count()
 		);
@@ -175,8 +173,8 @@ bandlim_manager_t::update_traffic_counters_for_new_turn() noexcept
 		};
 	m_last_update_at = update_at;
 
-	// Вспомогательная функция для выполнения однотипных действий
-	// над channel_limits_data_t::m_user_end_traffic и
+	// Helper function for doing the same actions on
+	// channel_limits_data_t::m_user_end_traffic and
 	// channel_limits_data_t::m_target_end_traffic.
 	const auto dir_handler =
 		[seq_num = m_sequence_number, quote_calculator](
@@ -191,15 +189,14 @@ bandlim_manager_t::update_traffic_counters_for_new_turn() noexcept
 				f.m_actual = 0u;
 			else
 			{
-				// Если на предыдущем такте отослали больше, чем было
-				// разрешено, то в этом такте учитываем "излишек".
-				// Если "излишек" превысит quote, то значит текущий такт
-				// будет пропущен.
+				// If we sent more that allowed on the previous turn then
+				// count that "surplus" on the current turn.
+				// If the value of "surplus" is greater than the quote for
+				// the current turn, then the current turn will be skipped.
 				f.m_actual -= old_quote;
 			}
 
-			// Т.к. на предыдущем такте конфигурация могла изменится, то
-			// выставляем новую квоту.
+			// Set a new quote because the config could have been changed.
 			f.m_quote = quote_t{new_quote};
 			f.m_reserved = 0u;
 		};
@@ -217,12 +214,12 @@ bandlim_manager_t::update_traffic_counters_for_new_turn() noexcept
 					traffic.m_directive_values.m_in );
 		};
 
-	// Номер такта должен изменится.
+	// The turn number should increase.
 	m_sequence_number.increment();
 
-	// Сперва обрабатываем общий лимит на все подключения.
+	// The general limit should be processed first.
 	processor( m_general_traffic );
-	// А затем уже проходимся по всем доменам.
+	// Then the domain limits can be processed.
 	for( auto & [k, v] : m_domain_traffic )
 		processor( v.m_traffic );
 }

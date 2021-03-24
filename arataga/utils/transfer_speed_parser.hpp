@@ -1,7 +1,6 @@
 /*!
  * @file
- * @brief Повторно используемые средства для разбора значения максимальной
- * пропускной способности.
+ * @brief Stuff for parsing values of bandwidth.
  */
 
 #pragma once
@@ -17,11 +16,11 @@ namespace arataga::utils::parsers
 // transfer_speed_p
 //
 /*!
- * @brief Продюсер для easy_parser-а, который извлекает значение
- * скорости передачи данных с возможными суффиксами (gibps, mibps,
+ * @brief A producer for easy_parser that extracts values of
+ * bandwidth with possible suffixes (gibps, mibps,
  * kibps, bps, kbps, mbps, gbps, b, kib, mib, gib).
  *
- * Продюсер производит значение типа bandlim_config_t::value_t.
+ * Produces values of type bandlim_config_t::value_t.
  */
 [[nodiscard]]
 inline auto

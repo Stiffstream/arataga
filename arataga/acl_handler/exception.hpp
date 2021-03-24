@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Класс исключения, который используется в реализации acl_handler.
+ * @brief Exception class to be used in implementation of acl_handler.
  */
 
 #pragma once
@@ -13,7 +13,7 @@ namespace arataga::acl_handler
 //
 // acl_handler_ex_t
 //
-//! Тип исключения, которое может выбрасывать acl_handler.
+//! Type of exception to be used by acl_handler.
 struct acl_handler_ex_t : public exception_t
 {
 public:

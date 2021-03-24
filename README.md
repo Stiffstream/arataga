@@ -1,46 +1,46 @@
 # Что такое arataga?
 
-arataga -- это работающий прототип socks5 + http/1.1 прокси сервера. arataga разрабатывался компанией [stiffstream](https://stiffstream.com) для заказчика, который затем отказался от этого проекта. Дабы не выбрасывать получившийся результат, исходный код arataga был открыт под лицензией GNU Affero GPL v3.
+*arataga* is a working prototype of socks5+http/1.1 proxy server. arataga was developed by [stiffstream] (https://stiffstream.com) for a customer who then abandoned the project. So as not to throw away the result, the source code of arataga was opened under the GNU Affero GPL v3.
 
-arataga создавался под следующие условия:
+arataga was created under the following conditions:
 
-* требовалось открывать от 5 до 10 тысяч точек входа на одном прокси-сервере. Каждая точка входа (т.н. ACL) -- это уникальное сочетание IPv4 адреса и TCP/IP порта;
-* требовалось предоставлять доступ к прокси-серверу для нескольких десятков тысяч пользователей;
-* требовалось обслуживать несколько десятков тысяч (от 40 тысяч и более) одновременных подключений;
-* требовалось работать в условиях частого подключения/отключения клиентов (с темпом в 1000 новых подключений в секунду и выше);
-* требовалось ограничивать пропускную способность для подключений клиентов (например, все подключения клиента на один ACL не могут суммарно потреблять больше 10MiB/s);
-* требовалось ограничивать пропускную способность для клиентов с учетом целевого домена (например, для клиента лимит в 10MiB/s, но при обращении к instagram.com этот лимит снижается до 5MiB/s);
-* конфигурацию и списки пользователей, которым разрешена работа с arataga, нужно получать на специальную HTTP-точку входа. Копии текущей конфигурации и списка пользователей должны храниться локально и использоваться при рестартах.
+* 5 to 10 thousand entry points on a single proxy server were required. Each entry point (called ACL) is a unique combination of IPv4 address and TCP/IP port;
+* the proxy server had to be accessible to tens of thousands of users;
+* tens of thousands (40,000 or more) of simultaneous connections had to be handled;
+* frequent client connections/disconnections were required (at the rate of 1,000 new connections per second and above);
+* bandwidth had to be limited for client connections (for example, all client connections per ACL could not consume more than 10MiB/s in total);
+* was required to limit bandwidth for clients based on the target domain (for example, for a client there is a limit of 10MiB/s, but when accessing instagram.com this limit is reduced to 5MiB/s);
+* the configuration and lists of users who are allowed to work with arataga must be received on a special HTTP entry point. Copies of the current configuration and user list should be stored locally and used during restarts.
 
-На данный момент arataga находится в состоянии работающего прототипа. Это означает, что практически весь его функционал работает и был протестирован внутри stiffstream в рамках имевшихся у нас ресурсов. Из изначально запланированных возможностей не была реализована только асинхронная работа с DNS-серверами, перечень которых должен был задаваться в конфигурационном файле.
+At the moment arataga is in a working prototype state. This means that almost all of its functionality works and has been tested inside stiffstream within the resources we have available. From the originally planned features was not implemented only asynchronous work with DNS-servers, a list of which should have been specified in the configuration file.
 
-Серьезного тестирования в приближенных к "боевым" условиям не проводилось, т.к. внутри stiffstream не было ресурсов для создания соответствующего тестового стенда, на котором можно было открыть достаточное количество IP-адресов и создать тестовый трафик на 60-80 тысячах одновременных подключений, а заказчик, который располагал необходимыми ресурсами потерял интерес к проекту без объяснения причин.
+Serious testing in conditions close to the "combat" was not carried out, because within stiffstream there were no resources to create a suitable test bed, which could open a sufficient number of IP-addresses and create a test traffic on 60-80 thousand simultaneous connections, and the customer, who had the necessary resources lost interest in the project without explanation.
 
-# Зачем исходники arataga были открыты?
+# Why was arataga open-source?
 
-Есть две основные причины открытия исходников arataga.
+There are two main reasons to open the sources of arataga.
 
-Первая причина: arataga является отличным проектом для демонстрации того, как выглядит реальный код на базе [SObjectizer](https://github.com/Stiffstream/sobjectizer) и [RESTinio](https://github.com/Stiffstream/restinio).
+The first reason: arataga is a great project to show what real code based on [SObjectizer](https://github.com/Stiffstream/sobjectizer) and [RESTinio](https://github.com/Stiffstream/restinio) looks like.
 
-Если кто-то слышал о SObjectizer и/или RESTinio и хочет посмотреть на любую из этих библиотек в реальном проекте, то arataga отлично подходит для этой цели. arataga разрабатывался с прицелом на применение в продакшене, это не простенький HelloWorld на 100 строк.
+If anyone has heard of SObjectizer and/or RESTinio and wants to see any of these libraries in a real project, arataga is great for that purpose. arataga was developed with production use in mind, it's not a simple 100 line HelloWorld.
 
-Так что если вы хотите составить себе представление о том, как может выглядеть код с использованием SObjectizer и/или RESTinio, то можете заглянуть в исходники arataga.
+So if you want to get an idea of what code using SObjectizer and/or RESTinio might look like, you can take a look at the arataga sources.
 
-Вторая причина: жалко выбрасывать продукт, в который был вложен наш труд. Может быть кому-то результаты нашей работы пригодятся.
+Second reason: it's a shame to throw away a product that our hard work was put into. Maybe results of our work will be useful for somebody.
 
-Так что если вас заинтересовали возможности arataga, но чего-то вам не хватает, то вы можете [связаться с нами](mailto:info@stiffstream.com) и обсудить доработку arataga под ваши условия, цели и задачи. В том числе и в виде закрытого форка.
+So if you are interested in the possibilities of arataga but something is missing, you can [contact us](mailto:info@stiffstream.com) and discuss the modification of arataga for your conditions, goals and objectives. Including in the form of a closed fork.
 
-Ну и можно отметить еще и третью причину, хотя она и не основная: мы сами рассматриваем arataga как отличный полигон для проверки новых версий SObjectizer и RESTinio в условиях, близких к боевым.
+Well, we can also mention the third reason, although it's not the main one: we ourselves consider arataga to be an excellent testing ground for testing new versions of SObjectizer and RESTinio in real-life conditions.
 
-# Как взять и попробовать?
+# How to get and try?
 
-Потребуется компилятор с более-менее нормальной поддержкой C++17 (filesystem должен быть доступен "из коробки"), например, GCC-8 или более новый.
+You will need a compiler with more or less normal C++17 support (filesystem should be available "out of the box"), such as GCC-8 or newer.
 
-Операционная система GNU/Linux. У нас не было требований поддерживать другие ОС. Мы проверяли на Ubuntu 18.04 и 20.04.
+A GNU/Linux operating system. We had no requirements to support other operating systems. We tested it on Ubuntu 18.04 and 20.04.
 
-## Использование демонстрационного Dockerfile
+## The usage of demo Dockerfile
 
-Самый простой способ -- это использовать демонстрационный Dockerfile:
+The easiest way is to use demo Dockerfile:
 
 ```sh
 git clone https://github.com/Stiffstream/arataga
@@ -49,68 +49,68 @@ docker build -t arataga-ubuntu1804-gcc10 -f arataga-ubuntu1804-gcc10-local.Docke
 docker run -p 5001:5001 -p 8088:8088 arataga-ubuntu1804-gcc10
 ```
 
-Проверить работоспособность затем можно будет посредством команд вроде:
+The following commands can be used for checking:
 
 ```sh
-# Пытаемся загрузить страничку через прокси.
+# Try to load a Web-page via proxy.
 curl -x localhost:5001 -U user:12345 https://ya.ru
 ```
 
-или
+or
 
 ```sh
-# Обращаемся к административному входу для списка работающих точек входа.
+# Access admin HTTP-entry to get list of ACLs.
 curl -H "arataga-admin-token: arataga-admin-entry" http://localhost:8088/acls
 
-# Запрашиваем с административного входа текущие счетчики статистики.
+# Access admin HTTP-entry to get the current stats.
 curl -H "arataga-admin-token: arataga-admin-entry" http://localhost:8088/stats
 ```
 
-## Как взять и собрать вручную?
+## How to get and build manually?
 
-В данном репозитории находятся только исходные тексты самих примеров. Исходные тексты зависимостей (т.к. asio, fmtlib, sobjectizer, doctest, restinio и пр.) в репозиторий не включены. Есть два способа взять примеры с необходимыми для них зависимостями.
+This repository contains only the source code of the examples themselves. The source code for the dependencies (i.e., asio, fmtlib, sobjectizer, doctest, restinio, etc.) is not included in the repository. There are two ways to get the examples with their required dependencies.
 
-### Загрузить полный архив
+### Download of a full archive
 
-В секции Releases находятся архивы, в которые включены все исходные тексты: и arataga, и всех зависимостей. Поэтому самый простой способ -- это загрузить соответствующий архив из Releases, распаковать его, зайти в arataga и перейти к компиляции примеров.
+The Releases section contains the archives which contain all the source code: both arataga and all the dependencies. Therefore, the easiest way is to download the corresponding archive from Releases, unzip it, go into arataga and start compiling the examples.
 
-### Использовать MxxRu::externals
+### The usage of MxxRu::externals
 
-В этом случае вам потребуется Ruby + MxxRu + различный инструментарий, который из коробки есть у Linux-разработчиков (вроде git, tar, unzip и пр.). В этом случае:
+In this case you need Ruby + MxxRu + various tools that Linux developers have out of the box (like git, tar, unzip, etc.). In this case:
 
-* Устанавливаем Ruby и RubyGems (обычно RubyGems идет сразу с Ruby, но где-то может придется ставить отдельно).
-* Устанавливаем MxxRu: `gem install Mxx_ru`
-* Делаем git clone: `git clone https://github.com/Stiffstream/arataga`
-* Заходим в нужный подкаталог: `cd arataga`
-* Запускаем команду `mxxruexternals`.
-* Ждем пока все зависимости подтянутся.
+* Install Ruby and RubyGems (usually RubyGems comes with Ruby, but somewhere you may have to install it separately).
+* Install MxxRu: `gem install Mxx_ru`.
+* Make a git clone: `git clone https://github.com/Stiffstream/arataga`.
+* Go to the desired subdirectory: `cd arataga`.
+* Run the command `mxxruexternals`.
+* Wait for all dependencies to pick up.
 
-После этого можно переходить к компиляции.
+After that, we can move on to the building.
 
-### Компиляция посредством MxxRu
+### Building via MxxRu
 
-На данный момент поддерживается только сборка посредством MxxRu. Поэтому перед сборкой вам нужно будет установить Ruby и RubyGems (обычно RubyGems идет сразу с Ruby, но где-то может придется ставить отдельно), после чего выполнить установку MxxRu: `gem install Mxx_ru`.
+At the moment only builds via MxxRu are supported. So before building you will need to install Ruby and RubyGems (usually RubyGems comes with Ruby, but somewhere you may have to install separately), then install MxxRu: `gem install Mxx_ru`.
 
-Для компиляции заходим в каталог arataga и выполняем команду `ruby build.rb`. Результат сборки будет находиться в `target/release/bin`.
+To compile, go to the directory arataga and run the command `ruby build.rb`. The result of the build will be in `target/release/bin`.
 
-Если есть желание прогнать юнит-тесты, то следует выполнить команду `ruby build_tests.rb`.
+If you want to run unit tests, run the command `ruby build_tests.rb`.
 
-### Подготовка к запуску
+### Preparing to a launch
 
-#### Каталог для хранения локальных копий конфигурации
+#### A path for holding local copies of the config
 
-arataga потребуется каталог для хранения локальных копий конфигурации и списка пользователей. Этот каталог должен быть доступен для arataga для чтения и записи.
+arataga will need a directory for storing local copies of the configuration and user list. This directory must be readable and writable for arataga.
 
-Проще всего создать этот каталог прямо внутри каталога arataga, например:
+The easiest way to create this directory is directly inside the arataga directory, e.g:
 
 ```
 cd arataga
 mkdir locals
 ```
 
-#### Начальный файл с конфигурацией
+#### An initial config file
 
-Потребуется начальный файл с конфигурацией, в котором будут описаны основные параметры работы arataga и список точек доступа. Например, файл вида:
+You will need an initial configuration file, which will describe the basic parameters of arataga operation and the list of access points. For example, a file of the form:
 
 ```
 log_level info
@@ -125,18 +125,18 @@ acl auto, port=3000, in_ip=127.0.0.1, out_ip=192.168.1.1
 acl auto, port=3001, in_ip=192.168.1.1, out_ip=192.168.1.1
 ```
 
-#### Начальный файл со списком пользователей
+#### An initial user-list file
 
-Потребуется начальный файл со списком пользователей, в котором будут перечислены пользователи. Например, файл вида:
+You will need an initial file with a list of users allowed to access the proxy. For example, a file of the form:
 
 ```
 127.0.0.1 3000 user 12345 = 0 0 0 1
 192.168.1.1 3001 192.168.1.1 = 10MiBps 5MiBps 0 2
 ```
 
-### Запуск и управление через HTTP-вход
+### The launch and handling via admin HTTP-entry
 
-Запустить arataga в консоли можно следующей командой:
+arataga can be launched in a console by a command:
 
 ```
 ./target/release/bin/arataga --no-daemonize \
@@ -147,9 +147,9 @@ acl auto, port=3001, in_ip=192.168.1.1, out_ip=192.168.1.1
   --log-level=debug
 ```
 
-После этого остановить arataga можно будет посредством Ctrl+C.
+Then the arataga can be stopped by Ctrl+C.
 
-После того, как arataga будет запущен, ему нужно будет передать конфигурацию и список пользователей посредством следующих команд:
+Once arataga is started a new config and/or user-list can be passed to it via the following commands:
 
 ```
 curl \
@@ -167,13 +167,13 @@ curl \
   http://localhost:8088/users
 ```
 
-После этого arataga создаст все необходимые точки входа и сможет принимать входящие подключения.
+Arataga will create all necessary entry points and starts to access incoming connections.
 
-### Запуск и работа с локальной копией конфигов
+### Running and working with a local copy of configs
 
-После успешного приема конфигурации и списка пользователей arataga создает в каталоге, имя которого задано параметром командной строки `--local-config-path`, два файла: `local-config.cfg`, в котором содержится копия конфигурации, и `local-user-list.cfg`, в котором содержится копия списка пользователей. Эти локальные файлы используются arataga при рестартах -- если файлы есть, то при запуске arataga пытается их прочитать и, если это удалось, использует их содержимое.
+After successfully accepting the configuration and user list, arataga creates two files in the directory named with the `--local-config-path` command line parameter: `local-config.cfg`, which contains a copy of the configuration, and `local-user-list.cfg`, which contains a copy of the user list. These local files are used by arataga during restarts -- if the files exist, arataga tries to read them at startup and, if it succeeds, uses their contents.
 
-Поэтому, если нет желания после запуска arataga выдавать управляющие команды через curl, то можно поступить проще: сразу создать файлы `local-config.cfg` и `local-user-list.cfg`. Например:
+So if you don't want to issue control commands via curl after starting arataga, you can do something simpler: create `local-config.cfg` and `local-user-list.cfg` files immediately. For example:
 
 ```
 cp my-config.cfg locals/local-config.cfg
@@ -185,87 +185,88 @@ cp my-users.cfg locals/local-user-list.cfg
   --log-target=stdout \
   --log-level=debug
 ```
-# Административный HTTP-вход
 
-arataga при старте создает HTTP-вход для получения новой конфигурации и обновленных списков пользователей. IP-адрес и TCP-порт этого HTTP-входа задается аргументами командной строки `--admin-http-ip` и `--admin-http-port`.
+# Admin HTTP-entry
 
-Все запросы, которые идут на административный HTTP-вход, должны содержать HTTP-поле (HTTP-заголовок) с именем `Arataga-Admin-Token` и тем же самым значением, которое было передано arataga в аргументе командной строки `--admin-http-token`. Запросы без такого HTTP-поля будут отклоняться.
+arataga creates an HTTP input on startup to get new configuration and updated user lists. The IP address and TCP port of this HTTP entry is specified by the command line arguments `--admin-http-ip` and `--admin-http-port`.
 
-## POST на /config
+All requests that go to the administrative HTTP input must contain an HTTP field (HTTP header) named `Arataga-Admin-Token` and the same value that was passed to arataga in the `--admin-http-token` command line argument. Requests without such an HTTP field will be rejected.
 
-Для того, чтобы загрузить в arataga новую конфигурацию необходимо выполнить POST-запрос на `/config`. Тело запроса должно содержать конфигурацию в виде `text/plain`. Формат конфигурации описан в README_CONFIG.md.
+## POST to /config
 
-## POST на /users
+In order to load a new configuration into arataga, a POST request to `/config` must be made. The body of the request must contain the configuration as `text/plain`. The format of the configuration is described in README_CONFIG.md.
 
-Для того, чтобы загрузить в arataga новый список пользователей необходимо выполнить POST-запрос на `/users`. Тело запроса должно содержать список пользователей в виде `text/plain`. Формат списка пользователей описан в README_USER_LIST.md.
+## POST to /users
 
-## GET на /acls
+In order to upload a new list of users to arataga, a POST request to `/users` has to be made. The body of the request must contain a list of users in `text/plain` form. The format of the list of users is described in README_USER_LIST.md.
 
-GET-запрос на `/acls` позволяет получить в виде текста список существующий ACL внутри arataga.
+## GET on /acls
 
-## GET на /stats
+A GET request to `/acls` allows you to retrieve as text a list of existing ACLs within arataga.
 
-GET-запрос на `/stats` позволяет получить в виде текста некоторые статистические данные о происходящем внутри arataga.
+## GET on /stats
 
-# Принцип работы
+A GET request to `/stats` allows you to get some statistical data in text form about what's going on inside arataga.
 
-## Использование многопоточности
+# The working principle
 
-arataga представляет из себя многопоточное приложение, которое задействует возможности многоядерных процессоров для обработки большого количества точек входа и подключений к ним.
+## The use of multithreading
 
-При старте arataga создает N рабочих потоков (нитей, threads), которые будут использоваться для обслуживания сетевых подключений. Значение N либо задается в командной строке параметром `--io-threads`, либо же вычисляется автоматически как (nCPU-2), где nCPU -- это количество доступных вычислительных ядер. Так, если запускать arataga на 8-ядерном процессоре без гипертрейдинга, то N будет равным 6 (при условии, что `--io-threads` не задан).
+arataga is a multithreaded application that uses the power of multicore processors to handle a large number of entry points and connections to them.
 
-Все заданные в конфигурации ACL равномерно распределяются по этим N рабочим потокам. Т.е., если N=6, а в конфиге задано 3000 ACL, то на каждый рабочий поток будет приходится по 500 ACL.
+On startup, arataga creates N worker threads, which will be used to handle network connections. The value of N is either specified on the command line by the `--io-threads` parameter, or it is calculated automatically as (nCPU-2), where nCPU is the number of available CPU cores. Thus, if you run arataga on an 8-core processor without hyperthreading, N will be 6 (assuming `--io-threads` is not set).
 
-Каждый ACL внутри arataga обслуживается отдельным объектом-агентом. Агент создается для очередного ACL при обработке конфигурации и привязывается к конкретной рабочей нити. После того, как агент-ACL оказался привязан к конкретной нити, он так и останется работать на этой нити до тех пор, пока arataga не завершит свою работу или же соответствующий ACL не будет изъят из конфигурации.
+All ACLs specified in the configuration are evenly distributed across these N worker threads. That is, if N=6 and 3000 ACLs are specified in configuration, then each worker thread will have 500 ACLs.
 
-### Локализация операций разрешения доменных имен и аутентификации клиента
+Each ACL inside arataga is served by a separate agent object. The agent is created for the next ACL during configuration processing and is bound to a specific worker thread. Once an ACL agent is bound to a particular thread, it will remain running on that thread until arataga completes its work or the corresponding ACL is removed from the configuration.
 
-На каждой рабочей нити arataga запускает отдельные экземпляры двух специальных агентов: dns_resolver и authentificator. Т.е., если arataga стартовал на 6 рабочих потоках, то внутри arataga будет 6 агентов dns_resolver и 6 агентов authentificator.
+### Locality of domain name resolution and client authentication operations
 
-Каждая пара dns_resolver+authentificator привязана к своей рабочей нити. При этом агенты-ACL, которые привязаны к этой же рабочей нити, общаются только с этой парой агентов dns_resolver+authenitificator. Таким образом практически весь обмен информации между сущностями, обслуживающими подключения клиентов (т.е. агенты-ACL, dns_resolver, authentificator), происходит только их общем рабочем контексте.
+On each worker thread, arataga runs separate instances of two special agents: dns_resolver and authentificator. That is, if arataga started on 6 worker threads, there would be 6 dns_resolver agents and 6 authenticator agents inside arataga.
 
-Агент dns_resolver отвечает за операции разрешения доменных имен (т.е. определяет IP адрес, соответствующий доменному имени).
+Each dns_resolver+authenticator pair is bound to its own worker thread. The ACL-agents that are bound to the same work thread communicate only with this pair of agents dns_resolver+authenticator. So practically all information exchange between entities serving client connections (i.e. ACL-agents, dns_resolver, authenticator) occurs only in their common work context.
 
-Агент authentificator хранит списки пользователей и производит аутентификацию очередного подключившегося клиента.
+The dns_resolver agent is responsible for domain name resolution operations (i.e. defining an IP address corresponding to a domain name).
 
-## Изменение конфигурации в процессе работы
+The authentificator agent stores user lists and authenticates the next connected client.
 
-### Изменение списка ACL
+## Change of the config during the work
 
-В процессе работы arataga ему может быть передана новая конфигурация через HTTP-вход. В этом случае arataga подхватит новые параметры без необходимости перезапуска всего arataga.
+### Change of the ACL list
 
-При получении новой конфигурации arataga сравнивает свой текущий список ACL и новый список ACL. Все агенты-ACL, которые исчезли из нового списка, будут уничтожены. Для новых ACL, которые есть в новом списке, но не было в старом, будут созданы новые агенты-ACL.
+While arataga is running, a new configuration can be passed to it through the admin HTTP-entry. In this case, arataga will pick up the new settings without having to restart the entire arataga.
 
-Если у какой-то ACL изменился тип (например, изначально ACL обслуживала только HTTP-протокол, а затем ее изменили на socks5 протокол), то старый агент-ACL будет уничтожен, а на его место будет создан новый агент. Соответственно, при этом все подключения, которые обслуживались через этого агента, будут разорваны.
+When arataga receives the new configuration, it compares its current ACL list with the new ACL list. Any ACL agents that have disappeared from the new list will be destroyed. For new ACLs that are in the new list but were not in the old list, new ACL-agent will be created.
 
-При обновлении конфигурации может сложиться ситуация, когда на какой-то из рабочих нитей будет уничтожено гораздо больше старых агентов-ACL, чем на других нитях. Возникнет диспропорция, при которой на одной нити, например, будет работать 100 агентов-ACL, а на остальных по 250 агентов.
+If an ACL changed its type (for example, initially it supported only HTTP protocol, then it was changed to socks5 protocol), then the old ACL-agent will be removed and the new one will be created in its place. Accordingly, all connections that were served through the agent will be broken.
 
-В этом случае arataga не будет перераспределять оставшихся старых агентов-ACL между нитями для того, чтобы уравнять количество агентов-ACL. Поэтому, если при обновлении конфигурации будут только удаляться ACL, то подобные диспропорции будут возникать и будут сохраняться до рестарта arataga.
+When updating the configuration it is possible that on some working thread more old ACL agents will be removed than on the other ones. There will be a disproportion where one thread, for example, has 100 ACL-agents on it, and the others have 250 agents each.
 
-Если же кроме удаления старых ACL при переконфигурировании происходит и создании новых ACL, то arataga будет создавать новые агенты-ACL так, чтобы новые агенты привязывались к рабочим нитям с наименьшим количеством живых агентов-ACL.
+In this case, arataga will not redistribute the remaining old ACL-agents between the threads in order to equalize the number of ACL-agents. Therefore, if the configuration update only deletes ACLs, such imbalances will occur and will persist until arataga restarts.
 
-### Изменение списка пользователей
+If, however, in addition to deleting old ACLs during reconfiguration, new ACLs are created, then arataga will create new ACL-agents so that the new agents bind to the worker threads with the smallest number of live ACL-agents.
 
-В процессе работы arataga ему может быть передан новый список пользователей через HTTP-вход. Это позволяет обновлять списки пользователей без рестарта arataga.
+### Change of the user-list
 
-Если в обновленном списке пользователя для какого-то из пользователей изменились разрешенные лимиты (например, лимит был уменьшен с 10MiB/s до 5MiB/s), то новые лимиты будут применяться сразу и для уже существующих, и для новых подключений данного клиента.
+While arataga is running, a new user list can be passed to it via the admin HTTP-entry. This allows user lists to be updated without restarting arataga.
 
-В текущей версии arataga при изменении списка пользователей соединения, которые были сделаны пользователями, которых нет в новом списке, в текущей версии arataga не обрываются принудительно. Это означает, что если пользователь создал долго живущее подключение к arataga, а затем этого пользователя из списка выбросили, то его соединение продолжит жить и будет обслуживаться arataga. 
+If in the updated user list for any of the users the allowed limits have changed (for example, the limit has been reduced from 10MiB/s to 5MiB/s), the new limits will be applied immediately for both existing and new connections of this client.
 
-# Дополнительная информация
+In the current version of arataga, when the user list is changed, connections made by users who are not on the new list are not forced to terminate in the current version of arataga. This means that if a user created a long-lived connection to arataga and then that user was dropped from the list, his connection will continue to live and will be serviced by arataga. 
 
-Параметры командной строки описаны в файле README_CMDLINE.md.
+# Additional info
 
-Формат и параметры конфигурационного файла описаны в README_CONFIG.md.
+The command line parameters are described in the README_CMDLINE.md file.
 
-Формат списка пользователей описан в README_USER_LIST.md.
+The format and parameters of the configuration file are described in README_CONFIG.md.
 
-Примеры взаимодействия с arataga через HTTP-вход описаны в curl_examples.md.
+The format of the user list is described in README_USER_LIST.md.
 
-Задать вопрос или сообщить о проблеме можно в разделе Issues.
+Examples of interaction with arataga via HTTP input are described in curl_examples.md.
 
-# Лицензия
+To ask a question or report a problem, see the Issues section.
 
-Исходные тексты arataga распространяются под лицензией [GNU Affero GPL v3](https://www.gnu.org/licenses/agpl-3.0.txt).
+# License
+
+Source code of arataga is distributed under [GNU Affero GPL v3](https://www.gnu.org/licenses/agpl-3.0.txt).
 

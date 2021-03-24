@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Реализация dns_lookup_handler-а.
+ * @brief Implementation of dns_lookup_handler.
  */
 
 #include <arataga/acl_handler/handlers/http/basics.hpp>
@@ -20,20 +20,20 @@ namespace handlers::http
 // dns_lookup_handler_t
 //
 /*!
- * @brief Обработчик соединения, который производит DNS lookup.
+ * @brief Connection-handler that performs DNS lookup.
  */
 class dns_lookup_handler_t final : public basic_http_handler_t
 {
-	//! Состояние разбора исходного запроса.
+	//! Request parsing state.
 	http_handling_state_unique_ptr_t m_request_state;
 
-	//! Дополнительная информация об исходном запросе.
+	//! Additional info for the request.
 	request_info_t m_request_info;
 
-	//! Ограничитель трафика для этого клиента.
+	//! Traffic limiter for the user.
 	traffic_limiter_unique_ptr_t m_traffic_limiter;
 
-	//! Время, когда DNS lookup начался.
+	//! Timepoint when DNS lookup was started.
 	std::chrono::steady_clock::time_point m_created_at;
 
 public:
@@ -99,7 +99,6 @@ protected:
 										"DNS-lookup timed out" );
 							} );
 
-					// Осталось только отослать ответ и закрыть соединение.
 					send_negative_response_then_close_connection(
 							delete_protector,
 							can_throw,
@@ -126,8 +125,8 @@ private:
 		std::visit( ::arataga::utils::overloaded{
 				[&]( const dns_resolving::hostname_found_t & info )
 				{
-					// Теперь мы точно знаем куда подключаться.
-					// Пусть этим занимается следующий обработчик.
+					// Now we know the target address.
+					// But the connection will be established by the next handler.
 					const asio::ip::tcp::endpoint target_endpoint{
 							info.m_ip,
 							m_request_info.m_target_port
@@ -150,9 +149,9 @@ private:
 				},
 				[&]( const dns_resolving::hostname_not_found_t & info )
 				{
-					// Информация о хосте не найдена.
-					// Осталось только залогировать этот факт, отослать
-					// отрицательный результат и закрыть подключение.
+					// There is no info about the target.
+					// We have to log that fact, send the negative response
+					// and close the connection.
 					::arataga::logging::wrap_logging(
 							proxy_logging_mode,
 							spdlog::level::warn,

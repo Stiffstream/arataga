@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Интерфейсы, необходимые для обработчиков подключений.
+ * @brief Interfaces for connection_handlers.
  */
 
 #include <arataga/acl_handler/connection_handler_ifaces.hpp>
@@ -31,7 +31,7 @@ traffic_limiter_t::reserved_capacity_t::release(
 	std::size_t bytes_transferred ) const noexcept
 {
 	if( ec )
-		// Считаем, что в случае ошибки ничего не прочитано.
+		// Assume that 0 bytes have been read in the case on error.
 		bytes_transferred = 0u;
 
 	NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
@@ -54,13 +54,13 @@ connection_handler_t::connection_handler_t(
 	,	m_connection{ std::move(connection) }
 	,	m_status{ status_t::active }
 {
-//Оставлено здесь на случай, если эта отладочная печать потребуется.
+//Kept here for a case of debugging.
 //std::cout << this << ": constructed" << std::endl;
 }
 
 connection_handler_t::~connection_handler_t()
 {
-//Оставлено здесь на случай, если эта отладочная печать потребуется.
+//Kept here for a case of debugging.
 //std::cout << this << ": destroyed" << std::endl;
 }
 
@@ -85,8 +85,8 @@ connection_handler_t::release() noexcept
 
 	if( m_connection.is_open() )
 	{
-		// Подавляем все исключения поскольку это noexcept метод и
-		// у нас нет возможности как-то исключения обработать.
+		// Suppress exceptions because it's noexcept method and we have
+		// no possibility to handle an exception.
 		asio::error_code ec;
 		m_connection.shutdown( asio::ip::tcp::socket::shutdown_both, ec );
 		m_connection.close( ec );

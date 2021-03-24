@@ -1,35 +1,37 @@
-# Параметры командной строки для arataga
+# arataga's command line arguments
 
 ## --admin-http-ip
 
 `--admin-http-ip=[char-seq]`
 
-**Обязательный параметр.**
+**Mandatory argument.**
 
-Задает IP-адрес, на котором должен быть открыт административный HTTP-вход для управления arataga.
+Specifies the IP address at which the administrative HTTP-entry for arataga management should be opened.
 
-Может содержать IP-адрес (например, 127.0.0.1 или 192.168.1.1) или имя домена (например, `localhost`).
+Can contain an IP address (such as 127.0.0.1 or 192.168.1.1) or a domain name (such as `localhost`).
 
 ## --admin-http-port
 
 `--admin-http-port=[ushort]`
 
-**Обязательный параметр.**
+**Mandatory argument.**
 
-Задает TCP-порт, на котором должен быть открыт административный HTTP-вход для управления arataga.
+Specifies the TCP-port at which the administrative HTTP-entry for arataga management should be opened.
 
 ## --admin-token
 
 `--admin-token=[char-seq]`
 
-**Обязательный параметр.**
+**Mandatory argument.**
 
-Задает значение для HTTP-заголовка `Arataga-Admin-Token`.
+Sets the value for the `Arataga-Admin-Token` HTTP header field.
 
-Заголовок `Arataga-Admin-Token` должен присутствовать во всех HTTP-запросах,
-которые приходят на административный HTTP-вход. Значение этого заголовка задается в командной строке. Если заданное в командной строке значение не совпадает с тем, что получено в HTTP-запросе, то HTTP-запрос отвергается.
+The `Arataga-Admin-Token` header must be present in all HTTP requests, that
+come to the administrative HTTP input. The value of this header is specified on
+the command line. If the value specified on the command line does not match
+what is received in the HTTP request, the HTTP request is rejected.
 
-Пример:
+Example:
 
 `--admin-token=Our-Bigest-Secret-Word-Is-Abracadabra`
 
@@ -37,49 +39,49 @@
 
 `--io-threads=[uint]`
 
-*Опциональный параметр.*
+*Optional argument*
 
-Задает количество рабочих нитей для выполнения сетевого ввода-вывода.
+Sets the number of worker threads to perform network I/O.
 
-arataga создает несколько рабочих нитей при своем старте и далее обслуживает все описанные в конфигурации ACL только на контексте этих рабочих нитей. Так, если в конфигурации задано 1000 ACL, а arataga создал всего 4 рабочих нити для ввода-вывода, то каждая из этих нитей будет обслуживать по 250 ACL (arataga пытается равномерно распределить ACL между рабочими нитями).
+arataga creates multiple worker threads at its startup and then serves all ACLs described in the configuration only in the context of those worker threads. Thus, if the configuration specifies 1000 ACLs, and arataga created only 4 I/O worker threads, each of those threads will serve 250 ACLs (arataga tries to distribute ACLs evenly among the worker threads).
 
-Если аргумент `io-threads` не задан в командной строке, то arataga вычисляет количество нитей для ввода-вывода самостоятельно: `nCPU-2` или 2, если nCPU меньше или равно 2. Где `nCPU` -- это количество доступных ядер. Так, если arataga запущен на одноядерном процессоре, то будет создано 2 рабочих нити. Если на 4-х ядерном с hyperthreading, то будет создано 6 рабочих нитей (nCPU будет равен 8 в этом случае).
+If the `io-threads` argument is not given on the command line, then arataga calculates the number of I/O threads by itself: `nCPU-2` or 2 if nCPU is less than or equal to 2. Where `nCPU` is the number of available cores. So, if arataga is running on a single-core processor, 2 working threads will be created. If it is running on a 4-core with hyperthreading then 6 threads will be created (nCPU will be 8 in this case).
 
-Но иногда может быть необходимо ограничить количество рабочих нитей для arataga. Например, если ACL всего 4, а arataga запускается на 16-ядерном процессоре. В этом случае количество рабочих нитей для операций ввода-вывода задается аргументом `io-threads`. Так, если указать `--io-threads 2`, то arataga будет использовать всего две рабочих нити даже на 16-ядерном процессоре.
+But sometimes it may be necessary to limit the number of worker threads for arataga. For example, if the ACL is only 4 and arataga is running on a 16-core processor. In this case, the number of worker threads for I/O operations is specified by the `io-threads` argument. So, if you specify `--io-threads 2`, then arataga will use only two worker threads even on a 16-core processor.
 
 ## -l, --log-level
 
-`-l[level]` или `--log-level=[level]`
+`-l[level]` or `--log-level=[level]`
 
-*Опциональный параметр.*
+*Optional argument.*
 
-Задает минимальный уровень важности для сообщений лога, которые должны записываться в журнал.
+Sets the minimum level of importance for log messages to be logged.
 
-Так, если задан уровень `info`, то в журнал не будут попадать сообщения с уровнями `trace` и `debug`.
+For example, if the level `info` is set, then messages with the levels `trace` and `debug` will not be logged.
 
-Разрешенные значения: `trace`, `debug`, `info`, `warn`, `error`, `crit`.
+Allowed values: `trace`, `debug`, `info`, `warn`, `error`, `crit`.
 
-Специальное значение `off` отключает логирование.
+The special value `off` disables logging.
 
-По умолчанию: `trace`.
+Default: `trace`.
 
-**Примечание.** Заданное в командной строке значение действует только до момента чтения конфигурации (из локальной копии или при получении конфигурации через административный HTTP-вход). Если в конфигурации задана команда `log_level`, то минимальный уровень логирования устанавливается равным значению команды `log_level` из конфига.
+**Note.** The value set in the command line is valid only until the configuration is read (from a local copy or when the configuration is received through the administrative HTTP input). If the `log_level` command is specified in the configuration, the minimum logging level is set equal to the value of the `log_level` command from the config.
 
 ## --local-config-path
 
 `--local-config-path=[path]`
 
-**Обязательный параметр.**
+**Mandatory argument.**
 
-Задает имя каталога, в котором arataga будет сохранять локальные копии конфига и списка пользователей, полученные через административный HTTP-вход.
+Sets the name of the directory where arataga will save local copies of the config and user list obtained through the administrative HTTP login.
 
-Этот каталог должен существовать.
+This directory must exist.
 
-У пользователя, от имени которого запускается arataga, должны быть права на создание/удаление/чтение/запись файлов в этом каталоге.
+The user on whose behalf arataga is run must have permissions to create/delete/read/write files in this directory.
 
-Значением может быть либо абсолютное имя каталога, либо относительное имя (относительно каталога из которого запускают arataga).
+The value can be either an absolute directory name or a relative name (relative to the directory from which arataga is run).
 
-Пример:
+Example:
 
 `--local-config-path=/usr/etc/arataga/local-configs`
 
@@ -87,123 +89,123 @@ arataga создает несколько рабочих нитей при св�
 
 `--log-file-count=[non-zero-value]`
 
-*Опциональный параметр.*
+*Optional argument.*
 
-Если для логирования используются лог-файлы, то этот параметр задает максимальное количество лог-файлов в ротации. Так, если задано значение 5, то будет создаваться не более 5 лог-файлов. После этого новые лог-файлы будут перезаписывать старые.
+If log files are used for logging, this parameter sets the maximum number of log files in rotation. So, if set to 5, no more than 5 log files will be created. After that, the new log files will overwrite the old ones.
 
-Например, если задано:
+For example, if set:
 
 `--log-target=/var/log/arataga --log-file-count=3`
 
-то в течении работы arataga в `/var/log` будут созданы файлы `arataga`, `arataga.1`, `arataga.2`, `arataga.3`. Затем файл `arataga.3` будет удален, файл `arataga.2` будет переименован в `arataga.3`, файл `arataga.1` в `arataga.2`, а `arataga` в `arataga.1`.
+then the files `arataga`, `arataga.1`, `arataga.2`, `arataga.3` will be created in `/var/log` while arataga is running. Then the file `arataga.3` will be deleted, the file `arataga.2` will be renamed to `arataga.3`, the file `arataga.1` to `arataga.2`, and `arataga` to `arataga.1`.
 
-Этот параметр должен иметь значение 2 или более.
+This parameter must have a value of 2 or more.
 
-По умолчанию: 3.
+The default is 3.
 
 ## --log-file-size
 
 `--log-file-size=[bytes]`
 
-*Опциональный параметр.*
+*Optional argument.*
 
-Если для логирования используются лог-файлы, то при достижении текущим лог-файлом заданного этим параметром размера происходит переключение на другой лог-файл (выполняется ротация логов).
+If log files are used for logging, then when the current log file reaches the size specified by this parameter, it is switched to another log file (log rotation is performed).
 
-По умолчанию: 10MiB.
+Default: 10MiB.
 
 ## --log-target
 
 `--log-target=[name...]`
 
-*Опциональный параметр.*
+*Optional argument.*
 
-Задает куда будут идти сообщения лога.
+Specifies where the log messages will go.
 
-Может указываться несколько раз. Каждое вхождение аргумента `--log-target` должно указывать разные типы пунктов назначения:
+Can be specified more than once. Each occurrence of the `--log-target` argument must specify a different type of destination:
 
-* консоль. Разрешенные значения: `stdout`, `stderr`;
-* syslog. Задается в формате `@stream-name`, где `stream-name` -- это имя syslog-потока для сообщений;
-* имя файла.
+* console. Allowed values: `stdout`, `stderr`;
+* syslog. Defined in the format `@stream-name`, where `stream-name` is the name of the syslog stream for messages;
+* file name.
 
-Примеры:
+Examples:
 
-* логирование только в syslog в потоке `arataga`: `arataga --log-target=@arataga`;
-* логирование только на стандартный поток ошибок: `arataga --log-target=stderr`;
-* логирование и на стандартный поток вывода, и в syslog в потоке `arataga`: `arataga --log-target=stdout --log-target=@arataga`;
-* логирование и в syslog в потоке `arataga`, и в файл `/var/log/arataga.log`: `arataga --log-target=@arataga --log-target=/var/log/arataga.log`.
+* logging to the syslog only (into `arataga` stream): `arataga --log-target=@arataga`;
+* logging to the standard error stread only: `arataga --log-target=stderr`;
+* logging to the standard output stream, and to the syslog (into `arataga` stream): `arataga --log-target=stdout --log-target=@arataga`;
+* logging to the syslog (into `arataga` stream), and to the file `/var/log/arataga.log`: `arataga --log-target=@arataga --log-target=/var/log/arataga.log`.
 
-Если не указан, то логирование выполняется только на stdout.
+If not specified then the logging is performed to the stdout only.
 
 ## --max-stage-startup-time
 
 `--max-stage-startup-time=[seconds]`
 
-*Опциональный параметр.*
+*Optional argument.*
 
-Запуск arataga происходит в несколько стадий: сперва происходит попытка загрузить локальную копию списка пользователей, затем происходит попытка загрузить локальную копию конфигурационного файла, затем создается административная точка входа по HTTP.
+Running arataga takes place in several stages: first it tries to load a local copy of the user list, then it tries to load a local copy of the configuration file, then it creates an HTTP administrative entry point.
 
-Каждая стадия должна успешно завершится прежде чем начнется выполнение следующей стадии. Время, которое отводится стадиям на завершение своей работы ограничено. Если стадия не успела запуститься за отведенное для этого время, то работа arataga принудительно завершается.
+Each stage must complete successfully before the next stage begins. The time that stages have to complete their work is limited. If a stage fails to start in the allotted time, arataga is forced to terminate.
 
-Параметр --max-stage-startup-time позволяет задать максимальное разрешенное время для завершения работы очередной стадии запуска arataga.
+The --max-stage-startup-time parameter allows you to set the maximum time allowed for the next arataga stage to complete its run.
 
-Значение задается в секундах.
+The value is set in seconds.
 
-Значение по умолчанию: 5 секунд.
+The default value is 5 seconds.
 
 ## --no-daemonize
 
-*Опциональный параметр.*
+*Optional argument.*
 
-Если указан, то arataga после старта не демонизирует себя, а продолжает работать как обычное консольное приложение.
+If specified then arataga doesn't become a daemon and continue work as a usual console application.
 
 ## --setgid
 
 `--setgid=[gid]`
 
-*Опциональный параметр.*
+*Optional argument.*
 
-Если указан, то arataga после старта выполняет системный вызов `setgid` для понижения своих привелений в системе и продолжения работы от имени группы с заданным идентификатором.
+If specified, arataga makes a `setgid` system call after startup to downgrade its permissions in the system and continue working as a member of the group with the identifier given.
 
-По умолчанию arataga не делает вызов `setgid`.
+By default arataga does not make a `setgid` call.
 
 ## --setuid
 
 `--setuid=[uid]`
 
-*Опциональный параметр.*
+*Optional argument.*
 
-Если указан, то arataga после старта выполняет системный вызов `setuid` для понижения своих привелений в системе и продолжения работы от имени пользователя с заданным идентификатором.
+If specified, arataga makes a `setuid` system call after startup to downgrade its permissions in the system and continue working as a user with the identifier given.
 
-По умолчанию arataga не делает вызов `setuid`.
+By default arataga does not make a `setuid` call.
 
 ## --so5-combined-locks
 
-*Опциональный параметр.*
+*Optional argument.*
 
-Если указан, то внутри arataga начинают использоваться специальные реализации mutex-ов, которые сочетаю в себе spin-lock-и и обычные mutex-ы. Этот режим может снизить латентность при обработке некоторых действий внутри arataga, но ценой большего расхода CPU.
+If specified, special implementations of mutexes inside arataga start to be used, which combine spin-locks and regular mutexes. This mode can reduce latency when processing some actions inside arataga, but at the cost of more CPU consumption.
 
-По умолчанию этот режим не используется и внутри arataga применяются обычные mutex-ы.
+By default, this mode is not used and regular mutexes are used inside arataga.
 
 ## -f, --log-flush-level
 
-`-f[level]` или `--log-flush-level=[level]`
+`-f[level]` or `--log-flush-level=[level]`
 
-*Опциональный параметр.*
+*Optional argument.*
 
-Задает уровень важности сообщений в логе, при котором происходит сброс сообщений в заданные пункты назначения.
+Specifies the level of importance of messages in the log at which messages are dumped to specified destinations.
 
-В arataga для логирования используется библиотека [spdlog](https://github.com/gabime/spdlog), которая работает в асинхронном режиме (т.е. сообщения не записываются в файл/syslog сразу). Сообщения периодически сбрасываются в файл/syslog либо по заполнению внутренних буферов spdlog-а, либо при появлении сообщений с определенным уровнем важности.
+Arataga uses the [spdlog](https://github.com/gabime/spdlog) library for logging, which works in asynchronous mode (i.e. messages are not written to file/syslog immediately). Messages are periodically dumped to the file/syslog either when the internal buffers of spdlog are full or when messages of a certain severity level appear.
 
-Параметр `--log-flush-level` задает уровень важности, при котором накопленные в буферах spdlog сообщения будут записываться.
+The `--log-flush-level' parameter sets the severity level at which the messages accumulated in the spdlog buffers will be written.
 
-Так, если задать уровень `trace`, то запись будет осущетсвяться после появления каждого сообщения (т.е. `trace` -- это минимальный уровень). Если задать уровень `warn`, то запись будет осуществляться только при появлении сообщений с уровнем `warn` или выше.
+For example, if you set the level of `trace`, the recording will be done after each message (i.e. `trace` is the minimum level). If you set the `warn` level, the recording will be done only when messages with the `warn` level or higher appear.
 
-По умолчанию: `error`.
+Default: `error`.
 
 ## -h, --help
 
-Предписывает вывести справку по параметрам командной строки и завершить работу.
+Instructs to print a help on the command line arguments and quit.
 
 ## -v, --version
 
-Предписывает вывести информацию о версии и завершить работу.
+Instructs to print the version number and quit.

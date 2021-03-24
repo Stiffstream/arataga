@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Публичная часть интерфейса агента startup_manager.
+ * @brief The public interface of startup_manager-agent.
  */
 
 #pragma once
@@ -20,28 +20,32 @@ namespace arataga::startup_manager
 // params_t
 //
 /*!
- * @brief Конфигурационные параметры для агента startup_manager.
+ * @brief Initial parameters for startup_manager-agent.
  */
 struct params_t
 {
-	//! Путь, в котором нужно искать и сохранять локальные копии конфига.
+	//! Path for local copy of the config.
 	std::filesystem::path m_local_config_path;
 
-	//! Максимальное время ожидания старта одного агента.
+	//! Max waiting time for startup of one agent.
 	/*!
-	 * Если агент за это время стартовать не успел, то работа
-	 * всего приложения будет аварийно прервана.
+	 * If an agent doesn't start within that time then the
+	 * whole application will be terminated.
 	 */
 	std::chrono::seconds m_max_stage_startup_time;
 
-	//! Количество IO-threads, которые должны быть созданы.
+	//! Number of IO-threads to be created.
+	/*!
+	 * If this value is empty then the number of IO-thread
+	 * will be detected automatically.
+	 */
 	std::optional< std::size_t > m_io_threads_count;
 
-	//! IP-адрес для административного HTTP-входа.
+	//! IP-address of admin HTTP-entry.
 	asio::ip::address m_admin_http_ip;
-	//! TCP-порт для административного HTTP-входа.
+	//! TCP-port of admin HTTP-entry.
 	std::uint16_t m_admin_http_port;
-	//! Значение токена, которое должно присутствовать во входящих запросах.
+	//! Value of special admin-token to be present in incoming POST requests.
 	std::string m_admin_http_token;
 };
 
@@ -49,8 +53,7 @@ struct params_t
 // introduce_startup_manager
 //
 /*!
- * @brief Функция для создания и запуска агента startup_manager в
- * указанном SObjectizer Environment.
+ * @brief A factory for creation and launching a new startup_manager-agent.
  */
 void
 introduce_startup_manager(
@@ -58,5 +61,4 @@ introduce_startup_manager(
 	params_t params );
 
 } /* namespace arataga::startup_manager */
-
 

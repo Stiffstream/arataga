@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Публичная часть интерфейса агента user_list_processor.
+ * @brief The public interface of user_list_processor-agent.
  */
 
 #pragma once
@@ -18,14 +18,14 @@ namespace arataga::user_list_processor
 // params_t
 //
 /*!
- * @brief Параметры, необходимые агенту для начала его работы.
+ * @brief Initial parameters for user_list_processor-agent.
  */
 struct params_t
 {
-	//! Путь, в котором нужно искать и сохранять локальные копии user-list-а.
+	//! A path for local copy of user-list file.
 	std::filesystem::path m_local_config_path;
 
-	//! mbox, на который нужно отправить подтверждение об успешном старте.
+	//! mbox for a notification about successful start.
 	so_5::mbox_t m_startup_notify_mbox;
 };
 
@@ -33,15 +33,14 @@ struct params_t
 // new_user_list_t
 //
 /*!
- * @brief Сообщение о получении нового списка пользователей.
+ * @brief A notification about a new incoming user-list.
  */
 struct new_user_list_t final : public so_5::message_t
 {
-	//! Объект, через который нужно будет сформировать
-	//! ответ на попытку обновить список пользователей.
+	//! An object to send the reply to admin HTTP-entry.
 	::arataga::admin_http_entry::replier_shptr_t m_replier;
 
-	//! Содержимое нового списка пользователей.
+	//! The content of new incoming user-list.
 	const std::string_view m_content;
 
 	new_user_list_t(
@@ -56,18 +55,18 @@ struct new_user_list_t final : public so_5::message_t
 // introduce_user_list_processor
 //
 /*!
- * @brief Функция для создания и запуска агента user_list_processor в
- * указанном SObjectizer Environment.
+ * @brief A factory for creation of a new user_list_processor-agent and
+ * binding it to the specified dispatcher.
  */
 void
 introduce_user_list_processor(
-	//! SObjectizer Environment, в котором нужно работать.
+	//! SObjectizer Environment to work within.
 	so_5::environment_t & env,
-	//! Диспетчер, к которому должен быть привязан новый агент.
+	//! The dispatcher for a new user_list_processor-agent.
 	so_5::disp_binder_shptr_t disp_binder,
-	//! Контекст всего arataga.
+	//! The context of the whole application.
 	application_context_t app_ctx,
-	//! Индивидуальные параметры для нового агента.
+	//! Initial params for a new user_list_processor-agent.
 	params_t params );
 
 } /* namespace arataga::user_list_processor */

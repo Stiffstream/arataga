@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Тип для представления порядкового номера такта.
+ * @brief A type for representing turn's sequence number.
  */
 
 #pragma once
@@ -15,10 +15,10 @@ namespace arataga::acl_handler
 // sequence_number_t
 //
 /*!
- * @brief Тип для представления порядкового номера такта.
+ * @brief A type for representing turn's sequence number.
  *
- * Нужен для того, чтобы случайно не передать номер такта туда,
- * где требуется беззнаковое число (и наоборот).
+ * It is needed to aviod acidental passing of turn's number instead
+ * of unsigned number (or vice verse).
  */
 class sequence_number_t
 {

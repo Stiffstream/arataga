@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Инструменты для создания агента stats_collector.
+ * @brief Stuff for introduction of stats_collector.
  */
 
 #pragma once
@@ -14,12 +14,10 @@ namespace arataga::stats_collector
 // params_t
 //
 /*!
- * @brief Параметры, необходимые агенту для начала его работы.
+ * @brief Initial parameters for stats_collector.
  *
  * @note
- * На данный момент это пустая структура, но она добавлена для того,
- * чтобы впоследствии можно было легко добавлять новые параметры для
- * агента stats_collector.
+ * At this point it's an empty struct. But it can be extended later.
  */
 struct params_t
 {
@@ -29,20 +27,20 @@ struct params_t
 // introduce_stats_collector
 //
 /*!
- * @brief Функция для создания и запуска агента stats_collector в
- * указанном SObjectizer Environment с привязкой к указанному диспетчеру.
+ * @brief A factory for creation of stats_collector-agent and registration
+ * of the new agent with binding to the specified dispatcher.
  */
 void
 introduce_stats_collector(
-	//! SObjectizer Environment, в котором нужно работать.
+	//! SObjectizer Environment to work within.
 	so_5::environment_t & env,
-	//! Родительская кооперация.
+	//! The parent coop for a new agent.
 	so_5::coop_handle_t parent_coop,
-	//! Диспетчер, к которому должен быть привязан новый агент.
+	//! Dispatcher for a new agent.
 	so_5::disp_binder_shptr_t disp_binder,
-	//! Контекст всего arataga.
+	//! The context of the whole application.
 	application_context_t app_ctx,
-	//! Индивидуальные параметры для нового агента.
+	//! Initial parameters for a new agent.
 	params_t params );
 
 } /* namespace arataga::stats_collector */

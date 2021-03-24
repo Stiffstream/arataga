@@ -1,7 +1,6 @@
 /*!
  * @file
- * @brief Вспомогательные инструменты для отображения опциональных
- * username и password.
+ * @brief Helpers for printing optional username and password values.
  */
 
 #pragma once
@@ -14,9 +13,9 @@ namespace arataga::opt_username_dumper
 {
 
 /*!
- * @brief Специальная обертка для печати необязательного username в ostream.
+ * @brief A special wrapper for printing an optional username into ostream.
  *
- * Пример использования:
+ * Usage example:
  *
  * @code
  * using namespace arataga::opt_username_dumper;
@@ -47,9 +46,9 @@ operator<<( std::ostream & to, const opt_username_dumper_t & d )
 }
 
 /*!
- * @brief Специальная обертка для печати необязательного password в ostream.
+ * @brief A special wrapper for printing an optional password into ostream.
  *
- * Пример использования:
+ * Usage example:
  *
  * @code
  * using namespace arataga::opt_username_dumper;

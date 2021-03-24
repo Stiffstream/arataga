@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Реализация connect_method_handler-а.
+ * @brief Implementation of connect_method_handler.
  */
 
 #include <arataga/acl_handler/handlers/http/basics.hpp>
@@ -20,30 +20,29 @@ namespace handlers::http
 // connect_method_handler_t
 //
 /*!
- * @brief Обработчик соединения, который обрабатывает метод CONNECT.
+ * @brief Connection-handler that services CONNECT method.
  */
 class connect_method_handler_t final : public handler_with_out_connection_t
 {
-	//! Описание целевого узла.
+	//! Description of the target host.
 	/*!
-	 * Необходимо для выполнения логирования.
+	 * It's necessary for logging purposes.
 	 */
 	const std::string m_connection_target;
 
-	//! Ограничитель трафика для этого клиента.
+	//! Traffic limiter for the user.
 	traffic_limiter_unique_ptr_t m_traffic_limiter;
 
-	//! Буфер для отсылки клиенту положительного ответа.
+	//! Buffer for positive response to the user.
 	/*!
-	 * После отсылки ответа будет произведен перевод подключения в режим
-	 * простой передачи данных.
+	 * After the sending of the response a data-transfer handler will
+	 * be used for the connection.
 	 */
 	out_string_view_buffer_t m_positive_response;
 
-	//! Время когда данный объект был создан.
+	//! Timepoint when this object was created.
 	/*!
-	 * Используется для органичения длительности операции записи
-	 * положительного ответа клиенту.
+	 * Used for controlling the timeout of sending the response.
 	 */
 	std::chrono::steady_clock::time_point m_created_at;
 
@@ -79,7 +78,6 @@ protected:
 		wrap_action_and_handle_exceptions(
 			delete_protector,
 			[this]( delete_protector_t, can_throw_t can_throw ) {
-				// Для того, чтобы проще затем было анализировать логи.
 				::arataga::logging::wrap_logging(
 						proxy_logging_mode,
 						spdlog::level::info,
@@ -91,15 +89,15 @@ protected:
 									"serving-request=CONNECT " + m_connection_target );
 						} );
 
-				// Нужно отослать положительный ответ клиенту.
+				// Have to send positive response to the user.
 				write_whole( can_throw,
 						m_connection,
 						m_positive_response,
 						[this]( delete_protector_t delete_protector,
 							can_throw_t can_throw )
 						{
-							// Клиент получил наш ответ, так что мы теперь
-							// можем просто перейти к data-transfer-handler.
+							// The response is sent. Now we can switch
+							// to data-transfer-handler.
 							replace_handler(
 									delete_protector,
 									can_throw,
@@ -123,8 +121,7 @@ protected:
 			delete_protector,
 			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 			{
-				// В качестве лимита времени будем использовать
-				// idle_connection_timeout.
+				// Will use idle_connection_timeout as the timeout duration.
 				const auto now = std::chrono::steady_clock::now();
 				if( m_created_at +
 						context().config().idle_connection_timeout() < now )
@@ -156,9 +153,9 @@ make_connect_method_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket in_connection,
-	// Эта информация передается в функцию-фабрику, но для
-	// connect_method_handler-а она не нужна.
-	// Поэтому она здесь будет просто выброшена.
+	// This information is passed to HTTP connection-handler factories.
+	// But this type of handler doesn't need it.
+	// So it will be thrown out.
 	http_handling_state_unique_ptr_t /*http_state*/,
 	request_info_t request_info,
 	traffic_limiter_unique_ptr_t traffic_limiter,

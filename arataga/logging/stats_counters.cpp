@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Счетчики статистики для сообщений лога.
+ * @brief Stats counters for log messages.
  */
 
 #include <arataga/logging/stats_counters.hpp>

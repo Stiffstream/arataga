@@ -46,7 +46,7 @@ parse_cmd_line( int argc, char ** argv )
 
 	args::ArgumentParser parser( "mass_load", "\n" );
 
-	// Общие параметры.
+	// The common params.
 
 	args::HelpFlag help( parser, "help", "Display this help text",
 			{ 'h', "help" } );

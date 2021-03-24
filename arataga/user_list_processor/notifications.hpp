@@ -1,7 +1,6 @@
 /*!
  * @file
- * @brief Описания нотификаций, которые может рассылать агент
- * user_list_processor.
+ * @brief Notifications sent by user_list_processor-agent.
  */
 
 #pragma once
@@ -19,7 +18,7 @@ namespace arataga::user_list_processor
 // started_t
 //
 /*!
- * @brief Уведомление о том, что user_list_processor успешно стартовал.
+ * @brief Notification about successful start of user_list_processor-agent.
  */
 struct started_t final : public so_5::signal_t {};
 
@@ -27,15 +26,14 @@ struct started_t final : public so_5::signal_t {};
 // updated_user_list_t
 //
 /*!
- * @brief Сообщение о получении нового содержимого списка пользователей.
+ * @brief Notification about accepted new user-list.
  *
  * @note
- * Для упрощения реализации первой версии список пользователей в этом
- * сообщении передается по значению.
+ * For simplicity new user-list is sent by a value.
  */
 struct updated_user_list_t final : public so_5::message_t
 {
-	//! Содержимое списка пользователей.
+	//! New user-list.
 	::arataga::user_list_auth::auth_data_t m_auth_data;
 
 	updated_user_list_t(

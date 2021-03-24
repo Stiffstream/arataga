@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Публичный интерфейс админстративного HTTP-входа.
+ * @brief The public interface of admin HTTP-entry.
  */
 
 #pragma once
@@ -20,15 +20,14 @@ namespace arataga::admin_http_entry
 // running_entry_instance_t
 //
 /*!
- * @brief Интерфейс объекта, который отвечает за останов
- * запущенного HTTP-входа.
+ * @brief Interface of an object for stopping the running HTTP-entry.
  */
 class running_entry_instance_t
 {
 public:
 	virtual ~running_entry_instance_t();
 
-	//! Выдача команды на принудительный останов HTTP-входа.
+	//! Sends 'stop' command to HTTP-entry.
 	virtual void
 	stop() = 0;
 };
@@ -36,13 +35,13 @@ public:
 //
 // running_entry_handle_t
 //
-//! Псевдоним unique_ptr для running_entry_instance.
+//! Alias for unique_ptr to running_entry_instance.
 using running_entry_handle_t = std::unique_ptr< running_entry_instance_t >;
 
 //
 // status_t
 //
-//! Специальный тип для хранения кода ответа на HTTP-запрос.
+//! Special type for holding the status-line for a response to a HTTP-request.
 class status_t
 {
 	std::uint16_t m_code;
@@ -79,7 +78,7 @@ public:
 	}
 };
 
-// Статусы, которые определены для arataga.
+// Statuses for arataga's replies.
 inline constexpr status_t status_ok{
 		200u,
 		"Ok"
@@ -109,27 +108,27 @@ inline constexpr status_t status_user_list_processor_failure{
 // replier_t
 //
 /*!
- * @brief Интерфейс объекта для ответа на ранее полученный запрос.
+ * @brief An interface of object for sending a response to an incoming request.
  */
 class replier_t
 {
 public:
 	virtual ~replier_t();
 
-	//! Параметры для ответа в виде структуры.
+	//! Type of holder for parts of the response.
 	struct reply_params_t
 	{
-		//! Код ответа.
+		//! The value of status-line for the response.
 		status_t m_status;
-		//! Основная часть ответа.
+		//! The response's body.
 		std::string m_body;
 	};
 
 	virtual void
 	reply(
-		//! Числовой код ответа.
+		//! The status-line for the response.
 		status_t status,
-		//! Основная часть ответа.
+		//! The response's body.
 		std::string body ) = 0;
 
 	void
@@ -145,14 +144,14 @@ public:
 // replier_shptr_t
 //
 /*!
- * @brief Тип умного указателя для replier.
+ * @brief Alias for shared_ptr to replier.
  */
 using replier_shptr_t = std::shared_ptr< replier_t >;
 
 namespace debug_requests
 {
 
-//! Тестовый запрос на аутентификацию клиента.
+//! Test request for client's authentification.
 struct authentificate_t
 {
 	asio::ip::address_v4 m_proxy_in_addr;
@@ -167,7 +166,7 @@ struct authentificate_t
 	std::uint16_t m_target_port;
 };
 
-//! Тестовый запрос на разрешение доменного имени.
+//! Test request for domain name resolving.
 struct dns_resolve_t
 {
 	asio::ip::address_v4 m_proxy_in_addr;
@@ -183,56 +182,56 @@ struct dns_resolve_t
 // requests_mailbox_t
 //
 /*!
- * @brief Интерфейс, с помощью которого HTTP-вход сможет отдавать
- * полученные запросы на обработку в SObjectizer-овскую часть.
+ * @brief An interface for sending incoming requests into SObjectizer's
+ * part of arataga.
  */
 class requests_mailbox_t
 {
 public:
 	virtual ~requests_mailbox_t();
 
-	//! Передать запрос на обновление конфигурации.
+	//! Send a request to apply of new config.
 	virtual void
 	new_config(
-		//! Объект для формирования ответа на этот запрос.
+		//! Replier for that request.
 		replier_shptr_t replier,
-		//! Содержимое нового конфига.
+		//! The content of the new config.
 		std::string_view content ) = 0;
 
-	//! Передать запрос на получение списка известных ACL.
+	//! Send a request to retrieve the current ACL list.
 	virtual void
 	get_acl_list(
-		//! Объект для формирования ответа на этот запрос.
+		//! Replier for that request.
 		replier_shptr_t replier ) = 0;
 
-	//! Передать запрос на обновление списка пользователей.
+	//! Send a request to apply a new user-list.
 	virtual void
 	new_user_list(
-		//! Объект для формирования ответа на этот запрос.
+		//! Replier for that request.
 		replier_shptr_t replier,
-		//! Содержимое списка пользователей.
+		//! The content of the new user-list.
 		std::string_view content ) = 0;
 
-	//! Передать запрос на получение текущей статистики.
+	//! Send a request to retrieve the current stats.
 	virtual void
 	get_current_stats(
-		//! Объект для формирования ответа на этот запрос.
+		//! Replier for that request.
 		replier_shptr_t replier ) = 0;
 
-	//! Передать тестовый запрос на аутентификацию клиента.
+	//! Send a test request for user authentification.
 	virtual void
 	debug_authentificate(
-		//! Объект для формирования ответа на этот запрос.
+		//! Replier for that request.
 		replier_shptr_t replier,
-		//! Параметры запроса.
+		//! Request's parameters.
 		debug_requests::authentificate_t request ) = 0;
 
-	//! Передать тестовый запрос на разршение доменного имени.
+	//! Send a test request for domain name resolution.
 	virtual void
 	debug_dns_resolve(
-		//! Объект для формирования ответа на этот запрос.
+		//! Replier for that request.
 		replier_shptr_t replier,
-		//! Параметры запроса.
+		//! Request's parameters.
 		debug_requests::dns_resolve_t request ) = 0;
 };
 
@@ -240,26 +239,24 @@ public:
 // start_entry
 //
 /*!
- * @brief Функция для запуска административной HTTP-точки входа.
+ * @brief Function for launching of the admin HTTP-entry.
  *
- * Возвращает либо действительный running_entry_handle_t, либо порождает
- * исключение в случае проблем с запуском HTTP-точки входа.
+ * Returns an actual running_entry_handle_t or throws an exception.
  */
 [[nodiscard]]
 running_entry_handle_t
 start_entry(
-	//! IP-адрес, на котором должна работать точка входа.
+	//! IP-address for the admin HTTP-entry.
 	asio::ip::address entry_ip,
-	//! TCP-порт, на котором должна работать точка входа.
+	//! TCP-port for the admin HTTP-entry.
 	std::uint16_t entry_port,
-	//! Значение токена, который должен присутствовать во
-	//! входящих запросах для того, чтобы эти запросы принимались
-	//! на обработку.
+	//! Value of admin-token to be present in all incoming requests.
+	//! If there is no admin-token with that value an incoming request
+	//! will be rejected.
 	std::string admin_token,
-	//! Интерфейс, посредством которого HTTP-вход сможет общаться
-	//! c SObjectizer-овской частью.
-	//! Эта ссылка должна оставаться валидной на протяжении всего
-	//! времени жизни точки входа.
+	//! The interface for interaction with SObjectizer's part of arataga.
+	//! This reference is guaranteed to be valid for the whole lifetime
+	//! of the admin HTTP-entry.
 	requests_mailbox_t & mailbox );
 
 } /* namespace arataga::admin_http_entry */

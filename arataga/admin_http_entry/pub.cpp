@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Публичный интерфейс админстративного HTTP-входа.
+ * @brief The public interface of admin HTTP-entry.
  */
 
 #include <arataga/admin_http_entry/pub.hpp>
@@ -40,7 +40,7 @@ namespace impl
 //
 // actual_replier_t
 //
-//! Актуальная реализация интерфейса replier.
+//! The actual implementation of replier interface.
 class actual_replier_t final : public replier_t
 {
 public:
@@ -70,7 +70,7 @@ private:
 	const restinio::request_handle_t m_request;
 };
 
-// Названия точек входа в arataga.
+// Names of entry-points.
 constexpr std::string_view entry_point_config{ "/config" };
 constexpr std::string_view entry_point_acls{ "/acls" };
 constexpr std::string_view entry_point_users{ "/users" };
@@ -82,8 +82,8 @@ constexpr std::string_view entry_point_debug_dns_resolve{ "/debug/dns-resolve" }
 // make_admin_token_checker
 //
 /*!
- * @brief Фабрика по созданию обработчика, который будет проверять наличие и
- * значение admin-token-а во входящих запросах.
+ * @brief A factory for handler that checks the presence and the value
+ * of admin-token in incoming requests.
  */
 [[nodiscard]]
 auto
@@ -98,14 +98,12 @@ make_admin_token_checker(
 		if( admin_header_value )
 		{
 			if( token == *admin_header_value )
-				// Можно работать. Заголовок присутствует и
-				// имеет корректное значение.
-				// Разрешаем передачу запроса следующим обработчикам в цепочке.
+				// There is the required field and it has the right value.
+				// We can go further. Allow to work to the next worker.
 				return restinio::request_not_handled();
 		}
 
-		// В остальных случаях нужно сразу отвечать отрицательным
-		// результатом.
+		// In all other cases the negative response has to be sent.
 		return req->create_response( restinio::status_forbidden() )
 				.append_header_date_field()
 				.append_body( "No valid admin credentials supplied\r\n" )
@@ -117,8 +115,8 @@ make_admin_token_checker(
 // make_content_type_checker
 //
 /*!
- * @brief Фабрика для создания обработчика, который проверяет наличие
- * и содержимое Content-Type для заголовка.
+ * @brief A factory for handler that checks the presence and the
+ * value of Content-Type for headers.
  */
 [[nodiscard]]
 auto
@@ -126,8 +124,8 @@ make_content_type_checker()
 {
 	return []( const auto & req ) -> restinio::request_handling_status_t
 	{
-		// Проверять Content-Type нужно только если POST запросы пришли на 
-		// /config и /users.
+		// The check is necessary only if it is POST request for
+		// /config and /users entries.
 		if( restinio::http_method_post() == req->header().method() &&
 				(req->header().path() == entry_point_config ||
 				req->header().path() == entry_point_users) )
@@ -139,8 +137,8 @@ make_content_type_checker()
 			if( const auto * ct_val = std::get_if< content_type_value_t >(
 					&parse_result ) )
 			{
-				// Ждем содержимое только в формате text/plain, все остальное
-				// отвергаем.
+				// Wait the content only in text/plain format. Reject all
+				// other content types.
 				if( !("text" == ct_val->media_type.type &&
 						"plain" == ct_val->media_type.subtype) )
 				{
@@ -153,8 +151,7 @@ make_content_type_checker()
 			}
 			else
 			{
-				// Нельзя брать на обработку запрос, содержимое которого
-				// непонятно в каком формате.
+				// We can't process the request with unknown content-type.
 				return req->create_response( restinio::status_bad_request() )
 						.append_header_date_field()
 						.append_body( "No valid Content-Type field found\r\n" )
@@ -162,8 +159,7 @@ make_content_type_checker()
 			}
 		}
 
-		// Никаких проблем не выявили. Можно разрешать дальнейшую
-		// обработку запроса.
+		// There is no problem. Go to the next handler.
 		return restinio::request_not_handled();
 	};
 }
@@ -172,8 +168,7 @@ make_content_type_checker()
 // request_processor_t
 //
 /*!
- * @brief Тип объекта, который будет отвечать за обработку
- * входящих запросов.
+ * @brief Type of object for handling incoming requests.
  */
 class request_processor_t
 {
@@ -186,40 +181,40 @@ public:
 	on_request( restinio::request_handle_t req );
 
 private:
-	//! Почтовый ящик для отсылки запросов в SObjectizer-часть.
+	//! Mailbox for sending requests to SObjectizer's part of arataga.
 	requests_mailbox_t & m_mailbox;
 
-	//! Реакция на запрос с новой конфигурацией.
+	//! The handler for a request with a new config.
 	[[nodiscard]]
 	restinio::request_handling_status_t
 	on_new_config(
 		restinio::request_handle_t req ) const;
 
-	//! Реакция на запрос списка известных ACL.
+	//! The handler for a request for retrieving of ACL list.
 	[[nodiscard]]
 	restinio::request_handling_status_t
 	on_get_acl_list(
 		restinio::request_handle_t req ) const;
 
-	//! Реакция на запрос с новым списком пользователей.
+	//! The handler for a request with a new user-list.
 	[[nodiscard]]
 	restinio::request_handling_status_t
 	on_user_list(
 		restinio::request_handle_t req ) const;
 
-	//! Реакция на запрос текущей статистики.
+	//! The handler for a request for retrieving the current stats.
 	[[nodiscard]]
 	restinio::request_handling_status_t
 	on_get_current_stats(
 		restinio::request_handle_t req ) const;
 
-	//! Реакция на запрос тестовой аутентификации.
+	//! The handler for a request with test authentification.
 	[[nodiscard]]
 	restinio::request_handling_status_t
 	on_debug_auth(
 		restinio::request_handle_t req ) const;
 
-	//! Реакция на запрос тестовой аутентификации.
+	//! The handler for a request with test domain name resolution.
 	[[nodiscard]]
 	restinio::request_handling_status_t
 	on_debug_dns_resolve(
@@ -353,8 +348,8 @@ request_processor_t::on_debug_auth(
 		}
 
 		m_mailbox.debug_authentificate(
-				// Передаем req по значению, чтобы иметь возможность
-				// использовать req в секции catch.
+				// NOTE: `req` is passed by value.
+				// It allows us to use `req` in catch block.
 				std::make_shared< actual_replier_t >( req ),
 				std::move(request_params) );
 	}
@@ -395,8 +390,8 @@ request_processor_t::on_debug_dns_resolve(
 				qp[ "ip-version" ] );
 
 		m_mailbox.debug_dns_resolve(
-				// Передаем req по значению, чтобы иметь возможность
-				// использовать req в секции catch.
+				// NOTE: `req` is passed by value.
+				// It allows us to use `req` in catch block.
 				std::make_shared< actual_replier_t >( req ),
 				std::move(request_params) );
 	}
@@ -418,10 +413,10 @@ request_processor_t::on_debug_dns_resolve(
 //
 struct server_traits_t : public restinio::default_traits_t 
 {
-	// На данный момент всего три обработчика в цепочке:
-	// - проверка admin-token;
-	// - проверка content-type для POST-запросов;
-	// - прикладная обработка.
+	// There are only three handlers in the chain:
+	// - checks for admin-token;
+	// - checks for content-type for POST-requests;
+	// - actual handling.
 	using request_handler_t = restinio::sync_chain::fixed_size_chain_t<3>;
 };
 
@@ -447,7 +442,7 @@ public:
 	}
 
 private:
-	//! Дескриптор запущенного RESTinio-сервера.
+	//! A handle of the running RESTinio-server.
 	server_handle_t m_server;
 };
 
@@ -473,15 +468,15 @@ start_entry(
 				.address( entry_ip )
 				.port( entry_port )
 				.request_handler(
-					// Первый обработчик проверяет наличие admin-token-а.
+					// The first handler checks admin-token.
 					impl::make_admin_token_checker( std::move(admin_token) ),
-					// Следующий обработчик контролирует Content-Type.
+					// The next handler checks Content-Type for POST-requests.
 					impl::make_content_type_checker(),
-					// Следующий обработчик уже делает реальную обработку запроса.
+					// The next handler does the actual processing.
 					[handler = std::move(processor)]( auto req ) {
 						return handler->on_request( std::move(req) );
 					} ),
-			// Достаточно одной рабочей нити.
+			// Just one worker thread is enough.
 			1 );
 
 	return std::make_unique< impl::actual_running_entry_instance_t >(

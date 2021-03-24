@@ -1,7 +1,6 @@
 /*!
  * @file
- * @brief Вспомогательный класс для хранения информации о запросах
- * на разрешение доменного имени или адреса.
+ * @brief Helper class for holding info about actual DNS lookups.
  */
 
 #pragma once
@@ -13,20 +12,16 @@
 namespace arataga::dns_resolver
 {
 
-
 /*!
- * @brief Класс, хранящий активные запросы на разрешение имени.
+ * @brief Class for holding a list of active DNS lookups.
  *
- * Суть данного класса заключается в том, чтобы не делать реальные запросы
- * к DNS-серверу на каждый приходящий ResolveRequest из-за возможности появления
- * дублей запросов.
+ * This class is necessary to avoid new lookup if there are some active
+ * lookup with the same parameters. So this class is used to deal with
+ * duplicates of ResolveRequest.
  *
- * В результате добавления очередного запроса возвращается флаг, указывающий на
- * необходимость совершения реального запроса к DNS-серверу.
- *
- * @tparam Key Тип ключа, по которому хранятся элементы в словаре.
- * @tparam ResolveRequest Тип запроса на разрешение имени.
- * @tparam ResolveResponse Тип ответа на запрос.
+ * @tparam Key Type of the key for items in the dictionary.
+ * @tparam ResolveRequest Type of resolution request.
+ * @tparam ResolveResponse Type of resolution response.
  */
 template <
 	typename Key,
@@ -40,36 +35,36 @@ class waiting_requests_handler_t
 	using resolve_result_t =
 		typename ResolveResponse::resolve_result_t;
 
-	//! Вспомогательная информация о запросе, чтобы в дальнейшем
-	//! ее прокинуть в ответ.
+	//! Info about a request.
 	struct resolve_request_info_t
 	{
-		//! Идетификатор запроса.
+		//! Request ID.
 		resolve_req_id_t m_req_id;
 
-		//! В каком виде требуется представить ответ.
+		//! Required IP-version.
 		ip_version_t m_ip_version;
 
-		//! Токен для завершения обработки запроса.
+		//! Completion token for the request.
 		/*!
 		* @note
-		* Может быть нулевым указателем.
+		* Could be nullptr.
 		*/
 		completion_token_t m_completion_token;
 
-		//! Mbox, на который нужно отправить ответ.
+		//! mbox for the reply.
 		so_5::mbox_t m_reply_to;
 	};
 
 public:
 
 	/*!
-	 * @brief Добавить запрос в список ожидающий.
+	 * @brief Add a request to wait list.
 	 *
-	 * @param key Ключ, по которому определяется запрос.
-	 * @param req Запрос на разрешение.
-	 * @return true Если необходимо совершать реальный запрос.
-	 * @return false Если запрос по такому ключу уже выполняется.
+	 * @param key Key for the result.
+	 * @param req The request to be added.
+	 *
+	 * @return true If the actual resolution attempt should be performed.
+	 * @return false If there already is active request with the same params.
 	 */
 	[[nodiscard]]
 	bool
@@ -82,11 +77,13 @@ public:
 		if( find == m_waiting_requests.end() )
 		{
 			resolve_requests_info_list_t requests = {
-			resolve_request_info_t {
-				req.m_req_id,
-				req.m_ip_version,
-				req.m_completion_token,
-				req.m_reply_to } };
+				resolve_request_info_t {
+					req.m_req_id,
+					req.m_ip_version,
+					req.m_completion_token,
+					req.m_reply_to
+				}
+			};
 
 			m_waiting_requests.emplace(
 				key,
@@ -110,13 +107,13 @@ public:
 	}
 
 	/*!
-	 * @brief Обработать результат разрешения для всех элементов по ключу.
-	 * Для всех запросов устанавливается один результат. Может быть полезно,
-	 * если от DNS-сервера пришел отрицательный результат разрешения имени.
+	 * @brief Handle the result for all requests with the same params.
 	 *
-	 * @param key Ключ, по которому хранится запрос в словаре.
-	 * @param result Результаты разрешения имени или адреса, пришедшие от DNS-сервера.
-	 * @param logger Функция для логирования результата.
+	 * All requests receive the same result.
+	 *
+	 * @param key Key for the request.
+	 * @param result The result for resolution attempt.
+	 * @param logger Logging function for logging the result.
 	 */
 	template<typename LoggerFunc>
 	void
@@ -134,6 +131,7 @@ public:
 
 			for( const auto & req_info : requests )
 			{
+				//FIXME: what to do if this send throws?
 				so_5::send< ResolveResponse >(
 					req_info.m_reply_to,
 					req_info.m_req_id,
@@ -146,13 +144,15 @@ public:
 	}
 
 	/*!
-	 * @brief Обработать результаты разрешения для всех элементов по ключу.
+	 * @brief Handle the result for all requests with the same params.
 	 *
-	 * @param key Ключ, по которому хранится запрос в словаре.
-	 * @param results Результаты разрешения имени, пришедшие от DNS-сервера.
-	 * @param logger Функция для логирования результата.
-	 * @param address_extractor Функция, позволяющая извлечь адрес из
-	 * объекта-результата разрешения имени.
+	 * All requests receive the same result.
+	 *
+	 * @param key Key for the request.
+	 * @param result The result for resolution attempt.
+	 * @param logger Logging function for logging the result.
+	 * @param address_extractor Functor for extraction of an IP-address
+	 * from the resolution result.
 	 */
 	template<typename List, typename LoggerFunc, typename Extractor>
 	void
@@ -174,6 +174,7 @@ public:
 				auto result = get_resolve_result(
 					results, req_info.m_ip_version, address_extractor );
 
+				//FIXME: what to do if this send throws?
 				so_5::send< ResolveResponse >(
 					req_info.m_reply_to,
 					req_info.m_req_id,
@@ -188,22 +189,15 @@ public:
 	}
 
 private:
-
-	//! Тип списка элементов, хранящих информацию о запросе.
+	//! Type of list of waiting requests with the same params.
 	using resolve_requests_info_list_t =
 		std::list< resolve_request_info_t >;
 
 	/*!
-	 * @brief Словарь содержащий запросы к DNS-серверу.
-	 *
-	 * Ключ -- Элемент, по которому выполняется разрешение.
-	 * В случае прямого разрешения это имя, в обратном случае - адрес.
-	 *
-	 * Значение -- Список запросов, запрашивающих ту же информацию.
-	 *
+	 * @brief A map of waiting requests.
 	 */
 	std::map< Key, resolve_requests_info_list_t > m_waiting_requests;
-
 };
 
 } /* namespace arataga::dns_resolver */
+

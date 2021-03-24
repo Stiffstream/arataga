@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Реализация negative_response_sender-а.
+ * @brief Implementation of negative_response_sender.
  */
 
 #include <arataga/acl_handler/handlers/http/basics.hpp>
@@ -15,22 +15,21 @@ namespace handlers::http
 // negative_response_sender_handler_t
 //
 /*!
- * @brief Реализация connection_handler-а которая только отсылает
- * отрицательный ответ и закрывает соединение.
+ * @brief Implementation of connection_handler that only sends
+ * a negative response and then closes the connection.
  */
 class negative_response_send_handler_t : public connection_handler_t
 {
-	//! Время, когда этот обработчик был создан.
+	//! Timepoint when the handler was created.
 	const std::chrono::steady_clock::time_point m_created_at;
 
-	//! Причина, по которой соединение закрывается.
+	//! Why the connection is being closed.
 	const remove_reason_t m_remove_reason;
 
-	//! Буфер, который будет использоваться для отсылки
-	//! отрицательного ответа.
+	//! Buffer to be used for the response.
 	/*!
-	 * Используется тот факт, что все отрицательные ответы на данный
-	 * момент представлены строками в статической памяти.
+	 * We're using the fact that all negative responses are
+	 * represented as string literals.
 	 */
 	out_string_view_buffer_t m_negative_response_buffer;
 

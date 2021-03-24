@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Реализация authentification_handler-а.
+ * @brief The implementation of authentification_handler.
  */
 
 #include <arataga/acl_handler/handlers/http/basics.hpp>
@@ -24,85 +24,84 @@ namespace handlers::http
 // authentification_handler_t
 //
 /*!
- * @brief Обработчик соединения, который производит аутентификацию клиента.
+ * @brief Connection-handler that performs authentification.
  */
 class authentification_handler_t final : public basic_http_handler_t
 {
-	//! Результат успешного извлечения username/password из
-	//! заголовков HTTP-запроса.
+	//! The result of successful extraction of username/password
+	//! from header fields of HTTP-request.
 	struct username_password_t
 	{
 		std::string m_username;
 		std::string m_password;
 	};
 
-	//! Структура для случая, когда username/password вообще не были
-	//! заданы.
+	//! The result for the case when username/password weren't set.
 	struct no_username_password_provided_t {};
 
-	//! Структура для случая, когда username/password не удалось
-	//! извлечь из-за какой-то ошибки.
+	//! The result for the case of an error during username/password
+	//! extraction.
 	struct username_password_extraction_failure_t
 	{
-		//! Описание возникшей ошибки.
+		//! The description of the error.
 		std::string m_description;
 	};
 
-	//! Общий результат извлечения username/password из параметров запроса.
+	//! The generic result of username/password extraction from a HTTP-request.
 	using username_password_extraction_result_t = std::variant<
 			username_password_t,
 			no_username_password_provided_t,
 			username_password_extraction_failure_t
 		>;
 
-	//! Результат успешного извлечения имени целевого узла и номера порта.
+	//! The result of successful extraction of host/port from a HTTP-request.
 	struct target_host_and_port_t
 	{
 		std::string m_host;
 		std::uint16_t m_port;
 	};
 
-	//! Результат неудачного извлечения имени целевого узла и номера порта.
+	//! The result of a failed extraction of host/port from a HTTP-request.
 	struct target_host_and_port_extraction_failure_t
 	{
-		//! Описание возникшей ошибки.
+		//! The description of the error.
 		std::string m_description;
 	};
 
-	//! Общий результат извлечения имени целевого узна и номера порта
-	//! из параметров запроса.
+	//! Generic result of host/port extraction from a HTTP-request.
 	using target_host_and_port_extraction_result_t = std::variant<
 			target_host_and_port_t,
 			target_host_and_port_extraction_failure_t
 		>;
 
-	//! Результат успешного преобразования request-target.
+	//! The result of successful transformation of request-target.
 	struct update_request_target_success_t {};
 
-	//! Результат неудачного преобразования request-target.
+	//! The result of failed transformation of request-target.
 	struct update_request_target_failure_t
 	{
-		//! Описание возникшей ошибки.
+		//! The description of the error.
 		std::string m_description;
 	};
 
-	//! Общий результат преобразования request-target.
+	//! Generic result of request-target transformation.
 	using update_request_target_result_t = std::variant<
 			update_request_target_success_t,
 			update_request_target_failure_t
 		>;
 
-	//! Состояние разбора исходного запроса.
+	//! The state of HTTP-request parsing.
 	http_handling_state_unique_ptr_t m_request_state;
 
-	//! Дополнительная информация по исходному запросу.
+	//! Additional info for the HTTP-request.
 	/*!
-	 * В результате успешного анализа request-target и заголовка Host
-	 * сюда будет сохранен актуальный target-host и target-port.
+	 * In the case of successful analisys of request-target and Host
+	 * header field the actual target-host and target-port will be
+	 * stored here.
 	 */
 	request_info_t m_request_info;
 
-	//! Время, когда аутентификация началась.
+	//! The timepoint of the start of authentification.
 	std::chrono::steady_clock::time_point m_created_at;
 
 public:
@@ -127,11 +126,10 @@ protected:
 			delete_protector,
 			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 			{
-				// Нужно определить имя пользователя и пароль, если
-				// они заданы.
+				// If username/password are set, they have to be extracted.
 				auto username_password_extraction_result =
 						try_extract_username_and_password( can_throw );
-				// В случае ошибки продолжать нет смысла.
+				// There is no sense to continue in the case of an error.
 				if( auto * err = std::get_if<username_password_extraction_failure_t>(
 						&username_password_extraction_result); err )
 				{
@@ -157,7 +155,7 @@ protected:
 					return;
 				}
 
-				// Нужно определить целевой узел и номер порта на нем.
+				// Detect the target host and port.
 				auto target_host_and_port_extraction_result =
 						try_extract_target_host_and_port( can_throw );
 				if( auto * err = std::get_if<target_host_and_port_extraction_failure_t>(
@@ -185,8 +183,8 @@ protected:
 					return;
 				}
 
-				// Нужно преобразовать request-target из absolute-form
-				// в origin-form, если request-target был задан в absolute-form.
+				// If request-target is in absolute-form it should be
+				// transformed into origin-form.
 				auto update_request_target_result =
 						try_update_request_target( can_throw );
 				if( auto * err = std::get_if<update_request_target_failure_t>(
@@ -215,7 +213,7 @@ protected:
 				}
 
 
-				// Осталось только инциировать саму аутентификацию.
+				// Now we can initiate the authentification.
 				initiate_authentification(
 						can_throw,
 						username_password_extraction_result,
@@ -244,7 +242,7 @@ protected:
 										"authentification timed out" );
 							} );
 
-					// Осталось только отослать ответ и закрыть соединение.
+					// We can only send the response and close the connection.
 					send_negative_response_then_close_connection(
 							delete_protector,
 							can_throw,
@@ -297,8 +295,8 @@ private:
 							static_cast<int>(basic_auth_result.error()) )
 			};
 
-		// Заголовок Proxy-Authorization больше не нужен и должен
-		// быть удален.
+		// The Proxy-Authorization header field isn't needed anymore
+		// and should be removed.
 		m_request_info.m_headers.remove_all_of(
 				restinio::http_field_t::proxy_authorization );
 
@@ -323,7 +321,7 @@ private:
 					try_extract_target_host_and_port_from_host_field( can_throw );
 		}
 
-		// После извлечения значения заголовок Host должен быть удален.
+		// The Host header field should be removed after the extraction.
 		m_request_info.m_headers.remove_all_of( restinio::http_field_t::host );
 
 		return extraction_result;
@@ -334,7 +332,7 @@ private:
 	try_extract_target_host_and_port_from_request_target(
 		can_throw_t /*can_throw*/ )
 	{
-		// Сперва попытаемся разобрать URL на части.
+		// Try to deconstruct the URL.
 		http_parser_url parser_url;
 		http_parser_url_init( &parser_url );
 
@@ -378,14 +376,13 @@ private:
 			opt_port = parser_url.port;
 
 		if( !host_sv.empty() && opt_port )
-			// У нас уже есть результат.
+			// We already have the result.
 			return target_host_and_port_t{
 					std::string{ host_sv },
 					*opt_port
 			};
 
-		// Если есть schema и host, то можно попробовать определить
-		// port самостоятельно.
+		// If there are 'schema' and 'host' then the port number can be detected.
 		if( !schema_sv.empty() && !host_sv.empty() )
 		{
 			if( "http" == schema_sv )
@@ -399,14 +396,14 @@ private:
 						443u
 				};
 			else
-				// Схема, которую мы не поддерживаем.
+				// Unsupported scheme found.
 				return target_host_and_port_extraction_failure_t{
 						fmt::format( "unsupported schema in request-target: {}",
 								schema_sv )
 				};
 		}
 
-		// Не смогли извлечь target-host и port.
+		// target-host and port are not extracted.
 		return target_host_and_port_extraction_failure_t{
 				fmt::format( "no target-host and port in request-target" )
 		};
@@ -417,9 +414,8 @@ private:
 	try_extract_target_host_and_port_from_host_field(
 		can_throw_t /*can_throw*/ )
 	{
-		// Если количество заголовков Host больше 1, то запрос
-		// должен быть отвергнут. Поэтому бежим по всем значениям
-		// Host и считаем их количество.
+		// If there are more than one Host header fields then the request
+		// should be rejected. So count the fields.
 		std::optional< std::string_view > opt_host;
 		std::size_t host_occurrences{ 0u };
 
@@ -446,10 +442,9 @@ private:
 							host_occurrences )
 			};
 
-		// Осталось разобрать значение.
-		// Используем парсер значения Host из RESTinio потому, что, как
-		// оказалось, http_parser_parse_url не может справится со
-		// значениями вида "localhost:9090".
+		// We have to parse the value.
+		// The parser from RESTinio is used because http_parser_parse_url
+		// can't handle values like "localhost:9090".
 		using namespace restinio::http_field_parsers;
 
 		auto parse_result = raw_host_value_t::try_parse( opt_host.value() );
@@ -489,13 +484,14 @@ private:
 	try_update_request_target(
 		can_throw_t /*can_throw*/ )
 	{
-		// Значение request-target нужно забрать в отдельный объект,
-		// т.к. на его содержимое затем нужно будет ссылаться.
+		// The value of request-target should be borrowed into 
+		// a separate object because we need a reference to that value
+		// during the construction of new m_request_target value.
 		std::string value_to_process{
 				std::move(m_request_info.m_request_target)
 			};
 
-		// Сперва попытаемся разобрать URL на части.
+		// Try to deconstruct URL.
 		http_parser_url parser_url;
 		http_parser_url_init( &parser_url );
 
@@ -535,8 +531,8 @@ private:
 
 		m_request_info.m_request_target.clear();
 
-		// Если request-target задан в authority-form, то после парсинга
-		// path может оказаться пустым.
+		// If request-target is specified in authority-form then 'path'
+		// could be empty after the parsing.
 		if( !path.empty() )
 			m_request_info.m_request_target.append( path.data(), path.size() );
 		else
@@ -572,8 +568,8 @@ private:
 			password = std::move(upi->m_password);
 		}
 
-		// Информация о целевом узле и целевом порте должна быть сохранена
-		// в request_info, поскольку она потребуется впоследствии.
+		// Info about target-host and target-port should be stored into
+		// request_info because it'll necessary later.
 		{
 			auto & host_port =
 				std::get< target_host_and_port_t >( target_host_and_port_info );
@@ -584,8 +580,8 @@ private:
 		context().async_authentificate(
 				m_id,
 				authentification::request_params_t {
-					// Пока работаем только с IPv4 адресами на входе,
-					// поэтому не ждем ничего другого.
+					// We work with IPv4 addresses only so don't expect
+					// something else.
 					m_connection.remote_endpoint().address().to_v4(),
 					std::move(username),
 					std::move(password),
@@ -613,7 +609,6 @@ private:
 		std::visit( ::arataga::utils::overloaded{
 				[&]( authentification::success_t & info )
 				{
-					// Передаем управление следующему handler-у.
 					replace_handler(
 							delete_protector,
 							can_throw,

@@ -1,7 +1,6 @@
 /*!
  * @file
- * @brief Вспомогательная функция для загрузки содержимого всего файла
- * в память.
+ * @brief Helper function for loading the whole file content into memory.
  */
 
 #pragma once
@@ -21,8 +20,8 @@
 namespace arataga::utils
 {
 
-// Если файла нет или если возникает ошибка чтения, то
-// выбрасывается исключение.
+// An exception is throw in the case of the absecense of file or
+// if there is some error.
 [[nodiscard]]
 inline std::vector< char >
 load_file_into_memory(

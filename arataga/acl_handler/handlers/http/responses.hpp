@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Ответы, которые будут отсылаться клиентам.
+ * @brief HTTP-responses to be sent to users.
  */
 
 #pragma once

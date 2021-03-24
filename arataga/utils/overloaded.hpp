@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Вспомогательные средства для упрощения работы с std::variant.
+ * @brief Helpers to simplify working with std::variant.
  */
 
 #pragma once
@@ -13,7 +13,7 @@ namespace arataga::utils
 //
 // overloaded
 //
-// Взято отсюда: https://en.cppreference.com/w/cpp/utility/variant/visit
+// Source: https://en.cppreference.com/w/cpp/utility/variant/visit
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 

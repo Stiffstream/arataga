@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Описание контекста, в котором будут работать сущности arataga.
+ * @brief Definition of context in that arataga's entities will work.
  */
 
 #pragma once
@@ -18,35 +18,35 @@ namespace arataga
 // application_context_t
 //
 /*!
- * @brief Структура, которая содержит информацию, необходимую для
- * взаимодействия сущностей внутри arataga.
+ * @brief A struct for holding info necessary for interaction
+ * between arataga's entities.
  */
 struct application_context_t
 {
-	//! mbox для взаимодействия с config_processor-ом.
+	//! mbox for interaction with config_processor.
 	so_5::mbox_t m_config_processor_mbox;
 
-	//! mbox для взаимодействия с user_list_processor-ом.
+	//! mbox for interaction with user_list_processor.
 	so_5::mbox_t m_user_list_processor_mbox;
 	
-	//! mbox для распространения информации об обновлениях конфигурации.
+	//! mbox for spreading info about changes in the configuration.
 	so_5::mbox_t m_config_updates_mbox;
 
-	//! mbox для сбора статистики.
+	//! mbox for collecting the stats.
 	so_5::mbox_t m_stats_collector_mbox;
 
-	//! mbox для глобальных сообщений от таймера.
+	//! mbox for messages from the global timer.
 	so_5::mbox_t m_global_timer_mbox;
 
-	//! Хранилище статистики по ACL.
+	//! The storage for statistics from ACL.
 	std::shared_ptr<
 			stats::connections::acl_stats_reference_manager_t > m_acl_stats_manager;
 
-	//! Хранилище статистики по аутентификациям.
+	//! The storage for statistics from authentification operations.
 	std::shared_ptr<
 			stats::auth::auth_stats_reference_manager_t > m_auth_stats_manager;
 
-	//! Хранилище статистики по DNS.
+	//! The storage for statistics from DNS operations.
 	std::shared_ptr<
 			stats::dns::dns_stats_reference_manager_t > m_dns_stats_manager;
 };

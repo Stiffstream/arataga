@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Реализация различных буферов для чтения/записи данных.
+ * @brief Implementation of various buffers for reading/writting of data.
  */
 
 #pragma once
@@ -27,11 +27,11 @@ namespace arataga::acl_handler
 // data_parsing_result_t
 //
 /*!
- * Перечисление с возможными результатами попытки разобрать
- * прочитанные данные.
+ * @brief Enumeration of possible parsing results.
  *
- * Определено здесь, т.к. это перечисление может потребоваться для работы
- * с разными протоколами.
+ * @note
+ * This enumeration is defined in buffers.hpp because it could be necessary
+ * for working with various protocols.
  */
 enum class data_parsing_result_t
 {
@@ -43,7 +43,7 @@ enum class data_parsing_result_t
 //
 // to_byte
 //
-//! Вспомогательная функция для конвертации значения в std::byte.
+//! Helper function for converting a value into std::byte.
 template< typename T >
 [[nodiscard]]
 constexpr std::byte
@@ -74,26 +74,25 @@ inline constexpr bool is_byte_compatible_v = is_byte_compatible<T>::value;
 // in_buffer_fixed_t
 //
 /*!
- * @brief Класс буфера для входящих данных с фиксированной в
- * compile-time размерностью.
+ * @brief Buffer of incoming data with capacity fixed at the compile-time.
  */
 template< std::size_t Capacity >
 class in_buffer_fixed_t
 {
-	//! Сам буфер с данными.
+	//! Data buffer.
 	std::array< std::byte, Capacity > m_buffer;
 
-	//! Общее количество байт, которое содержится в буфере.
+	//! The total count of bytes in the buffer.
 	std::size_t m_size{ 0u };
 
-	//! Позиция, с которой будет осуществляться следующее чтение.
+	//! The position for the next read operation.
 	std::size_t m_read_position{ 0u };
 
 public:
 	in_buffer_fixed_t() = default;
 
-	//! Конструктор для случая, когда начальное содержимое буфера
-	//! уже известно.
+	//! The constructor for the case when the initial value of the buffer
+	//! is already known.
 	in_buffer_fixed_t( byte_sequence_t initial_content )
 		:	m_size{ initial_content.size() }
 	{
@@ -140,7 +139,7 @@ public:
 		return { &m_buffer[ pos ], bytes_to_return };
 	}
 
-	//! Взять все оставшиеся байты из буфера как строку.
+	//! Take the all remaining bytes from the buffer as a string.
 	[[nodiscard]]
 	std::string
 	read_bytes_as_string()
@@ -166,7 +165,7 @@ public:
 	asio::mutable_buffer
 	asio_buffer() noexcept
 	{
-		// Читать нужно в область, которая начинается с индекса m_size.
+		// Read into the area starting from m_size.
 		return asio::buffer( &m_buffer[ m_size ], (Capacity - m_size) );
 	}
 
@@ -215,30 +214,29 @@ public:
 // in_external_buffer_t
 //
 /*!
- * @brief Класс обертки вокруг внешнего буфера для приема входящих
- * данных.
+ * @brief A wrapper arount an external data buffer for incoming data.
  */
 class in_external_buffer_t
 {
-	//! Сам буфер с данными.
+	//! External data buffer.
 	std::byte * m_buffer;
 
-	//! Максимальный объем внешнего буфера.
+	//! Max capacity of the external buffer.
 	const std::size_t m_capacity;
 
-	//! Общее количество байт, которое содержится в буфере.
+	//! Total number of bytes in the external buffer.
 	std::size_t m_size{ 0u };
 
-	//! Позиция, с которой будет осуществляться следующее чтение.
+	//! The position for the next read operation.
 	std::size_t m_read_position{ 0u };
 
 public:
 	in_external_buffer_t( const in_external_buffer_t & ) = delete;
 	in_external_buffer_t( in_external_buffer_t && ) = delete;
 
-	//! Инициализирующий конструктор.
+	//! The initializing constructor.
 	/*!
-	 * Предназначен для случая, когда в буфере никаких данных еще нет.
+	 * Intended to be used in the case when the external buffer is empty.
 	 */
 	template<
 		typename T,
@@ -248,9 +246,10 @@ public:
 		,	m_capacity{ capacity }
 	{}
 
-	//! Инициализирующий конструктор.
+	//! The initializing constructor.
 	/*!
-	 * Предназначен для случая, когда в буфере уже есть какие-то данные.
+	 * Intended to be used in the case when the external buffer
+	 * is not empty.
 	 */
 	template<
 		typename T,
@@ -302,7 +301,7 @@ public:
 		return { &m_buffer[ pos ], bytes_to_return };
 	}
 
-	//! Взять все оставшиеся байты из буфера как строку.
+	//! Take the all remaining bytes from the buffer as a string.
 	[[nodiscard]]
 	std::string
 	read_bytes_as_string()
@@ -328,7 +327,7 @@ public:
 	asio::mutable_buffer
 	asio_buffer() noexcept
 	{
-		// Читать нужно в область, которая начинается с индекса m_size.
+		// Read into the area starting from m_size.
 		return asio::buffer( &m_buffer[ m_size ], (m_capacity - m_size) );
 	}
 
@@ -384,22 +383,21 @@ public:
 // buffer_read_trx_t
 //
 /*!
- * @brief Вспомогательный класс для организации транзакции чтения
- * данных из входного буфера.
+ * @brief Helper class for organizing read-transaction from
+ * an input buffer.
  *
- * Автоматически возвращает текущую позицию чтения для входного
- * буфера в исходное положение, если не был явно вызван метод commit.
+ * Automatically returns the current read position back if
+ * `commit` method wasn't called explicitely.
  *
- * Идея использования этого класса следующая:
+ * That is the main usage scenarion:
  *
- * - создается экземпляр buffer_read_trx_t;
- * - выполняется чтение из входного буфера;
- * - если из буфера прочитаны все данные, то для buffer_read_trx
- *   вызывается метод commit. Тем самым подтверждается изъятие
- *   данных из буфера;
- * - если данных во входном буфере недостаточно, то делается простой
- *   возврат из текущего скоупа. Объект buffer_read_trx вернет
- *   текущую позицию чтения в исходное положение в деструкторе.
+ * - an instance of buffer_read_trx_t created;
+ * - a read operation is performed;
+ * - if all required data have been read then commit() is called
+ *   for buffer_read_trx_t instance;
+ * - if some data is missing in the buffer then a simple return from
+ *   the current scope is performed. An instance of buffer_read_trx_t
+ *   return the read position back automatically.
  */
 template< typename Buffer >
 class buffer_read_trx_t
@@ -431,26 +429,25 @@ public:
 // out_buffer_fixed_t
 //
 /*!
- * @brief Класс буфера исходящих данных с фиксированной в
- * compile-time размерностью.
+ * @brief Class for output buffer with the capacity fixed in the compile-time.
  */
 template< std::size_t Capacity >
 class out_buffer_fixed_t
 {
-	//! Сам буфер с данными.
+	//! Data buffer.
 	std::array< std::byte, Capacity > m_buffer;
 
-	//! Общее количество байт, которое содержится в буфере.
+	//! The total count of bytes in the buffer.
 	std::size_t m_size{ 0u };
 
-	//! Сколько байт было отосланно из этого буфера в сокет.
+	//! How many bytes were sent.
 	std::size_t m_bytes_written{ 0u };
 
 public:
 	out_buffer_fixed_t() = default;
 
-	//! Конструктор для случая, когда начальное содержимое буфера
-	//! уже известно.
+	//! The initializing constructor for the case when the initial
+	//! content of the buffer is already known.
 	out_buffer_fixed_t( byte_sequence_t initial_content )
 		:	m_size{ initial_content.size() }
 	{
@@ -512,7 +509,7 @@ public:
 		m_size += C;
 	}
 
-	// Сколько байт еще не было отослано в сокет.
+	// How many bytes wasn't sent yet.
 	[[nodiscard]]
 	std::size_t
 	remaining() const noexcept
@@ -538,7 +535,7 @@ public:
 	asio::const_buffer
 	asio_buffer() const noexcept
 	{
-		// Записывать нужно содержимое с индекса m_bytes_written.
+		// Write operation should start from m_bytes_written index.
 		return asio::buffer(
 				&m_buffer[ m_bytes_written ], remaining() );
 	}
@@ -557,9 +554,9 @@ public:
 		m_bytes_written = new_written;
 	}
 
-	// Перевод буфера в начальное состояние.
-	// Все значения сбрасываются в 0.
-	// Содержимое буфера ничем не переинициализируется.
+	// Switch the buffer into the initial state.
+	// All values are reset to 0.
+	// The content of the buffer doesn't reinitialized.
 	void
 	reset()
 	{
@@ -573,35 +570,37 @@ public:
 // out_string_view_buffer_t
 //
 /*!
- * @brief Класс буфера исходящих данных, который представлен объектом
- * string_view.
+ * @brief Class of output buffer for the case when outgoing data is
+ * stored inside a string_view object.
  *
- * Этот класс предназначен для упрощения записи содержимого string_view
- * в сокет. Запись новых данных в string_view объект не поддерживается.
+ * This class is intended for simplification of writting the content
+ * of string_views. Addition of a new data to a string_view object
+ * isn't supported.
  */
 class out_string_view_buffer_t
 {
-	//! Исходный string_view с данными.
+	//! Source string_view with a data.
 	std::string_view m_data;
 
-	//! Сколько байт было отосланно из этого буфера в сокет.
+	//! How many bytes were written.
 	std::size_t m_bytes_written{ 0u };
 
 public:
-	//! Пустой конструктор так же нужен.
+	//! The default constructor.
 	/*!
-	 * Для создания объектов, которые пока не имеют никакого содержимого.
+	 * It's necessary for the creation of an empty object that receives a value
+	 * later.
 	 */
 	out_string_view_buffer_t()
 		:	m_data{ "" }
 	{}
 
-	//! Инициализирующий конструктор.
+	//! Initializing constructor.
 	out_string_view_buffer_t( std::string_view data )
 		:	m_data{ data }
 	{}
 
-	// Сколько байт еще не было отослано в сокет.
+	// How many bytes wasn't sent yet.
 	[[nodiscard]]
 	std::size_t
 	remaining() const noexcept
@@ -627,7 +626,7 @@ public:
 	asio::const_buffer
 	asio_buffer() const noexcept
 	{
-		// Записывать нужно содержимое с индекса m_bytes_written.
+		// Write operation should start from m_bytes_written index.
 		return asio::buffer(
 				&m_data[ m_bytes_written ], remaining() );
 	}
@@ -651,33 +650,35 @@ public:
 // out_string_buffer_t
 //
 /*!
- * @brief Класс буфера исходящих данных, который представлен объектом
- * string.
+ * @brief Class of output buffer for the case when outgoing data is
+ * stored inside a string object.
  *
- * Этот класс предназначен для упрощения записи содержимого string
- * в сокет. Запись новых данных в string объект не поддерживается.
+ * This class is intended for simplification of writting the content
+ * of strings. Addition of a new data to a string object
+ * isn't supported.
  */
 class out_string_buffer_t
 {
-	//! Данные, которые нужно записать в сокет.
+	//! Data to be written.
 	std::string m_data;
 
-	//! Сколько байт было отосланно из этого буфера в сокет.
+	//! How many bytes were written.
 	std::size_t m_bytes_written{ 0u };
 
 public:
-	//! Пустой конструктор так же нужен.
+	//! The default constructor.
 	/*!
-	 * Для создания объектов, которые пока не имеют никакого содержимого.
+	 * It's necessary for the creation of an empty object that receives a value
+	 * later.
 	 */
 	out_string_buffer_t() = default;
 
-	//! Инициализирующий конструктор.
+	//! Initializing constructor.
 	out_string_buffer_t( std::string data )
 		:	m_data{ std::move(data) }
 	{}
 
-	// Сколько байт еще не было отослано в сокет.
+	// How many bytes wasn't sent yet.
 	[[nodiscard]]
 	std::size_t
 	remaining() const noexcept
@@ -703,7 +704,7 @@ public:
 	asio::const_buffer
 	asio_buffer() const noexcept
 	{
-		// Записывать нужно содержимое с индекса m_bytes_written.
+		// Write operation should start from m_bytes_written index.
 		return asio::buffer(
 				&m_data[ m_bytes_written ], remaining() );
 	}
@@ -727,34 +728,35 @@ public:
 // out_fmt_memory_buffer_t
 //
 /*!
- * @brief Класс буфера исходящих данных, который представлен объектом
- * fmt::memory_buffer.
+ * @brief Class of output buffer for the case when outgoing data is
+ * stored inside a fmt::memory_buffer object.
  *
- * Этот класс предназначен для упрощения записи содержимого
- * fmt::memory_buffer в сокет. Запись новых данных в fmt::memory_buffer
- * объект не поддерживается.
+ * This class is intended for simplification of writting the content of
+ * fmt::memory_buffer. Addition of a new data to a fmt::memory_buffer object
+ * isn't supported.
  */
 class out_fmt_memory_buffer_t
 {
-	//! Данные, которые нужно записать в сокет.
+	//! Data to be written.
 	fmt::memory_buffer m_data;
 
-	//! Сколько байт было отосланно из этого буфера в сокет.
+	//! How many bytes were written.
 	std::size_t m_bytes_written{ 0u };
 
 public:
-	//! Пустой конструктор так же нужен.
+	//! The default constructor.
 	/*!
-	 * Для создания объектов, которые пока не имеют никакого содержимого.
+	 * It's necessary for the creation of an empty object that receives a value
+	 * later.
 	 */
 	out_fmt_memory_buffer_t() = default;
 
-	//! Инициализирующий конструктор.
+	//! Initializing constructor.
 	out_fmt_memory_buffer_t( fmt::memory_buffer data )
 		:	m_data{ std::move(data) }
 	{}
 
-	// Сколько байт еще не было отослано в сокет.
+	// How many bytes wasn't sent yet.
 	[[nodiscard]]
 	std::size_t
 	remaining() const noexcept
@@ -780,7 +782,7 @@ public:
 	asio::const_buffer
 	asio_buffer() const noexcept
 	{
-		// Записывать нужно содержимое с индекса m_bytes_written.
+		// Write operation should start from m_bytes_written index.
 		return asio::buffer(
 				m_data.data() + m_bytes_written, remaining() );
 	}

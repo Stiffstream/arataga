@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Агент для сбора статистики.
+ * @brief Agent for collecting arataga's stats.
  */
 
 #include <arataga/stats_collector/a_stats_collector.hpp>
@@ -350,7 +350,7 @@ introduce_stats_collector(
 	so_5::coop_handle_t parent_coop,
 	so_5::disp_binder_shptr_t disp_binder,
 	application_context_t app_ctx,
-	// На данный момент в params_t ничего нет.
+	// There are no initial params at this moment.
 	params_t /*params*/ )
 {
 	auto coop_holder = env.make_coop( parent_coop, std::move(disp_binder) );

@@ -71,7 +71,7 @@ detec_log_level(const std::string & name)
 	return *r;
 }
 
-//! Константы, определяющие параметры аргументов для логирования в консоль.
+// Available values for command-line arguments related to logging to console.
 const std::string stdout_log_target = "stdout";
 const std::string stderr_log_target = "stderr";
 
@@ -79,7 +79,7 @@ const std::string stderr_log_target = "stderr";
 // log_params_t
 //
 
-//! Параметры логирования в приложении
+//! Logging parameters.
 struct log_params_t
 {
 	void
@@ -102,14 +102,14 @@ struct log_params_t
 			set_file_target( target );
 	}
 
-	std::optional<std::string> m_console_target;
-	std::optional<std::string> m_syslog_target;
-	std::optional<std::string> m_file_target;
+	std::optional< std::string > m_console_target;
+	std::optional< std::string > m_syslog_target;
+	std::optional< std::string > m_file_target;
 
-	spdlog::level::level_enum m_log_level{spdlog::level::trace};
-	spdlog::level::level_enum m_log_flush_level{spdlog::level::err};
-	std::size_t m_log_file_size{10ull*1024u*1024u};
-	std::size_t m_log_file_count{3u};
+	spdlog::level::level_enum m_log_level{ spdlog::level::trace };
+	spdlog::level::level_enum m_log_flush_level{ spdlog::level::err };
+	std::size_t m_log_file_size{ 10ull*1024u*1024u };
+	std::size_t m_log_file_count{ 3u };
 
 private:
 
@@ -180,7 +180,7 @@ operator<<( std::ostream & o, const log_params_t & params )
 // cmd_line_args_t
 //
 
-//! Параметры, получаемые из аргументов командной строки.
+//! Command-line arguments.
 struct cmd_line_args_t
 {
 	bool m_is_no_daemonize{ false };
@@ -196,23 +196,20 @@ struct cmd_line_args_t
 
 	std::string m_local_config_path;
 
-	//! Должна ли использоваться система combined_locks из SObjectizer-а.
+	//! Should combined_locks from SObjectizer be used?
 	/*!
-	 * Эта система обеспечивает низкую латентность (за счет использования
-	 * spin-lock-ов), но зато создает большую нагрузку на CPU. Поэтому
-	 * по умолчанию она не используется, а применяется simple_locks.
+	 * Combined_locks provide low-latency (by using spin-locks), but
+	 * consume CPU. Because of that simple_locks are used by default.
 	 */
 	bool m_use_so5_combined_locks{ false };
 
-	//! Максимальное разрешенное время работы одной стадии инициализации
-	//! arataga.
+	//! Max time for the completion of one initialization stage.
 	std::chrono::seconds m_max_stage_startup_time{ 5 };
 
-	//! Количество io_threads которые нужно создавать.
+	//! Count of io_threads to be created.
 	/*!
-	 * Отсутствие значения указывает на то, что количество io_threads
-	 * следует определить автоматически на основании количества
-	 * доступных вычислительных ядер.
+	 * If that value is missed then the count of io_threads has to
+	 * be detected automatically.
 	 */
 	std::optional< std::size_t > m_io_threads_count;
 };
@@ -253,8 +250,10 @@ operator<<( std::ostream & o, const cmd_line_args_t & args )
 // finish_app_ex_t
 //
 
-//! Исключение, возникающее на старте работы приложения
-//! при разборе аргументов командной строки.
+//! An exception for errors related to command-line args parsing.
+/*!
+ * If such an exception is throw then the application has to be finished.
+ */
 class finish_app_ex_t : public std::runtime_error {
 
 	int m_exit_code;
@@ -272,14 +271,14 @@ public:
 	exit_code() const noexcept { return m_exit_code; }
 };
 
-
-
 //
 // parse_cmd_line
 //
 
-//! Возвращает параметры командной строки или finish_app_ex_t, если работа приложения
-//! должна быть прервана.
+/*!
+ * Returns values of command-line args or throws finish_app_ex_t
+ * in the case of an error.
+ */
 [[nodiscard]]
 cmd_line_args_t
 parse_cmd_line( int argc, char ** argv )
@@ -288,7 +287,7 @@ parse_cmd_line( int argc, char ** argv )
 
 	args::ArgumentParser parser( "arataga", "\n" );
 
-	// Общие параметры.
+	// Common parameters.
 
 	args::HelpFlag help( parser, "help", "Display this help text",
 			{ 'h', "help" } );
@@ -296,7 +295,7 @@ parse_cmd_line( int argc, char ** argv )
 	args::Flag version(parser, "version", "Show verion number and "
 			"description", { 'v', "version" } );
 
-	// Параметры запуска под Linux.
+	// Parameters related to Linux.
 
 	args::Flag no_daemonize( parser, "no-daemonize",
 			"Ignore 'daemon' command in configuration",
@@ -312,7 +311,7 @@ parse_cmd_line( int argc, char ** argv )
 			" (default: setgid() isn't called )",
 			{ "setgid" } );
 
-	// Параметры логирования.
+	// Parameters for logging.
 
 	args::ValueFlagList< std::string > log_target( parser,
 		"name", "Set log destination. "
@@ -351,7 +350,7 @@ parse_cmd_line( int argc, char ** argv )
 				result.m_log_params.m_log_file_count ) + ")",
 			{ "log-file-count" } );
 
-	// Параметры HTTP-сервера.
+	// Parameters for HTTP-server.
 
 	args::ValueFlag<std::string> admin_http_ip( parser,
 			"char-seq", "Set admin http endpoint ip-address."
@@ -367,14 +366,14 @@ parse_cmd_line( int argc, char ** argv )
 			" [required parameter]",
 			{"admin-token"});
 
-	// Путь к локальной конфигурации.
+	// A path for local copy of config.
 
 	args::ValueFlag<std::string> local_config_path( parser,
 			"path", "Set path to local configuration."
 			" [required parameter]",
 			{"local-config-path"});
 
-	// Параметры для SObjectizer-а.
+	// Parameters for SObjectizer.
 
 	args::Flag use_so5_combined_locks( parser, "so5-combined-locks",
 			"Use SObjectizer's combined_locks (low-latency, high CPU usage)."
@@ -569,14 +568,14 @@ try_to_create_test_file( const std::filesystem::path & path )
 	std::filesystem::remove(path / tmp_file_name);
 }
 
-//! Вспомогательная функция для проверки корректности заданного пути.
+//! Helper function for checking the correctness of a particular path.
 /*!
-	Проверяется, что переданный путь является директорией.
-	Проверяется возможность создать файл в данной директрории,
-	записать в него и прочитать из него.
-
-	\throws std::runtime_error в случае неудачной проверки.
-*/
+ * Checks for existence of the path. Checks a possibility to
+ * create a file inside the path, writing to that file and reading from that
+ * file.
+ *
+ * @throws std::runtime_error In the case if check fails.
+ */
 void
 ensure_local_config_path_is_present( const std::string & local_lonfig_path )
 {
@@ -643,7 +642,7 @@ prepare_process(
 	if(!params.m_is_no_daemonize)
 	{
 		::arataga::utils::ensure_successful_syscall(
-				// set nochdir to 1 because original 3proxy didn't change
+				// set nochdir to 1 because original proxy didn't change
 				// working directory to '/' in its 'daemonize()' implementation.
 				daemon(1, 0),
 				"prepare_process.daemon()");
@@ -737,14 +736,14 @@ make_logger(
 	return logger;
 }
 
-// Вспомогательная функция для настройки параметров работы SObjectizer-а.
+// Helper function for tuning of SObjectizer parameters.
 [[nodiscard]]
 so_5::environment_params_t
 make_sobjectizer_params(
 	const cmd_line_args_t & cmd_line_args )
 {
-	// Создаем логгер ошибок для SObjectizer-а, который будет
-	// направлять все сообщения в logger.
+	// Special logger that redirects all error messages to
+	// the application logger.
 	class so5_error_logger_t : public so_5::error_logger_t
 	{
 	public:
@@ -769,8 +768,7 @@ make_sobjectizer_params(
 		}
 	};
 
-	// Создаем логгер для логирования исключений, вылетающих из
-	// обработчиков событий SObjectizer-овских агентов.
+	// Special logger that logs exceptions thrown from event-handlers.
 	class so5_event_exception_logger_t : public so_5::event_exception_logger_t
 	{
 	public:
@@ -781,8 +779,7 @@ make_sobjectizer_params(
 			const std::exception & event_exception,
 			const so_5::coop_handle_t & coop ) noexcept override
 		{
-			// Этот метод не должен выпускать наружу исключений, поэтому
-			// просто проглатываем все, что может вылететь.
+			// This method can't throw. So catch all exceptions.
 			try
 			{
 				::arataga::logging::wrap_logging(

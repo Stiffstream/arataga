@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Сообщения для stats_collector-а с запросом текущей статистики.
+ * @brief Messages for stats_collector-agent for retrieving the current stats.
  */
 #pragma once
 

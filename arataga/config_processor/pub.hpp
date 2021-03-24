@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Публичная часть интерфейса агента config_processor.
+ * @brief Public part of config_processor agent.
  */
 
 #pragma once
@@ -18,17 +18,17 @@ namespace arataga::config_processor
 // params_t
 //
 /*!
- * @brief Параметры, необходимые агенту для начала его работы.
+ * @brief Initial parameters for the agent.
  */
 struct params_t
 {
-	//! Путь, в котором нужно искать и сохранять локальные копии конфига.
+	//! Path where local config copies should be stored.
 	std::filesystem::path m_local_config_path;
 
-	//! mbox, на который нужно отправить подтверждение об успешном старте.
+	//! mbox for acknoledgement of successful start.
 	so_5::mbox_t m_startup_notify_mbox;
 
-	//! Количество io_threads, которые необходимо создавать.
+	//! Number of io_threads to be created.
 	std::optional< std::size_t > m_io_threads_count;
 };
 
@@ -36,15 +36,14 @@ struct params_t
 // new_config_t
 //
 /*!
- * @brief Сообщение о получении нового конфига.
+ * @brief Message about new config.
  */
 struct new_config_t final : public so_5::message_t
 {
-	//! Объект, через который нужно будет сформировать
-	//! ответ на попытку обновить конфиг.
+	//! Replier for the incoming request.
 	::arataga::admin_http_entry::replier_shptr_t m_replier;
 
-	//! Содержимое нового конфига.
+	//! The content of the new config.
 	const std::string_view m_content;
 
 	new_config_t(
@@ -59,12 +58,11 @@ struct new_config_t final : public so_5::message_t
 // get_acl_list_t
 //
 /*!
- * @brief Сообщение о необходимости предоставить информацию
- * о запущенных ACL.
+ * @brief Message with a request of retrieving of the current ACL list.
  */
 struct get_acl_list_t final : public so_5::message_t
 {
-	//! Объект, через который нужно будет сформировать ответ.
+	//! Replier for the incoming request.
 	::arataga::admin_http_entry::replier_shptr_t m_replier;
 
 	get_acl_list_t(
@@ -77,14 +75,14 @@ struct get_acl_list_t final : public so_5::message_t
 // debug_auth
 //
 /*!
- * @brief Сообщение о необходимости провести тестовую аутентификацию.
+ * @brief Message with a request for test authentification.
  */
 struct debug_auth_t final : public so_5::message_t
 {
-	//! Объект, через который нужно будет сформировать ответ.
+	//! Replier for the incoming request.
 	::arataga::admin_http_entry::replier_shptr_t m_replier;
 
-	//! Параметры аутентификации.
+	//! Authentification parameters.
 	::arataga::admin_http_entry::debug_requests::authentificate_t m_request;
 
 	debug_auth_t(
@@ -100,14 +98,14 @@ struct debug_auth_t final : public so_5::message_t
 // debug_dns_resolve_t
 //
 /*!
- * @brief Сообщение о необходимости провести тестовое разрешение доменного имени.
+ * @brief Message with a request for test domain name resolution.
  */
 struct debug_dns_resolve_t final : public so_5::message_t
 {
-	//! Объект, через который нужно будет сформировать ответ.
+	//! Replier for the incoming request.
 	::arataga::admin_http_entry::replier_shptr_t m_replier;
 
-	//! Параметры разрешения доменного имени.
+	//! Parameters for domain name resolution.
 	::arataga::admin_http_entry::debug_requests::dns_resolve_t m_request;
 
 	debug_dns_resolve_t(
@@ -123,18 +121,18 @@ struct debug_dns_resolve_t final : public so_5::message_t
 // introduce_config_processor
 //
 /*!
- * @brief Функция для создания и запуска агента config_processor в
- * указанном SObjectizer Environment.
+ * @brief Function for create and launch config_processor agent
+ * in the specified SObjectizer Environment.
  */
 void
 introduce_config_processor(
-	//! SObjectizer Environment, в котором нужно работать.
+	//! SObjectizer Environment for a new agent.
 	so_5::environment_t & env,
-	//! Диспетчер, к которому должен быть привязан новый агент.
+	//! The dispatcher for a new agent.
 	so_5::disp_binder_shptr_t disp_binder,
-	//! Контекст всего arataga.
+	//! The context of the whole aragata app.
 	application_context_t app_ctx,
-	//! Индивидуальные параметры для нового агента.
+	//! Initial parameters for a new agent.
 	params_t params );
 
 } /* namespace arataga::config_processor */

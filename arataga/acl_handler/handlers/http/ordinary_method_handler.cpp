@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Реализация connection_handler-а для обработки обычных HTTP методов.
+ * @brief Implementation of connection-hander for ordinary HTTP methods.
  */
 
 #include <arataga/acl_handler/handlers/http/basics.hpp>
@@ -30,12 +30,13 @@ namespace handlers::http
 // ordinary_method_handler_t
 //
 /*!
- * @brief Обработчик соединения, который обрабатывает HTTP-методы,
- * отличные от CONNECT (вроде GET, POST, DELETE и т.д.).
+ * @brief Connection-handler for processing HTTP methods different
+ * from CONNECT (like GET, POST, DELETE, and so on).
  */
 class ordinary_method_handler_t final : public handler_with_out_connection_t
 {
-	//! Перечень состояний обработки status-line в ответе от целевого узла.
+	//! Enumeration of possible stages of handling the respose from
+	//! the target host.
 	enum class status_line_processing_stage_t
 	{
 		not_started,
@@ -43,113 +44,113 @@ class ordinary_method_handler_t final : public handler_with_out_connection_t
 		completed
 	};
 
-	//! Состояние обработки ответа.
+	//! The state of the response processing.
 	struct response_processing_state_t
 	{
-		//! Содержимое status-line.
+		//! Content of the status-line.
 		/*!
-		 * Опустошается после записи в ответ клиенту.
+		 * Cleaned up after sending to the user.
 		 */
 		std::string m_status_line;
 
-		//! Была ли полностью завершена status-line?
+		//! Stage of status-line processing.
 		status_line_processing_stage_t m_status_line_stage{
 				status_line_processing_stage_t::not_started
 			};
 
-		//! Имя очередного заголовка.
+		//! Name of the current HTTP header field.
 		std::string m_last_header_name;
-		//! Значение очередного заголовка.
+		//! Value of the current HTTP header field.
 		std::string m_last_header_value;
-		//! Признак того, что значение заголовка было извлечено.
+		//! Flag that tells that the value of the current HTTP header field
+		//! was extracted.
 		bool m_on_header_value_called{ false };
-		//! Общая длина разобранных заголовков.
+		//! The total size of parsed HTTP header fields.
 		std::size_t m_total_headers_size{ 0u };
 
-		//! Заголовки из ответа, которые уже были получены.
+		//! List of extracted HTTP header fields.
 		restinio::http_header_fields_t m_headers;
 
-		//! Признак того, что разбор обычных заголовков завершился.
+		//! Flag that tells that the parsing of ordinary HTTP header fields
+		//! has been completed.
 		bool m_leading_headers_completed{ false };
 	};
 
-	//! Возможные варианты состояния обработки HTTP-сообщения в этом
-	//! направлении.
+	//! Enumeration of possible states of handling incoming HTTP message.
 	enum incoming_http_message_stage_t
 	{
-		//! Входящее сообщение еще полностью не вычитано.
+		//! The reading of the incoming HTTP message is in progress.
 		in_progress,
-		//! HTTP-сообщение полностью вычитано. Больше не нужно ничего
-		//! читать из этого направления.
+		//! The reading of the incoming HTTP message completed, there is no
+		//! need to read more.
 		message_completed
 	};
 
-	//! Тип указателя на метод, который должен быть вызван после
-	//! успешного завершения записи исходящих данных в то или иное
-	//! соединение.
+	//! Type of pointer to method that should be called when
+	//! a write operation completes.
 	using write_completed_handler_t =
 		void (ordinary_method_handler_t::*)(
 				delete_protector_t, can_throw_t);
 
 	/*!
-	 * @brief Состояние одного направления передачи данных.
+	 * @brief State of a single direction.
 	 *
-	 * Этот объект формируется уже после того, как подключение от клиента
-	 * было первично обработано и клиент был аутентифицирован.
+	 * Such an object is created after the primary processing and
+	 * authentification of the user.
 	 */
 	struct direction_state_t
 	{
 		using out_piece_container_t = std::list< out_data_piece_t >;
 
-		//! Состояние разбора http-сообщений в этом направлении.
+		//! State of HTTP-parsing for that direction.
 		http_handling_state_unique_ptr_t m_http_state;
 
-		//! Параметры парсинга http-сообщений в этом направлении.
+		//! Settings for http_parser for the direction.
 		http_parser_settings m_http_parser_settings;
 
-		//! Сокет, который отвечает за это направление.
+		//! Socket that is used for this direction.
 		asio::ip::tcp::socket & m_channel;
 
-		//! Название этого направления.
+		//! Name of that direction (for logging).
 		/*!
 		 * @attention
-		 * Исходим из того, что это string_view для строкового литерала.
+		 * Assuming that name is defined as a string literal.
 		 */
 		const std::string_view m_name;
 
-		//! Список ожидающих отправки блоков данных.
+		//! List of pending outgoing data blocks.
 		out_piece_container_t m_pieces_read;
 
-		//! Тип этого направления для учета в traffic_limiter.
+		//! traffic_limiter's specific type for the direction.
 		traffic_limiter_t::direction_t m_traffic_direction;
 
-		//! Живо ли еще данное направление?
+		//! Flag that tells that the direction is still alive.
 		/*!
-		 * Направление живо пока не было диагностировано его закрытие.
+		 * The direction is alive until its closure has been diagnosed.
 		 */
 		bool m_is_alive{ true };
 
-		//! Превышен ли лимит трафика по этому направлению?
+		//! Flag that tells that traffic-limit has been exceeded.
 		bool m_is_traffic_limit_exceeded{ false };
 
-		//! Статус обработки входящего HTTP-сообщения по этому направлению.
+		//! The stage of incoming HTTP-message processing for the direction.
 		incoming_http_message_stage_t m_incoming_message_stage{
 				incoming_http_message_stage_t::in_progress
 			};
 
-		//! Обработчик, который должен быть вызван после записи
-		//! данных, прочитанных из этого направления.
+		//! A handler that should be called after the completion
+		//! of the current write operation.
 		write_completed_handler_t m_on_write_completed;
 
-		//! Сколько байт было отослано в это направление из противоположного
-		//! направления.
+		//! How many bytes were sent to this direction from the opposite
+		//! direction.
 		/*!
-		 * Если это user_end, то данное значение указывает, сколько байт,
-		 * прочитанных из target_end, было записано в user_end.
+		 * If this is the used_end dir, then that value tells how many
+		 * bytes read from the target_end dir were sent to the user_end dir.
 		 *
-		 * Это счетчик байт, которые были отосланы в канал. Возможно,
-		 * что реально записано в канал меньше, т.к. очередная операция
-		 * записи еще может быть незавершена.
+		 * This is the counter of bytes sent. In reality there could be
+		 * less data written because the current write operation can
+		 * still be in progress.
 		 */
 		std::uint_least64_t m_bytes_from_opposite_dir{ 0u };
 
@@ -174,44 +175,49 @@ class ordinary_method_handler_t final : public handler_with_out_connection_t
 		}
 	};
 
-	//! Краткое описание обрабатываемого запроса.
+	//! Brief description of the requist that is being processed.
 	/*!
-	 * Это описание нам нужно хранить для организации нормального
-	 * логирования.
+	 * This description is necessary for logging.
 	 */
 	struct brief_request_info_t
 	{
-		//! HTTP-метод для запроса.
+		//! HTTP-method of the request.
 		http_method m_method;
 
-		//! Значение request-target, которое будет использовано в запросе.
+		//! Value of request-target for the request.
 		std::string m_request_target;
 
-		//! Значение заголовка Host, который будет передан в запросе.
+		//! Value of Host header field for the request.
 		std::string m_host_field_value;
 
-		//! Нужно ли сохранять соединение с клиентом после обработки
-		//! его запроса.
+		//! Flag that tells that the connection should be kept after
+		//! the processing of the request.
 		bool m_keep_user_end_alive;
 	};
 
-	//! Ограничитель трафика для этого клиента.
+	//! traffic-limiter for the user.
 	traffic_limiter_unique_ptr_t m_traffic_limiter;
 
-	//! Состояние направления от клиента к целевому узлу.
+	//! The state of user_end direction.
+	/*!
+	 * This is direction from the user to ACL.
+	 */
 	direction_state_t m_user_end;
-	//! Состояние направления от целевого узла к клиенту.
+	//! The state of target_end direction.
+	/*!
+	 * This is direction from ACL to the target host.
+	 */
 	direction_state_t m_target_end;
 
-	//! Время последнего успешного чтения данных (из любого соединения).
+	//! Timepoint of the last successful read (from any direction).
 	std::chrono::steady_clock::time_point m_last_read_at{
 			std::chrono::steady_clock::now()
 		};
 
-	//! Состояние обработки ответа от целевого узла.
+	//! State of the processing of the response from the target host.
 	response_processing_state_t m_response_processing_state;
 
-	//! Краткое описание обрабатываемого запроса.
+	//! Brief description of HTTP-request that is beging processed.
 	const brief_request_info_t m_brief_request_info;
 
 public:
@@ -250,41 +256,40 @@ public:
 			}
 		,	m_brief_request_info{ make_brief_request_info( request_info ) }
 	{
-		// В конструкторе можно бросать исключения.
+		// We can throw exceptions in the constructor.
 		::arataga::utils::exception_handling_context_t exception_ctx;
 
 		tune_http_settings( exception_ctx.make_can_throw_marker() );
 
-		// У вызова этого метода в конструкторе есть отрицательная сторона:
-		// если в процессе обработки остатка входящих данных возникнет
-		// исключение, то оно вылетит наружу и приведет к тому, что
-		// соединение от клиента будет закрыто без отсылки какого-либо
-		// HTTP-ответа в соединение. Т.е. клиент вместо "400 Bad Request"
-		// получит просто разрыв.
+		// It is not good to call this method in the constructor:
+		// if an exception is thrown then this exception will be caught
+		// something upper in the stack and the connection will be closed
+		// without sending a negative response. It means that
+		// the user will detect the closed connection instead of
+		// "400 Bad Request" response.
 		//
-		// Чтобы это исправить нужно переносить данный вызов в on_start.
-		// Но это приведет к необходимости сохранять в handler-е значение
-		// request_info.
+		// To fix that this call can be moved into on_start().
+		// But this requires storing of request_info in the handler.
 		//
-		// Но даже перенос в on_start не гарантирует отсылки отрицательного
-		// ответа во всех случаях. Так, основных причин для выброса исключений
-		// две:
+		// But even the movement into on_start() doens't guarantee
+		// the send of negative response in all the cases. Because there are
+		// two main reasons of an exception:
+		//
+		// 1. Invalid data in the incoming stream. Those invalid data
+		// can be detected in the input stream at any moment, not necessarly
+		// at the begining. Thus, if we process chunked encoding then we
+		// can successfully read and process several chunks, but only
+		// then corrupted data can be found. In that case we can't send
+		// a negative response because we are already in the process of
+		// transferring the response from the target host to the user.
 		// 
-		// 1. Неправильные данные во входном потоке. Но эти неправильные
-		// данные могут быть обнаружены во входном потоке в любой момент,
-		// не обязательно в начале HTTP-сообщения. Так, при chunked encoding
-		// можно успешно выкачать несколько chunk-ов и передать их на сторону
-		// целевого узла и только потом получить ошибку. При этом уже может
-		// начаться передача ответа от целевого узла клиенту.
+		// 2. No available memory or other low-level error during the parsing.
+		// Such error can be detected after the start of transferring
+		// the response from the target host to the user. In the case of
+		// bad_alloc we can be in the situation where we can't make
+		// a new response at all.
 		//
-		// 2. Невозможность выделить память или какая-то другая ситуация,
-		// из-за которой нет возможности разобрать входящий поток. Такая
-		// ситуация может возникнуть уже после того, как ответ от целевого
-		// узла может начать транслироваться в строну клиента. Кроме того,
-		// если будет выброшен bad_alloc, то не факт, то получится
-		// отослать ответное сообщение.
-		//
-		// Поэтому пока вызов make_user_end_outgoing_data оставлен здесь.
+		// So the call to make_user_end_outgoing_data() is kept here for now.
 		make_user_end_outgoing_data(
 				exception_ctx.make_can_throw_marker(),
 				request_info );
@@ -298,8 +303,6 @@ protected:
 			delete_protector,
 			[this]( delete_protector_t, can_throw_t can_throw )
 			{
-				// Это логирование упрощает разбирательство с проблемами
-				// по логам.
 				::arataga::logging::wrap_logging(
 						proxy_logging_mode,
 						spdlog::level::info,
@@ -319,11 +322,10 @@ protected:
 								);
 						} );
 
-				// В user_end 100% есть данные, которые должны быть
-				// отосланы в target_end.
+				// There is data in user_end that should be sent into target_end.
 				write_data_read_from( can_throw, m_user_end, m_target_end );
 
-				// Сразу же запускаем чтение данных от целевого узла.
+				// Now we can read incoming data from the target end.
 				initiate_async_read_for_direction( can_throw, m_target_end );
 			} );
 	}
@@ -335,7 +337,7 @@ protected:
 			delete_protector,
 			[this]( delete_protector_t delete_protector, can_throw_t can_throw ) {
 			{
-				// Так быть не должно, но на всякий случай сделаем проверку...
+				// Don't expect this but let's make a check for safety...
 				if( m_user_end.is_dead() && m_target_end.is_dead() )
 				{
 					return log_and_remove_connection(
@@ -348,8 +350,8 @@ protected:
 			}
 
 			{
-				// Какое-то из соединений еще живо. Поэтому можно
-				// проверять время отсутствия активности.
+				// At least one of the directions is still alive.
+				// We can check inactivity time.
 				const auto now = std::chrono::steady_clock::now();
 
 				if( m_last_read_at +
@@ -364,11 +366,9 @@ protected:
 				}
 			}
 
-			// Если по каким-то направлениям был превышен лимит,
-			// то нужно проверить лимит еще раз, и если можно, то
-			// инициировать новые операции ввода-вывода.
-			// Особенность обработки этой ситуации конкретно для HTTP в том,
-			// что здесь лимит проверяется при выполнении записи, а не чтения.
+			// If bandwidth limit was exceeded we should recheck it again.
+			// A special case related to HTTP: the limit is checked for
+			// write operations, not for read ones.
 			if( m_user_end.m_is_traffic_limit_exceeded )
 			{
 				initiate_write_outgoing_data_or_read_next_incoming_portion(
@@ -399,9 +399,10 @@ private:
 		result.m_method = info.m_method;
 		result.m_request_target = info.m_request_target;
 
-		// Как оказалось, не все HTTP-сервера любят, когда в Host порт 80
-		// задается явно. Поэтому, если target_port==80, то в Host указываем
-		// только имя хоста. А target_port добаляем только если это не 80.
+		// Now all servers expects to see port 80 in Host field.
+		// So if the target port is 80 then Host won't have the port
+		// specified, only the host name.
+		// The target_port is added to Host only if it isn't 80.
 		if( 80u == info.m_target_port )
 			result.m_host_field_value = info.m_target_host;
 		else
@@ -417,17 +418,18 @@ private:
 	void
 	tune_http_settings( can_throw_t /*can_throw*/ )
 	{
-		// http_parser для направления user_end уже был проинициализирован,
-		// но он стоит на паузе и у него осталось старое значение data.
+		// http_parser for user_end direction is already initialized.
+		// But it's paused and has old data.
 		m_user_end.m_http_state->m_parser.data = this;
 		http_parser_pause( &(m_user_end.m_http_state->m_parser), 0 );
 
-		// А вот http_parser для направления target_end должен быть
-		// инициализирован.
+		// http_parser for the target_end direction has to be initialized.
 		http_parser_init( &(m_target_end.m_http_state->m_parser), HTTP_RESPONSE );
 		m_target_end.m_http_state->m_parser.data = this;
 
-		// Обработчики того, что идет от клиента.
+		//
+		// Handlers for data from the user.
+		//
 		http_parser_settings_init( &m_user_end.m_http_parser_settings );
 
 		m_user_end.m_http_parser_settings.on_message_begin =
@@ -470,7 +472,9 @@ private:
 			helpers::make_http_parser_callback<
 					&ordinary_method_handler_t::user_end__on_chunk_complete >();
 
-		// Обработчики того, что идет от целевого узла.
+		//
+		// Handlers for data from the target host.
+		//
 		http_parser_settings_init( &m_target_end.m_http_parser_settings );
 
 		m_target_end.m_http_parser_settings.on_message_begin =
@@ -519,29 +523,27 @@ private:
 		can_throw_t can_throw,
 		const request_info_t & request_info )
 	{
-		// Вместо того, чтобы отсылать данные небольшими кусочками, накапливаем
-		// их сперва в один буфер.
+		// Collect the pieces of outgoing data into one buffer.
 		fmt::memory_buffer out_data;
 
-		// Первой должна быть start-line.
-		// Всегда отсылаем исходящие запросы как HTTP/1.1
+		// The start-line is going first.
+		// We use HTTP/1.1 always.
 		fmt::format_to(
 				out_data,
 				"{} {} HTTP/1.1\r\n",
 				http_method_str(request_info.m_method),
 				request_info.m_request_target );
 
-		// Далее должен быть заголовок Host.
+		// The Host header field is going next.
 		fmt::format_to(
 				out_data,
 				"Host: {}\r\n",
 				m_brief_request_info.m_host_field_value );
 
-		// Переносим в исходящий запрос те заголовки, которые могут
-		// уйти на удаленный узел.
+		// Form the list of header fields that should go to the target host.
 		fill_headers_for_outgoing_request( can_throw, request_info, out_data );
 
-		// Все, заголовки закончились.
+		// This the end of the header.
 		fmt::format_to( out_data, "\r\n" );
 
 		m_user_end.m_pieces_read.push_back( std::move(out_data) );
@@ -553,12 +555,11 @@ private:
 	fill_headers_for_outgoing_request(
 		can_throw_t /*can_throw*/,
 		const request_info_t & request_info,
-		// Подлежащие отсылки данные должны добавляться вот сюда.
+		// Outgoing data should be written here.
 		fmt::memory_buffer & out_data )
 	{
-		// Учитываем тот факт, что из заголовков уже поудаляли всю
-		// информацию, которая не должна покидать прокси.
-		// Так что все оставшиеся заголовки просто переносим как есть.
+		// Assume that all unnecessary fields were deleted earliers.
+		// So just copy remaining fields as is.
 		request_info.m_headers.for_each_field(
 			[&]( const auto & field )
 			{
@@ -574,7 +575,7 @@ private:
 	{
 		http_handling_state_t & http_state = *(m_user_end.m_http_state);
 
-		// Произведем разбор того, что есть во входящем буфере.
+		// Try to parse data in the incoming buffer.
 		const auto bytes_to_parse = http_state.m_incoming_data_size
 				- http_state.m_next_execute_position;
 		if( !bytes_to_parse )
@@ -588,7 +589,7 @@ private:
 				bytes_to_parse );
 		http_state.m_next_execute_position += bytes_parsed;
 
-		// Разберемся с результатом разбора.
+		// Handle the parsing result.
 		if( const auto err = http_state.m_parser.http_errno;
 				HPE_OK != err && HPE_PAUSED != err )
 			throw acl_handler_ex_t{
@@ -597,27 +598,27 @@ private:
 							static_cast<unsigned>(http_state.m_parser.http_errno) )
 				};
 
-		// NOTE: изначально здесь была проверка на то, что все данные из
-		// входящего буфера были полностью разобраны.
-		// Но затем эта проверка была удалена. Потому, что если разбор
-		// в user_end__on_message_complete ставится на паузу, то это
-		// позволяет обрабатывать request pipelining. И в этом случае
-		// часть данных во входящем буфере может остаться неразобранной.
-		// Если же разбор на паузу в user_end__on_message_complete не
-		// ставится (т.е. request pipelining не поддерживается), то
-		// нет смысла проверять остаток данных. Поскольку либо этого
-		// остатка нет, либо же парсер сломается на начале следующего
-		// HTTP сообщения (из-за кода ошибки в user_end__on_message_begin).
+		// NOTE: there was a check for the presence of unparsed data
+		// initially. But this check was removed later.
+		// If the parsing was paused inside user_end__on_message_complete
+		// then it allows to handle request pipelining. And some unparsed
+		// data will be present in the buffer.
+		// If parsing wasn't paused inside user_end__on_message_complete
+		// (it means that request pipelining isn't supported) then there
+		// is no sense to check for unparsed data. Because if such data
+		// is here then we'll get a parsing error later when we'll try
+		// to parse the next incoming HTTP-message (an error will be
+		// produced in user_end__on_message_begin).
 	}
 
-	// Обработчик завершения записи данных из user_end.
+	// Handler for the completion of write of data read from the user_end.
 	void
 	user_end_default_write_completed_handler(
 		delete_protector_t /*delete_protector*/,
 		can_throw_t can_throw )
 	{
-		// Если исходный запрос еще не был полностью вычитан из канала,
-		// то нужно продолжать чтение.
+		// If the incoming request wasn't read completely then we
+		// have to read more.
 		if( incoming_http_message_stage_t::in_progress ==
 				m_user_end.m_incoming_message_stage )
 		{
@@ -625,38 +626,39 @@ private:
 		}
 	}
 
-	// Дефолтный обработчик завершения записи данных из target_end.
+	// Default handler for the completion of write of data read from the
+	// target_end.
 	void
 	target_end_default_write_completed_handler(
 		delete_protector_t /*delete_protector*/,
 		can_throw_t can_throw )
 	{
-		// Этот обработчик используется только пока HTTP-response не
-		// прочитан полностью. Поэтому все, что нам здесь нужно сделать --
-		// это инициировать следующее чтение.
+		// This handler is used only while the whole HTTP-response isn't read.
+		// That is why the only thing we can do here is to read more.
 		initiate_async_read_for_direction( can_throw, m_target_end );
 	}
 
-	// Обработчик завершения записи данных из target_end, который
-	// используется для завершения записи HTTP-response и перехода
-	// к нормальной процедуре завершения обработки входящего запроса.
+	// The handler for the completion of write of data read from the
+	// target_end that is used for finishing of writing of the HTTP-response
+	// and switching for the normal procedure of connection-handler
+	// completion.
 	void
 	target_end_normal_finilization_write_completed_handler(
 		delete_protector_t delete_protector,
 		can_throw_t can_throw)
 	{
-		// Если не нужно сохранять соединение с клиентом, то просто
-		// удаляем текущий обработчик.
-		// А вот если нужно сохранять соединение, то создаем новый
+		// If there is no need to keep the connection then we can
+		// simply delete the handler.
+		// But in the opposite case we have to create a new
 		// initial_http_handler.
 		if( m_brief_request_info.m_keep_user_end_alive )
 		{
-			// Разберемся с тем, осталось ли что-нибудь во входящих данных.
+			// If there is some unparsed data, it should be passed to a new
+			// connection-handler.
 			byte_sequence_t remaining_data;
 			if( const auto & state = *(m_user_end.m_http_state);
 					state.m_incoming_data_size > state.m_next_execute_position )
 			{
-				// Что-то осталось.
 				remaining_data = byte_sequence_t{
 						reinterpret_cast<const std::byte *>(
 								&(state.m_incoming_data[ state.m_next_execute_position ]) ),
@@ -673,8 +675,8 @@ private:
 								std::move(m_ctx),
 								m_id,
 								std::move(m_connection),
-								// В качестве первоначального значения отдаем все,
-								// что осталось неразобранным в user_end.
+								// Give all the remaining data as initial data
+								// for the new handler.
 								remaining_data,
 								std::chrono::steady_clock::now() );
 					} );
@@ -687,15 +689,15 @@ private:
 		}
 	}
 
-	// Обработчик завершения записи данных из target_end, который
-	// используется для завершения записи HTTP-response и последующего
-	// принудительно удаления handler-а.
+
+	// The handler for the completion of write of data read from the
+	// target_end that is used in the case of forced deletion of
+	// the current connection-handler.
 	void
 	target_end_destroy_handler_write_completed_handler(
 		delete_protector_t delete_protector,
 		can_throw_t )
 	{
-		// Нам остается только удалить текущий обработчик.
 		remove_handler(
 				delete_protector,
 				remove_reason_t::http_response_before_completion_of_http_request );
@@ -764,9 +766,8 @@ private:
 		const char *,
 		std::size_t )
 	{
-		// Это может быть только trailing-заголовок в chunked encoding.
-		// Поскольку мы сейчас trailing-заголовки не поддерживаем, то
-		// просто игнорируем его.
+		// It can only be a trailing-header in chunked encoding.
+		// Because we don't support trailing-headers just ignore it.
 		return 0;
 	}
 
@@ -775,9 +776,8 @@ private:
 		const char *,
 		std::size_t )
 	{
-		// Это может быть только trailing-заголовок в chunked encoding.
-		// Поскольку мы сейчас trailing-заголовки не поддерживаем, то
-		// просто игнорируем его.
+		// It can only be a trailing-header in chunked encoding.
+		// Because we don't support trailing-headers just ignore it.
 		return 0;
 	}
 
@@ -804,13 +804,12 @@ private:
 		const char * data,
 		std::size_t size )
 	{
-		// Нужно дописать очередной кусочек данных из входящего запроса.
+		// It's necessarty to write the current piece of data to
+		// the outgoing stream.
 		m_user_end.m_pieces_read.push_back( 
-				// Безопасно сохранять string_view, т.к. сами данные,
-				// на которые ссылается string_view, все еще находятся
-				// во входящем буфере, который сохранит свое значение
-				// до тех пор, пока все исходящие данные не будут
-				// записаны.
+				// It's safe to use string_view because the data is
+				// in incoming buffer that remains its value until the
+				// write completes.
 				std::string_view{ data, size } );
 
 		return 0;
@@ -822,9 +821,10 @@ private:
 		m_user_end.m_incoming_message_stage =
 				incoming_http_message_stage_t::message_completed;
 
-		// Приостанавливаем разбор данных из этого направления.
-		// Есть подозренение, что такой подход поможет при обработке
-		// request pipelining.
+		// Pause the parsing.
+		//
+		// eao197: I suspect that this behavior will help to deal
+		// with request pipelining.
 		http_parser_pause( &(m_user_end.m_http_state->m_parser), 1 );
 
 		return 0;
@@ -833,10 +833,9 @@ private:
 	int
 	user_end__on_chunk_header( can_throw_t /*can_throw*/ )
 	{
-		// На момент вызова этого метода в http_parser.content_length
-		// хранится длина очередного chunk-а. Используем это для того,
-		// чтобы сформировать заголовок для идущего от target-end
-		// chunk-а самостоятельно.
+		// At this moment http_parser.content_length contains the size
+		// of the current chunk. Use that value to form a header
+		// for that chunk by ourselves.
 		m_user_end.m_pieces_read.push_back(
 				fmt::format( "{:x}\r\n",
 						m_user_end.m_http_state->m_parser.content_length ) );
@@ -855,7 +854,7 @@ private:
 	int
 	target_end__on_message_begin( can_throw_t /*can_throw*/ )
 	{
-		// Здесь ничего не нужно делать!
+		// Nothing to do here.
 		return 0;
 	}
 
@@ -886,12 +885,12 @@ private:
 	{
 		const std::string_view reason_phrase{ data, size };
 
-		// Строка со статусом может приходить по частям. Поэтому нужно сперва
-		// понять, на какой стадии мы оказались.
+		// status-line can arrive by small parts. So we have to understand
+		// on that stage we are.
 		switch( m_response_processing_state.m_status_line_stage )
 		{
 		case status_line_processing_stage_t::not_started:
-			// Нужно формировать начало status-line.
+			// The beginning of the status-line should be formed.
 			m_response_processing_state.m_status_line =
 					fmt::format( "HTTP/1.1 {} {}",
 							static_cast<unsigned short>(
@@ -900,8 +899,6 @@ private:
 			m_response_processing_state.m_status_line_stage =
 					status_line_processing_stage_t::status_code_written;
 
-			// Такое логирование существенно упрощает разбирательство с
-			// проблемами по логам.
 			::arataga::logging::wrap_logging(
 					proxy_logging_mode,
 					spdlog::level::info,
@@ -926,14 +923,14 @@ private:
 		break;
 
 		case status_line_processing_stage_t::completed:
-			// Этого не должно быть!
+			// Don't expect that case.
 			throw acl_handler_ex_t{
 					fmt::format( "target_end__on_status called when "
 							"status-line is already completed" )
 				};
 		}
 
-		// Строка состояния должна укладываться в заданный лимит.
+		// The status-line shouldn't be too long.
 		if( const auto lim =
 				context().config().http_message_limits().m_max_status_line_length;
 				lim < m_response_processing_state.m_status_line.size() )
@@ -966,7 +963,7 @@ private:
 	{
 		if( m_response_processing_state.m_leading_headers_completed )
 		{
-			// Имеем дело с trailing-заголовками, которые мы пока игнорируем.
+			// This is a trailing-header, we ignore them for now.
 			return 0;
 		}
 
@@ -978,7 +975,7 @@ private:
 
 		m_response_processing_state.m_last_header_name.append( data, size );
 
-		// Длина имени заголовка не должна превышать разрешенный предел.
+		// The size of header name shouldn't be too long.
 		if( const auto lim =
 				context().config().http_message_limits().m_max_field_name_length;
 				lim < m_response_processing_state.m_last_header_name.size() )
@@ -1013,14 +1010,14 @@ private:
 	{
 		if( m_response_processing_state.m_leading_headers_completed )
 		{
-			// Имеем дело с trailing-заголовками, которые мы пока игнорируем.
+			// This is a trailing-header, we ignore them for now.
 			return 0;
 		}
 
 		m_response_processing_state.m_on_header_value_called = true;
 		m_response_processing_state.m_last_header_value.append( data, size );
 
-		// Длина значения заголовка не должна превышать разрешенный предел.
+		// The header value shouldn't be too long.
 		if( const auto lim =
 				context().config().http_message_limits().m_max_field_value_length;
 				lim < m_response_processing_state.m_last_header_value.size() )
@@ -1057,8 +1054,7 @@ private:
 
 		auto & headers = m_response_processing_state.m_headers;
 
-		// Сперва соберем значения из всех заголовков Connection
-		// в одно место.
+		// Collect all occurences of Connection field.
 		connection_value_t aggregated;
 		headers.for_each_value_of(
 				header_name,
@@ -1070,44 +1066,37 @@ private:
 								std::back_inserter( aggregated.values ) );
 					}
 
-					// Ошибки просто игнорируем.
+					// Ignore errors.
 					return restinio::http_header_fields_t::continue_enumeration();
 				} );
 
-		// Теперь осталось пройтись по полученным значениям и обработать
-		// их должным образом.
+		// Have to process collected value.
 		for( const auto & v : aggregated.values )
 		{
-			// У значения "close" в Connection специальный смысл.
-			// А вот все остальное должно восприниматься как имена
-			// заголовков, подлежащих удалению.
+			// The "close" value in Connection has the special meaning.
+			// All other values are names of headers to be removed.
 			if( "close" != v )
 			{
-				// Заголовок Transfer-Encoding нужно оставить, т.к.
-				// мы не производим трансформацию содержимого тела запроса,
-				// а отдаем на целевой узел все именно так, как оно пришло
-				// от клиента.
+				// Transfer-Encoding should be kept because we don't
+				// transform the body and just retranslate it as is.
 				if( "transfer-encoding" != v )
 					headers.remove_all_of( v );
 			}
 		}
 
-		// Заголовок Connection так же нужно удалить.
+		// The Connection header fields should be removed too.
 		headers.remove_all_of( header_name );
 	}
 
 	void
 	remove_hop_by_hop_headers_from_response( can_throw_t /*can_throw*/ )
 	{
-		// Выбрасываем заголовки, которые являются hop-to-hop
-		// заголовками и не должны уходить из прокси на целевой узел.
+		// Remove all top-to-hop headers.
 		//
-		// ПРИМЕЧАНИЕ: выбрасываем не все заголовки. Так, оставляем
-		// следующие заголовки:
-		// - Transfer-Encoding, т.к. мы отдаем содержимое именно в том
-		// виде, в котором получаем от клиента.
+		// NOTE: some headers should be kept, for example:
+		// - Transfer-Encoding, becase we just retranslate the body as is.
 		//
-		// Перечень hop-to-hop заголовков найден здесь:
+		// The list of hop-to-hop headers was found here:
 		// https://nathandavison.com/blog/abusing-http-hop-by-hop-request-headers
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
 		using namespace std::string_view_literals;
@@ -1138,8 +1127,8 @@ private:
 	int
 	target_end__on_headers_complete( can_throw_t can_throw )
 	{
-		// Отмечаем, что начальные заголовки закончились для того,
-		// чтобы можно было игнорировать trailing-заголовки.
+		// Set the flag that leading header fields are completed.
+		// It allows us to ignore trailing-headers.
 		m_response_processing_state.m_leading_headers_completed = true;
 
 		if( const auto rc = try_complete_response_last_header( can_throw );
@@ -1148,9 +1137,7 @@ private:
 			return rc;
 		}
 
-		// Для того, чтобы не отсылать все, что накопилось разобранного
-		// из ответа маленькими частями, соберем все это в один буфер,
-		// который будет отослан единовременно.
+		// Use a single buffer for collecting small parts of response.
 		fmt::memory_buffer out_data;
 
 		complete_and_write_status_line( out_data );
@@ -1159,10 +1146,10 @@ private:
 		remove_hop_by_hop_headers_from_response( can_throw );
 		concat_response_headers_to( can_throw, out_data );
 
-		// Далее должен идти "\r\n" для отделения заголовка от тела сообщения.
+		// The separator between headers and the body.
 		fmt::format_to( out_data, "\r\n" );
 
-		// Осталось отослать все, что было накоплено, одним куском.
+		// Send that all as one piece.
 		m_target_end.m_pieces_read.push_back( std::move( out_data ) );
 
 		return 0;
@@ -1173,13 +1160,10 @@ private:
 		const char * data,
 		std::size_t size )
 	{
-		// Нужно дописать очередной кусочек body.
+		// Have to write another part of the body.
 		m_target_end.m_pieces_read.push_back( 
-				// Безопасно сохранять string_view, т.к. сами данные,
-				// на которые ссылается string_view, все еще находятся
-				// во входящем буфере, который сохранит свое значение
-				// до тех пор, пока все исходящие данные не будут
-				// записаны.
+				// It's safe to use string_view because the data will be
+				// kept in the incoming buffer until the write completes.
 				std::string_view{ data, size } );
 
 		return 0;
@@ -1191,8 +1175,8 @@ private:
 		m_target_end.m_incoming_message_stage =
 				incoming_http_message_stage_t::message_completed;
 
-		// Разбор на паузу здесь не ставим. Т.к. от target_end больше
-		// ничего и не должно быть.
+		// Don't pause the parsing because don't expect additional
+		// data from the target_end.
 
 		return 0;
 	}
@@ -1200,10 +1184,9 @@ private:
 	int
 	target_end__on_chunk_header( can_throw_t /*can_throw*/ )
 	{
-		// На момент вызова этого метода в http_parser.content_length
-		// хранится длина очередного chunk-а. Используем это для того,
-		// чтобы сформировать заголовок для идущего от target-end
-		// chunk-а самостоятельно.
+		// At this moment http_parser.content_length contains the size
+		// of the current chunk. Use that value to form a header
+		// for that chunk by ourselves.
 		m_target_end.m_pieces_read.push_back(
 				fmt::format( "{:x}\r\n",
 						m_target_end.m_http_state->m_parser.content_length ) );
@@ -1218,8 +1201,7 @@ private:
 		return 0;
 	}
 
-	// Смысл возвращаемого значения такой же, как и в callback-ах
-	// для http_parser.
+	// The return value the same as for http_parser's callbacks.
 	[[nodiscard]]
 	int
 	try_complete_response_last_header( can_throw_t can_throw )
@@ -1287,7 +1269,7 @@ private:
 		can_throw_t can_throw,
 		direction_state_t & src_dir )
 	{
-		// Произведем разбор того, что есть во входящем буфере.
+		// Parse the data from the input buffer.
 		const auto bytes_to_parse = src_dir.m_http_state->m_incoming_data_size
 				- src_dir.m_http_state->m_next_execute_position;
 
@@ -1299,13 +1281,12 @@ private:
 				bytes_to_parse );
 		src_dir.m_http_state->m_next_execute_position += bytes_parsed;
 
-		// Разберемся с результатом разбора.
+		// Handle the parsing result.
 		if( const auto err = src_dir.m_http_state->m_parser.http_errno;
 				HPE_OK != err && HPE_PAUSED != err )
 		{
-			// Поведение при обнаружении каких-то проблем с HTTP-сообщением
-			// зависит от того, из какого именно потока мы читали данные и
-			// сколько успели записать в противоположном направлении.
+			// The reaction to a failure depends on the direction and
+			// amount of data written in the opposite direction.
 			return react_to_direction_failure(
 					delete_protector,
 					can_throw,
@@ -1313,8 +1294,7 @@ private:
 					remove_reason_t::protocol_error );
 		}
 
-		// Обрабатывать результат разбора прочитанных данных нужно
-		// с учетом того, из какого направления данные были прочитаны.
+		// Handle the result with the respect to the direction of data read.
 		switch( src_dir.m_traffic_direction )
 		{
 		case traffic_limiter_t::direction_t::from_user:
@@ -1334,9 +1314,9 @@ private:
 		const direction_state_t & src_dir,
 		remove_reason_t remove_reason )
 	{
-		// Ситуацию с проблемой направления от целевого узла нужно
-		// обрабатывать особым образом: если ничего не успели отослать
-		// клиенту, то следует отослать 502 Bad Gateway.
+		// A problem with the target_end direction should be handled
+		// a special way: if nothing has been sent then "502 Bad Gateway"
+		// should be sent.
 		if( traffic_limiter_t::direction_t::from_target ==
 				src_dir.m_traffic_direction )
 		{
@@ -1350,10 +1330,9 @@ private:
 			}
 		}
 
-		// В остальных случаях просто закрываем все.
-		// Т.к. либо мусор получен от клиента, либо мусор получен от
-		// целевого узла но уже после того, как часть ответа уже была
-		// отослана клиенту.
+		// In all other cases just close the connections.
+		// We have read a garbage from the user_end or from the target_end
+		// (but after sending something to the user).
 		return remove_handler( delete_protector, remove_reason );
 	}
 
@@ -1361,26 +1340,23 @@ private:
 	analyze_incoming_data_parsing_result_for_user_end(
 		can_throw_t can_throw )
 	{
-		// По сути, мы оказываемся в ситуации, когда все зависит от
-		// состояния HTTP-response. Если HTTP-response еще не был
-		// прочитан, то можно отсылать исходящие данные в target_end.
-		// Но если HTTP-response уже был прочитан, то ничего делать
-		// не нужно, т.к. нам остается только дождаться завершения
-		// записи HTTP-response и удаления текущего handler-а.
+		// If HTTP-response hasn't read yet then we can send
+		// outgoing data to the target_end. But if HTTP-response has been
+		// read already, then we have to do nothing, because we
+		// have to wait the completion of writing of the HTTP-response,
+		// and then we should remove the current handler.
 		switch( m_target_end.m_incoming_message_stage )
 		{
 		case incoming_http_message_stage_t::in_progress:
-			// HTTP-response еще не был полностью прочитан, так
-			// что можно просто передавать очередную часть
-			// HTTP-request-а на сторону целевого узла.
+			// HTTP-response hasn't been read. So we can send
+			// another part of the request to the target host.
 			initiate_write_outgoing_data_or_read_next_incoming_portion(
 					can_throw, m_user_end, m_target_end );
 		break;
 
 		case incoming_http_message_stage_t::message_completed:
-			// Ничего не нужно делать, т.к. нам остается только
-			// дождаться завершения записи HTTP-response и удаления
-			// handler-а.
+			// Nothing to do. Just wait the completion of writing
+			// the HTTP-response.
 		break;
 		}
 	}
@@ -1389,18 +1365,18 @@ private:
 	analyze_incoming_data_parsing_result_for_target_end(
 		can_throw_t can_throw )
 	{
-		// Записывать кусок HTTP-response нужно в любом случае.
-		// Вопрос лишь в том, следует ли менять on_write_completed обработчик.
+		// We should write a part of HTTP-response in any case.
+		// The question is: should we replace on_write_completed handler?
 		switch( m_target_end.m_incoming_message_stage )
 		{
 		case incoming_http_message_stage_t::in_progress:
-			/* Ничего менять не нужно */
+			/* Nothing to change */
 		break;
 
 		case incoming_http_message_stage_t::message_completed:
-			// А вот здесь мы уже зависим от того, был ли прочитан
-			// HTTP-запрос или нет. Если еще не был, то после записи
-			// HTTP-response нужно будет удалять handler.
+			// We depend on the status of HTTP-request:
+			// if it isn't read yet than we have to remove handler after
+			// writing the HTTP-response.
 			switch( m_user_end.m_incoming_message_stage )
 			{
 			case incoming_http_message_stage_t::in_progress:
@@ -1417,7 +1393,7 @@ private:
 		break;
 		}
 
-		// Собственно, сама запись очередного куска HTTP-response.
+		// Write the next part of HTTP-response.
 		initiate_write_outgoing_data_or_read_next_incoming_portion(
 				can_throw, m_target_end, m_user_end );
 	}
@@ -1430,8 +1406,7 @@ private:
 	{
 		if( src_dir.m_pieces_read.empty() )
 		{
-			// Пока исходящих данных не появилось. Продолжаем читать
-			// из входящего направления.
+			// There is no data read. Continue the reading.
 			initiate_async_read_for_direction( can_throw, src_dir );
 		}
 		else
@@ -1440,7 +1415,7 @@ private:
 		}
 	}
 
-	// Этот метод не должен вызываться, если src_dir.m_pieces_read пуст.
+	// This method shouldn't be called if src_dir.m_pieces_read is empty.
 	void
 	write_data_read_from(
 		can_throw_t /*can_throw*/,
@@ -1448,7 +1423,7 @@ private:
 		direction_state_t & dest_dir )
 	{
 		if( src_dir.m_pieces_read.empty() )
-			// Записывать нечего. Такого не должно быть!
+			// We don't expect that case.
 			throw acl_handler_ex_t{
 					"a call to write_data_read_from for "
 					"empty src_dir.m_pieces_read"
@@ -1456,18 +1431,17 @@ private:
 
 		auto & piece_to_send = src_dir.m_pieces_read.front();
 
-		// Пытаемся понять, сколько данных для отсылки мы сможем взять,
-		// чтобы не превысить лимит.
+		// How many data we can send without exceeding the bandwidth limit.
 		const auto reserved_capacity = m_traffic_limiter->reserve_read_portion(
 				src_dir.m_traffic_direction,
 				piece_to_send.remaining() );
 
-		// Если ничего не можем отослать, значит превышен лимит.
+		// If nothing to send then the bandwidth limit is exceeded.
 		src_dir.m_is_traffic_limit_exceeded =
 				( 0u == reserved_capacity.m_capacity );
 
 		if( src_dir.m_is_traffic_limit_exceeded )
-			// Нужно ждать наступления следующего такта.
+			// Have to wait for the next turn.
 			return;
 
 		asio::const_buffer data_to_write{
@@ -1475,13 +1449,12 @@ private:
 				reserved_capacity.m_capacity
 		};
 
-		// Нам нужно зафиксировать, сколько байт мы отошлем в dest_dir.
-		// Затем эта информация может использоваться для определения того,
-		// отсылалось ли dest_dir что-либо вообще или нет.
+		// Have to count the number of bytes sent.
+		// This info will be used later to detect was something sent
+		// to dest_dir or not.
 		dest_dir.m_bytes_from_opposite_dir += data_to_write.size();
 
-// Этот фрагмент кода оставлен здесь в закомментированном виде для того,
-// чтобы проще было вернуть его при необходимости отладки.
+// Kept here for debugging purposes.
 #if 0
 		std::cout << "*** ougoing data: '"
 				<< std::string_view{
@@ -1519,7 +1492,7 @@ private:
 	void
 	initiate_async_read_for_direction(
 		can_throw_t /*can_throw*/,
-		// Откуда данные нужно читать.
+		// Source direction for reading.
 		direction_state_t & src_dir )
 	{
 		auto buffer = asio::buffer(
@@ -1552,24 +1525,21 @@ private:
 		const asio::error_code & ec )
 	{
 		/*
-		 * Особенность текущей логики обработки HTTP-сообщений в том,
-		 * что как только HTTP-сообщение полностью вычитывается (т.е. для
-		 * него отрабатывает message_complete-коллбэк), то чтение из
-		 * соответствующего направления прекращается. Соответственно,
-		 * если возникает EOF до того, как HTTP-сообщение было полностью
-		 * вычитано, то это так же ненормальное завершение обслуживания
-		 * запроса клиента. Вне зависимости от того, какое именно
-		 * направление было закрыто.
+		 * The current HTTP-message processing logic is: the reading
+		 * from a direction is stopped as soon as the current HTTP-message
+		 * is fully parsed. So, if we detect the EOF before the
+		 * completion of the HTTP-message then it is abnormal case.
+		 * It's true regardless of closed direction (user_end or target_end).
 		 */
 
-		// Какой бы не была ошибка, соединение считается закрытым.
+		// Mark the direction as closed regardless of the error.
 		src_dir.m_is_alive = false;
 
 		auto remove_reason = remove_reason_t::unexpected_and_unsupported_case;
 
 		if( asio::error::eof == ec )
 		{
-			// Дальнейшие действия зависят от того, что за соединение закрылось.
+			// The further actions depend on the direction type.
 			if( traffic_limiter_t::direction_t::from_target ==
 					src_dir.m_traffic_direction )
 				remove_reason = remove_reason_t::target_end_broken;
@@ -1578,20 +1548,17 @@ private:
 		}
 		else if( asio::error::operation_aborted == ec )
 		{
-			// Вообще особо ничего делать не нужно.
+			// Nothing to do.
 			remove_reason = remove_reason_t::current_operation_canceled;
 		}
 		else
 		{
-			// Возможно, мы наткнулись на ошибку ввода-вывода.
-			// Но, может быть просто сейчас завершается наша работа и
-			// сокет был закрыт, а Asio выдал код ошибки, отличный
-			// от operation_aborted.
+			// There can be a case when we cancelled the operation but
+			// Asio reports a error different from operation_aborted.
 			if( src_dir.m_channel.is_open() )
 			{
-				// Все-таки это ошибка ввода-вывода.
+				// It's an I/O error.
 
-				// Залогируем ошибку.
 				::arataga::logging::wrap_logging(
 						proxy_logging_mode,
 						spdlog::level::debug,
@@ -1615,20 +1582,18 @@ private:
 	}
 
 	/*!
-	 * Обработка результатов чтения из src_dir.
+	 * Handling of reading result from src_dir.
 	 *
-	 * Есть два важных фактора, которые следует учитывать внутри on_read_result:
+	 * There are two important factors that should be taken into account:
 	 *
-	 * 1. Если в @a ec содержится ошибка, то на значение @a bytes_transferred
-	 * можно не обращать внимания. Т.к. даже если ошибка -- это eof, то
-	 * все ранее вычитанные из src_dir данные были нами обработаны в
-	 * предшествующем on_read_result, в котором в @a ec ошибки не было.
-	 * Предполагать какую-то другую логику доставки eof нет оснований.
+	 * 1. If @a ec contains an error then @a bytes_transferred value can
+	 * be ignored. It means that if error code is EOF then all previously
+	 * read data has been processed in the earlier call of on_read_result
+	 * (in that call @a ec contained no error).
 	 *
-	 * 2. В src_dir на данный момент нет данных, которые еще не были
-	 * отосланы в dest_dir. Ведь пока такие данные есть, новая операция
-	 * чтения не инициируется вовсе.
-	 *
+	 * 2. There is no any pending data in src_dir that wasn't sent to dest_dir.
+	 * It is because we don't read new data while the old data isn't written
+	 * yet.
 	 */
 	void
 	on_read_result(
@@ -1638,9 +1603,8 @@ private:
 		const asio::error_code & ec,
 		std::size_t bytes_transferred )
 	{
+// Kept here for debugging purposes.
 #if 0
-		// Этот код оставлен под комментарием для того, чтобы проще было
-		// вернуть его при необрходимости отладки.
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::trace,
@@ -1656,10 +1620,8 @@ private:
 
 		if( ec )
 		{
-			// В зависимости от того, какое направление сбойнуло и
-			// что было прочитано из этого направления, нужно либо
-			// сразу закрывать соединение, либо же отсылать клиенту
-			// ответ 502 Bad Gateway.
+			// We have to clode the connection or send "502 Bad Gateway"
+			// response in dependency of the direction type.
 			return react_to_direction_failure(
 					delete_protector,
 					can_throw,
@@ -1672,11 +1634,11 @@ private:
 			src_dir.m_http_state->m_incoming_data_size = bytes_transferred;
 			src_dir.m_http_state->m_next_execute_position = 0u;
 
-			// Должны зафиксировать время последней активности.
+			// Last activity timepoint has to be updated.
 			m_last_read_at = std::chrono::steady_clock::now();
 
-			// Осталось запустить разбор прочитанных данных, в процессе
-			// чего будут сформированны кусочки исходящих данных.
+			// We have to parse data read and send them into 
+			// the opposite direction.
 			try_parse_data_read( delete_protector, can_throw, src_dir );
 		}
 	}
@@ -1690,7 +1652,7 @@ private:
 		const asio::error_code & ec,
 		std::size_t bytes_transferred )
 	{
-		// При диагностировании ошибок записи просто прекращаем работу.
+		// Just stop the work in the case of an error.
 		if( ec )
 		{
 			log_and_remove_connection_on_io_error(
@@ -1701,8 +1663,8 @@ private:
 		else
 		{
 			if( src_dir.m_pieces_read.empty() )
-				// Такого не должно быть. Ведь это результат записи
-				// первого элемента из src_dir.m_pieces_read.
+				// Don't expect this, because it is the result of
+				// writing the first item from src_dir.m_pieces_read.
 				throw acl_handler_ex_t{
 					fmt::format( "on_write_result is called for "
 							"empty {}.m_pieces_read",
@@ -1714,12 +1676,12 @@ private:
 			if( !piece_to_send.remaining() )
 				src_dir.m_pieces_read.pop_front();
 
-			// Если есть еще что записывать, запишем и это.
+			// If there is some remaining data it has to be written.
 			if( !src_dir.m_pieces_read.empty() )
 				write_data_read_from( can_throw, src_dir, dest_dir );
 			else
-				// Все исходящие данные записаны, так что о дальнейшем
-				// пусть заботится обработчик успешной записи.
+				// All pending data was written, so further actions
+				// will be performed by completion handler.
 				(this->*src_dir.m_on_write_completed)( delete_protector, can_throw );
 		}
 	}

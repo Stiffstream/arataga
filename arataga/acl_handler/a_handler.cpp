@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Описание агента acl_handler.
+ * @brief Agent acl_handler.
  */
 
 #include <arataga/acl_handler/a_handler.hpp>
@@ -120,26 +120,25 @@ actual_config_t::http_message_limits() const noexcept
 // actual_traffic_limiter_t
 //
 /*!
- * @brief Актуальный ограничитель трафика для одного подключения
- * успешно аутентифицированного клиента.
+ * @brief Actual traffic limiter for one connection of an
+ * authentificated user.
  */
 class actual_traffic_limiter_t final : public traffic_limiter_t
 {
-	// Ссылка на словарь аутентифицированных клиентов нужен для того,
-	// чтобы при уничтожении traffic_limiter-а автоматически уменьшить
-	// количество подключений. И, если нужно, изъять информацию об
-	// этом клиенте.
+	// This reference is necessary to decrement the count of connections
+	// when traffic_limiter is destroyed (maybe the information about
+	// this user will be removed too if it was the last connection).
 	authentificated_user_map_t & m_auth_users;
 
-	// Ссылка на описание именно этого клиента.
+	// Reference to the description of that user.
 	authentificated_user_map_t::iterator m_it_auth_user;
 
-	// Ссылка на лимит для конкретного домена (если такой лимит задан).
+	// Reference to the limit for a particular domain (if such limit is set).
 	std::optional<
 				bandlim_manager_t::domain_traffic_map_t::iterator
 			> m_it_domain_traffic;
 
-	// Тип указателя на конкретное поле в channel_limits_data_t.
+	// Type of a pointer to a field in channel_limits_data_t.
 	using end_member_ptr_t =
 			bandlim_manager_t::direction_traffic_info_t
 					bandlim_manager_t::channel_limits_data_t::*;
@@ -201,8 +200,8 @@ class actual_traffic_limiter_t final : public traffic_limiter_t
 		if( opt_domain_traffic )
 			opt_domain_traffic->m_reserved += reserved_amount;
 
-		// Используем тот факт, что номера тактов во всех экземплярах
-		// direction_traffic_info_t одинаковые.
+		// Use the fact that sequence numbers are the same
+		// for all instances of direction_traffic_info_t.
 		return { reserved_amount, total_traffic.m_sequence_number };
 	}
 
@@ -221,10 +220,9 @@ class actual_traffic_limiter_t final : public traffic_limiter_t
 			traffic.m_actual += bytes;
 			auto & reserved = traffic.m_reserved;
 			if( reserved_capacity.m_sequence_number == traffic.m_sequence_number
-					// Не должно быть так, чтобы на том же самом такте
-					// значение reserved оказалось меньше, чем bytes_to_release.
-					// Но лучше перестраховаться, чтобы избежать перехода
-					// через 0.
+					// We don't expect that value of `reserved` will be less
+					// that `bytes_to_release` on the same turn.
+					// But it better to play it safe to avoid underflow.
 					&& reserved >= bytes_to_release )
 			{
 				reserved -= bytes_to_release;
@@ -239,10 +237,9 @@ class actual_traffic_limiter_t final : public traffic_limiter_t
 			traffic.m_actual += bytes;
 			auto & reserved = traffic.m_reserved;
 			if( reserved_capacity.m_sequence_number == traffic.m_sequence_number
-					// Не должно быть так, чтобы на том же самом такте
-					// значение reserved оказалось меньше, чем bytes_to_release.
-					// Но лучше перестраховаться, чтобы избежать перехода
-					// через 0.
+					// We don't expect that value of `reserved` will be less
+					// that `bytes_to_release` on the same tick.
+					// But it better to play it safe to avoid underflow.
 					&& reserved >= bytes_to_release )
 			{
 				reserved -= bytes_to_release;
@@ -389,8 +386,7 @@ a_handler_t::so_define_agent()
 
 	st_too_many_connections
 		.on_enter( [this]() {
-				// Приняли слишком много подключений, этот факт нужно
-				// залогировать.
+				// Too many connections accepted. This fact has to be logged.
 				::arataga::logging::wrap_logging(
 						direct_logging_mode,
 						spdlog::level::warn,
@@ -438,7 +434,7 @@ a_handler_t::so_evt_finish()
 						"{}: shutdown completed", m_params.m_name );
 			} );
 
-	// Очищаем все, чем владеем.
+	// Cleanup all sockets.
 	m_acceptor.close();
 	m_connections.clear();
 }
@@ -467,9 +463,8 @@ a_handler_t::replace_connection_handler(
 						info.handler()->name() );
 			} );
 
-	// Новый обработчик должен быть запущен.
-	// ВНИМАНИЕ: в процессе выполнения этой операции обработчик
-	// может быть заменен еще раз.
+	// The new handler should be started.
+	// NOTE: during that call the handler can be changed yet again.
 	info.handler()->on_start();
 }
 
@@ -486,9 +481,8 @@ a_handler_t::remove_connection_handler(
 
 		update_remove_handle_stats( reason );
 
-		// Исключения здесь не ловим, т.к. если они здесь произошли,
-		// то с высокой вероятностью вернуться к нормальной работе
-		// мы уже не сможем.
+		// Do not catch exceptions because if an exception is thrown
+		// then we have to chances to recover.
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,
 				spdlog::level::debug,
@@ -514,8 +508,8 @@ a_handler_t::log_message_for_connection(
 	::arataga::logging::processed_log_level_t level,
 	std::string_view message )
 {
-	// Здесь не нужно использовать wrap_logging, потому что данный метод
-	// уже вызывается из wrap_logging.
+	// Don't use wrap_logging because this method is called from inside
+	// of wrap_logging call.
 	::arataga::logging::impl::logger().log(
 			level,
 			"{}: connection {} => {}",
@@ -539,8 +533,8 @@ a_handler_t::async_resolve_hostname(
 {
 	namespace dnsr = ::arataga::dns_resolver;
 
-	// Свой completion-token который отвечает за вызов
-	// hostname-result-handler-а, полученного от connection-handler-а.
+	// Own completion-token for calling the
+	// hostname-result-handler received from connection_handler.
 	class token_t final : public dnsr::forward::completion_token_t
 	{
 		dns_resolving::hostname_result_handler_t m_handler;
@@ -574,9 +568,8 @@ a_handler_t::async_resolve_hostname(
 		}
 	};
 
-	// В качестве идентификатора для запроса в DNS-resolver используем
-	// ID самого соединения. Этот идентификатор будет уникальным в
-	// рамках ACL.
+	// Use ID of connection as ID for DNS-resolver request.
+	// That ID will be unqiue for the ACL.
 	const auto id = make_long_id( connection_id );
 
 	::arataga::logging::wrap_logging(
@@ -616,8 +609,8 @@ a_handler_t::async_authentificate(
 			traffic_limiter_unique_ptr_t (a_handler_t::*)(
 					const auth_ns::successful_auth_t &);
 
-	// Свой completion-token который отвечает за вызов
-	// result-handler-а, полученного от connection-handler-а.
+	// Own completion-token that calls result-handler
+	// provided by connection_handler.
 	class token_t final : public auth_ns::completion_token_t
 	{
 		a_handler_t & m_agent;
@@ -746,10 +739,10 @@ a_handler_t::on_shutdown( mhood_t< shutdown_t > )
 						"{}: shutting down...", m_params.m_name );
 			} );
 
-	// Переходим в специальное состояние чтобы ничего не обрабатывать.
+	// Switch a special state to avoid handling of any events.
 	this >>= st_shutting_down;
 
-	// Инициируем собственную дерегистрацию.
+	// This coop has to be destroyed.
 	so_deregister_agent_coop_normally();
 }
 
@@ -776,16 +769,15 @@ a_handler_t::on_try_create_entry_point(
 						endpoint );
 			} );
 
-	// Для очередной попытки используем временный объект acceptor, значение
-	// которого будет перемещено в m_acceptor, если создание завершится 
-	// успешно.
+	// Use a temporary instance of `acceptor` type.
+	// This instance will be moved into `m_acceptor` if everything
+	// will be OK.
 	asio::ip::tcp::acceptor tmp_acceptor{ m_params.m_io_ctx };
 
-	// Вспомогательная локальная функция для того, чтобы не писать
-	// кучу if-ов "лесенкой".
+	// Helper function to avoid writting nested `if-else` statements.
 	const auto finish_on_failure = [this]( auto && ...log_params ) -> void {
-		// Все связанные с невозможностью нормально создать/настроить
-		// acceptor проблемы нужно логировать с уровнем critical.
+		// All problems related to impossibility of create/tune the acceptor
+		// should be logged as critical.
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,
 				spdlog::level::critical,
@@ -796,9 +788,9 @@ a_handler_t::on_try_create_entry_point(
 							std::forward<decltype(log_params)>(log_params)... );
 				} );
 
-		// Нужно повторить попытку создания точки входа после тайм-аута.
+		// We have to repeat after some time-out.
 		so_5::send_delayed< try_create_entry_point_t >( *this,
-				// Произвольное, взятое с потолка значение.
+				// This is just an arbitrary value for the very first version.
 				10s );
 	};
 
@@ -840,7 +832,7 @@ a_handler_t::on_try_create_entry_point(
 	}
 
 	tmp_acceptor.listen(
-			// Произвольно взятое с потолка значение.
+			// This is just an arbitrary value for the very first version.
 			10,
 			ec );
 	if( ec )
@@ -851,7 +843,7 @@ a_handler_t::on_try_create_entry_point(
 				ec.message() );
 	}
 
-	// Теперь можно войти в нормальный режим работы.
+	// Now we can go to the normal mode.
 	m_acceptor = std::move(tmp_acceptor);
 	this >>= st_entry_created;
 }
@@ -864,17 +856,17 @@ a_handler_t::on_enter_st_entry_created() noexcept
 void
 a_handler_t::on_one_second_timer( mhood_t< one_second_timer_t > )
 {
-	// Начинается новый такт работы, на котором нужно пересчитать
-	// квоты по лимитам трафика.
+	// Start a new turn. Traffic quotes have to be recalculated.
 	update_traffic_limit_quotes_on_new_turn();
 
-	// Тут нужно проявлять осторожность с итераторами, т.к.
-	// содержимое m_connections может изменится прямо во время вызова on_timer.
+	// Additional care should be taken with iterators because
+	// the content of m_connections can be changed right inside
+	// on_timer call.
 	for( auto it = m_connections.begin(); it != m_connections.end(); )
 	{
-		// Держим указатель у себя до тех пор, пока не завершится on_timer.
+		// Hold a pointer until on_timer will be completed.
 		auto handler = it->second.handler();
-		++it; // Обязательно идем к следующему элементу пока it валиден.
+		++it; // Go to next item before the call to on_timer.
 
 		handler->on_timer();
 	}
@@ -897,7 +889,7 @@ a_handler_t::on_enter_st_accepting() noexcept
 						m_current_common_acl_params.m_maxconn );
 			} );
 
-	// Если здесь возникнет исключение, то нет смысла продолжать.
+	// There is not sense to continue if this `send` throws.
 	so_5::send< accept_next_t >( *this );
 }
 
@@ -915,8 +907,8 @@ a_handler_t::on_accept_next_when_accepting( mhood_t< accept_next_t > )
 						m_params.m_name );
 			} );
 
-	// Не ждем исключений в этом месте. Если исключения при вызове
-	// async_accept возникнут, то продолжать смысла нет.
+	// Do not wait exceptions here.
+	// There is no sense to continue if this call throws.
 	m_acceptor.async_accept(
 			[self = so_5::make_agent_ref(this)](
 				const asio::error_code & ec,
@@ -924,8 +916,8 @@ a_handler_t::on_accept_next_when_accepting( mhood_t< accept_next_t > )
 			{
 				if( ec )
 				{
-					// Ошибку operation_aborted игнорируем, т.к. это
-					// нормальная ситуация при выполнении операции shutdown.
+					// Ignore operation_aborted because it's expected
+					// during the shutdown operation.
 					if( asio::error::operation_aborted != ec )
 						::arataga::logging::wrap_logging(
 								direct_logging_mode,
@@ -955,7 +947,7 @@ a_handler_t::on_accept_completion_when_accepting(
 	if( m_connections.size() < m_current_common_acl_params.m_maxconn )
 		so_5::send< accept_next_t >( *this );
 	else
-		// Переходим в состояние, где прием новых соединений запрещен.
+		// Should go to the state where new connections are not accepted.
 		this >>= st_too_many_connections;
 }
 
@@ -976,13 +968,13 @@ a_handler_t::on_dns_result(
 						cmd->m_result );
 			} );
 
-	// Нужно найти описание соединения, к котором этот запрос относится.
-	// Такого соединения может уже и не быть. В этом случае и обрабатывать
-	// запрос не имеет смысла.
+	// Should find a connection that issued this request.
+	// This connection can be non-existent as this time.
+	// In that case we can just ignore the result.
 	if( auto * const connection_info = try_find_connection_info(
 			cmd->m_req_id.m_id ) )
 	{
-		// Соединение еще существует, поэтому применяем к нему результат.
+		// The connection still exists, so the result should be handled.
 		cmd->m_completion_token->complete( cmd->m_result );
 	}
 }
@@ -1004,13 +996,13 @@ a_handler_t::on_auth_result(
 						cmd->m_result );
 			} );
 
-	// Нужно найти описание соединения, к котором этот запрос относится.
-	// Такого соединения может уже и не быть. В этом случае и обрабатывать
-	// запрос не имеет смысла.
+	// Should find a connection that issued this request.
+	// This connection can be non-existent as this time.
+	// In that case we can just ignore the result.
 	if( auto * const connection_info = try_find_connection_info(
 			cmd->m_req_id.m_id ) )
 	{
-		// Соединение еще существует, поэтому применяем к нему результат.
+		// The connection still exists, so the result should be handled.
 		cmd->m_completion_token->complete( cmd->m_result );
 	}
 }
@@ -1021,16 +1013,17 @@ a_handler_t::on_updated_config(
 {
 	m_current_common_acl_params = cmd->m_params;
 
-	// Нужно обновить лимиты у всех существующих bandlim_manager-ов.
+	// Limits for all bandlim_managers should be updated.
 	update_default_bandlims_on_confg_change();
 
-	// Если находимся в состоянии st_accepting, то ничего делать не
-	// нужно, даже если новое значение maxconn меньше чем текущее
-	// количество подключений. Т.к. после возврата из accept мы
-	// автоматически сделаем новую проверку и уйдем из st_accepting
-	// в st_too_many_connections.
-	// А вот если мы сейчас в st_too_many_connections, то следует
-	// проверить, не пора ли вернутся в st_accepting.
+	// If we are in st_accepting then there is no need to do anything,
+	// even if maxconn is less than the current connection count.
+	// It is because we'll automatically do a check after the
+	// return from `accept`. And will go to st_too_many_connections
+	// from st_accepting.
+	//
+	// But if we are in st_too_many_connections then it is necessary
+	// to check the possibility to return to st_accepting.
 	try_switch_to_accepting_if_necessary_and_possible();
 }
 
@@ -1062,7 +1055,7 @@ void
 a_handler_t::accept_new_connection(
 	asio::ip::tcp::socket connection ) noexcept
 {
-	// Для нового подключения нужен новый ID.
+	// A new ID for the new connection.
 	const auto id = ++m_connection_id_counter;
 
 	::arataga::logging::wrap_logging(
@@ -1099,17 +1092,16 @@ a_handler_t::accept_new_connection(
 		return;
 	}
 
-	// Для нового подключения нужен начальный обработчик.
+	// Initial handler for the new connection.
 	connection_handler_shptr_t handler = make_protocol_detection_handler(
 			handler_context_holder_t{ so_5::make_agent_ref(this), *this },
 			id,
 			std::move(connection) );
 
-	// Запускаем начальный обработчик.
+	// This handler should be started manually.
 	handler->on_start();
 
-	// Новое соединение должно быть сохранено в списке известных
-	// нам подключений.
+	// New connection has to be stored in the list of known connections.
 	m_connections.emplace( id,
 			connection_info_t{ std::move(handler) } );
 }
@@ -1138,14 +1130,15 @@ traffic_limiter_unique_ptr_t
 a_handler_t::user_authentificated(
 	const ::arataga::authentificator::successful_auth_t & info )
 {
-	// Если информации об этом пользователе еще нет, то ее нужно создать.
+	// If there is no info about this user that info should be created.
 	auto it = m_authentificated_users.find( info.m_user_id );
 	if( it == m_authentificated_users.end() )
 	{
 		it = m_authentificated_users.emplace(
 				info.m_user_id,
 				authentificated_user_info_t{
-						// Сразу учитываем это подключение.
+						// The current connection from the user is taken
+						// into account.
 						1u,
 						bandlim_manager_t{
 								info.m_user_bandlims,
@@ -1155,11 +1148,11 @@ a_handler_t::user_authentificated(
 	}
 	else
 	{
-		// Учитываем еще одно подключение для клиента.
+		// A new connection should be taken into account.
 		it->second.m_connection_count += 1u;
 
-		// Возможно, у этого пользователя поменялся персональный лимит,
-		// поэтому нужно обновить значение в bandlim_manager-е.
+		// The personal limit for the user could has been changed.
+		// This case should be reflected in bandlim_manager.
 		it->second.m_bandlims.update_personal_limits(
 				info.m_user_bandlims,
 				m_current_common_acl_params.m_client_bandlim );
@@ -1170,7 +1163,8 @@ a_handler_t::user_authentificated(
 
 	if( info.m_domain_limits )
 	{
-		// Для домена заданы лимиты и это нужно учитывать.
+		// There are individual limits for the domain and
+		// this should be taken into account.
 		it_domain_traffic = it->second.m_bandlims.make_domain_limits(
 				info.m_domain_limits->m_domain,
 				info.m_domain_limits->m_bandlims );
@@ -1192,14 +1186,14 @@ a_handler_t::make_long_id( connection_id_t id ) const noexcept
 void
 a_handler_t::try_switch_to_accepting_if_necessary_and_possible()
 {
-	// Если режим приема новых соединений был приостановлен, а
-	// количество соединений опустилось ниже порога, то можно
-	// возобновить прием новых соединений.
+	// If we have stopped the acceptance of new connections but the
+	// current count of connection dropped below maxconn then
+	// we can resume the acception of new connection.
 	if( st_too_many_connections.is_active() &&
 			m_connections.size() < m_current_common_acl_params.m_maxconn )
 	{
-		// Просто поменять свое состояние мы не можем, т.к. этот
-		// метод вызывается не из обработчика события агента.
+		// We can't just change our state because this method is being
+		// called from outside of any event-handlers.
 		so_5::send< enable_accepting_connections_t >( *this );
 	}
 }

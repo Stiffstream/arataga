@@ -1,6 +1,6 @@
 /*!
  * @file
- * @brief Описание агента acl_handler.
+ * @brief Agent acl_handler.
  */
 
 #pragma once
@@ -30,7 +30,7 @@ namespace arataga::acl_handler
 // actual_config_t
 //
 /*!
- * @brief Актуальная реализация интерфейса config.
+ * @brief Actual implementation of config interface.
  */
 class actual_config_t final : public config_t
 {
@@ -102,20 +102,20 @@ public:
 //
 // authentificated_user_info_t
 //
-//! Информация о клиенте, который успешно прошел аутентификацию.
+//! Info about successfully authentificated client.
 struct authentificated_user_info_t
 {
-	//! Текущее количество подключений от данного клиента.
+	//! The number of current connection from this user.
 	std::size_t m_connection_count{};
 
-	//! Лимиты для данного клиента.
+	//! Limits for this user.
 	bandlim_manager_t m_bandlims;
 };
 
 //
 // authentificated_user_map_t
 //
-//! Словарь успешно аутентифицированных пользователей.
+//! Map of successfully authentificated users.
 using authentificated_user_map_t = std::map<
 		::arataga::user_list_auth::user_id_t,
 		authentificated_user_info_t
@@ -125,33 +125,30 @@ using authentificated_user_map_t = std::map<
 // a_handler_t
 //
 /*!
- * @brief Агент, который выполняет роль ACL.
+ * @brief An agent that serves ACL.
  *
- * Примечание по поводу особенностей работы replace_connection_handler()
- * и remove_connection().
+ * Some notices about replace_connection_handler() and remove_connection():
  *
- * Замена обработчиков соединений происходит в методе
- * replace_connection_handler(), который вызывается текущим
- * connection-handler-ом синхронно. При этом может оказаться,
- * что когда внутри replace_connection_handler() у нового
- * connection-handler-а вызывается on_start, то новый
- * connection-handler может вызвать у a_handler-а метод
- * replace_connection_handler() (чтобы заменить connection-handler
- * еще раз) или метод remove_connection() (чтобы удалить соединение,
- * если обслуживать его нельзя).
+ * A replacement of connection-handler is performed
+ * inside replace_connection_handler() that is called by
+ * the current connection-handler synchronously. There can be a case
+ * when replace_connection_handler() calls on_start() for a new
+ * connection-handler that new connection-handler can make another
+ * nested call to replace_connection_handler() (to set another
+ * connection-handler) or to remove_connection() (to destroy the
+ * connection if it can be served).
  *
- * Так же осторожность нужно проявлять при вызове on_timer у
- * connection_handler-ов, т.к. внутри on_timer может произойти
- * обратный вызов remove_connection() и a_handler-у потребуется
- * удалить тот connection-handler, для которого сейчас вызван
- * on_timer.
+ * Additional care should also be taken during the call to on_timer()
+ * for connection-handlers, because a backward call to remove_connection()
+ * can be made from inside on_timer. In that case a_handler should delete
+ * a object for that on_timer() isn't completed yet.
  */
 class a_handler_t final
 	:	public so_5::agent_t
 	,	public handler_context_t
 {
 public:
-	//! Основной конструктор.
+	//! Initializing constructor.
 	a_handler_t(
 		context_t ctx,
 		application_context_t app_ctx,
@@ -206,41 +203,41 @@ public:
 		connection_type_t connection_type ) override;
 
 private:
-	//! Сигнал о необходимости предпринять попытку создания точки входа.
+	//! Signal for next attempt to make an entry point.
 	struct try_create_entry_point_t final : public so_5::signal_t {};
 
-	//! Сигнал о необходимости сделать очередной async_accept.
+	//! Signal for next call to async_accept.
 	struct accept_next_t final : public so_5::signal_t {};
 
-	//! Сигнал о том, что очередной вызов accept-а завершился.
+	//! Notification about the completion of the current call to accept.
 	struct current_accept_completed_t final : public so_5::signal_t {};
 
-	//! Сигнал о том, что можно вернутся к приему новых подключений.
+	//! Signal to return to accepting new connections.
 	struct enable_accepting_connections_t final : public so_5::signal_t {};
 
-	//! Описание одного подключения от клиента.
+	//! The description for a single connection from a user.
 	/*!
-	 * В принципе, можно было бы в connection_map_t хранить просто
-	 * connection_handler_shptr_t. Но наличие connection_info_t
-	 * позволяет:
+	 * It could be possible to store just connection_handler_shptr_t
+	 * inside connection_map_t. But the presence of connection_info_t
+	 * allow us:
 	 *
-	 * - вызывать connection_handler_t::release() когда информация
-	 *   о подключении удаляется вне зависимости от причины удаления;
-	 * - позволяет в будущем расширить набор информации о соединении,
-	 *   если надобность в этом возникнет.
+	 * - to call connection_handler_t::release() when connection
+	 *   info has to be deleted regardless of the reason of the
+	 *   deletion;
+	 * - to extend the info in the future if it'll be necessary.
 	 */
 	class connection_info_t
 	{
-		//! Текущий обработчик для этого подключения.
+		//! The current handler for that connection.
 		connection_handler_shptr_t m_handler;
 
-		// Конструктор копирования должен быть запрещен для этого типа.
+		// Copy is disabled for that type.
 		connection_info_t( const connection_info_t & ) = delete;
 		connection_info_t &
 		operator=( const connection_info_t & ) = delete;
 
-		// Принудительный вызов release для обработчика,
-		// который больше не нужен.
+		// Safe call of handler's release for the case when
+		// the handler is not needed anymore.
 		static void
 		release_handler( const connection_handler_shptr_t & handler_ptr )
 		{
@@ -249,7 +246,7 @@ private:
 		}
 
 	public:
-		// Только конструктор и оператор перемещения доступны.
+		// There are only move construtor/operator.
 		connection_info_t( connection_info_t && ) = default;
 		connection_info_t &
 		operator=( connection_info_t && ) = default;
@@ -261,9 +258,8 @@ private:
 
 		~connection_info_t()
 		{
-			// Перед уничтожением m_handler нужно обязательно
-			// сделать вызов release(), чтобы завершить все текущие
-			// IO-операции.
+			// The call to release() should be done to complete all
+			// active IO-operations.
 			release_handler( m_handler );
 		}
 
@@ -274,8 +270,9 @@ private:
 			return m_handler;
 		}
 
-		// Замена старого обработчика на новый.
-		// Для старого обработчика автоматически вызывается release.
+		// Replacement of the old handler to a new one.
+		// The release() method is automatically called for the old handler.
+		// The old handler is returned.
 		connection_handler_shptr_t
 		replace( connection_handler_shptr_t new_handler )
 		{
@@ -288,68 +285,66 @@ private:
 		}
 	};
 
-	//! Тип словаря подключений.
+	//! Type of connections map.
 	using connection_map_t = std::map<
 			handler_context_t::connection_id_t,
 			connection_info_t >;
 
-	//! Состояние верхнего уровня для агента.
+	//! The top-level state for the agent.
 	/*!
-	 * В этом состоянии обрабатываются события, которые должны быть
-	 * обработаны вне зависимости от текущего состояния агента.
-	 * Например, обработка изменения конфигурации.
+	 * Events that have to be handled regardless of the current state
+	 * are subscribed for this top-level state.
 	 */
 	state_t st_basic{ this, "basic" };
 
-	//! Состояние, в котором точка входа еще не создана.
+	//! The state in that entry point isn't created yet.
 	state_t st_entry_not_created{
 		initial_substate_of{ st_basic }, "entry_not_created" };
 
-	//! Состояние, в котором точка входа создана и агент может
-	//! принимать новые подключения.
+	//! The state in that entry point is already created and the agent
+	//! can accept new connections.
 	state_t st_entry_created{
 		substate_of{ st_basic }, "entry_created" };
 
-	//! Состояние, в котором точка входа создана и принимает
-	//! новые подключения от клиентов.
+	//! The state in that entry point actively accepts new connections.
 	state_t st_accepting{
 		initial_substate_of{ st_entry_created }, "accepting" };
 
-	//! Состояние, в котором точка входа создана, но соединения
-	//! не принимаются, т.к. достигнут разрешенный максимум.
+	//! The state in that entry point is already created but the agent
+	//! can't accept new connections because there are too many
+	//! accepted connections.
 	state_t st_too_many_connections{
 		substate_of{ st_entry_created }, "too_many_connections" };
 
-	//! Состояние, в котором агент дожидается возможности
-	//! завершить свою работу.
+	//! The state in that the agent waits the completion of its work.
 	state_t st_shutting_down{ this, "shutting_down" };
 
-	//! Контекст всего arataga.
+	//! The context of the whole application.
 	const application_context_t m_app_ctx;
 
-	//! Индивидуальные параметры этого агента.
+	//! Initial parameters for the agent.
 	const params_t m_params;
 
-	//! Идивидуальная статистика этого ACL.
+	//! Individual stats for this ACL.
 	::arataga::stats::connections::acl_stats_t m_acl_stats;
 	::arataga::stats::connections::auto_reg_t m_acl_stats_reg;
 
-	//! Текущие значения общих для всех ACL параметров.
+	//! The current values of common ACL params.
 	common_acl_params_t m_current_common_acl_params;
 
-	//! Конфигурация для connection-handler-ов.
+	//! Configuration object for connection-handlers.
 	actual_config_t m_connection_handlers_config;
 
-	//! Серверный сокет, который будет принимать подключения.
+	//! The server socket for accepting new connections.
 	asio::ip::tcp::acceptor m_acceptor;
 
-	//! Счетчик идентификаторов для новых подключений.
+	//! ID counter for new connections.
 	handler_context_t::connection_id_t m_connection_id_counter{};
 
-	//! Словарь текущих подключений.
+	//! The map of current connections.
 	connection_map_t m_connections;
 
-	//! Словарь успешно аутентифицированных клиентов.
+	//! The map of successfully authentificated users.
 	authentificated_user_map_t m_authentificated_users;
 
 	void
@@ -386,65 +381,68 @@ private:
 	on_updated_config(
 		mhood_t< ::arataga::config_processor::updated_common_acl_params_t > cmd );
 
-	//! Получить доступ к описанию подключения по ID.
+	//! Get access to the description of a connection by ID.
 	/*!
-	 * Описание этого подключения обязательно должно существовать.
-	 * В противном случае порождается исключение.
+	 * This description should exists. Otherwise an exception will be thrown.
 	 */
 	[[nodiscard]]
 	connection_info_t &
 	connection_info_that_must_be_present(
 		connection_id_t id );
 
-	//! Попробовать найти описание подключения по ID.
+	//! Try to find the description of a connection by ID.
 	/*!
-	 * Описание подключения может отсутствовать. В этом случае
-	 * возвращается нулевой указатель.
+	 * The description can be non-existent. The nullptr is returned
+	 * in that case.
 	 */
 	[[nodiscard]]
 	connection_info_t *
 	try_find_connection_info(
 		connection_id_t id );
 
-	//! Прием нового подключения.
+	//! Acception of a new connection.
 	void
 	accept_new_connection(
 		asio::ip::tcp::socket connection ) noexcept;
 
-	//! Обновление информации о дефолтных лимитах при получении уведомления
-	//! об изменении конфигурации.
+	//! Update the info about default limits.
+	/*!
+	 * This method is called when the config is changed.
+	 */
 	void
 	update_default_bandlims_on_confg_change() noexcept;
 
-	//! Пересчет квот по трафику при начале нового такта работы.
+	//! Recalculation of traffic quotes.
+	/*!
+	 * This method is called at the beginning of a new turn.
+	 */
 	void
 	update_traffic_limit_quotes_on_new_turn();
 
-	//! Реакция на успешную аутентификацию клиента.
+	//! Handling of successful authentification.
 	/*!
-	 * Информация об этом клиенте должна попасть в m_authentificated_users.
+	 * The info about this client should go into m_authentificated_users.
 	 *
-	 * Возвращается traffic_limiter, который будет органичивать трафик
-	 * для нового подключения.
+	 * An instance of traffic_limiter for a new connection from this client
+	 * is returned.
 	 */
 	traffic_limiter_unique_ptr_t
 	user_authentificated(
 		const ::arataga::authentificator::successful_auth_t & info );
 
-	//! Вспомогательный метод для формирования единообразного ID.
+	//! Helper method for make an ID.
 	/*!
-	 * По этому ID в логе будет проще искать все связанные с
-	 * конкретным соединением строки.
+	 * This ID will simplify the searching connection-related info
+	 * in log files.
 	 */
 	::arataga::utils::acl_req_id_t
 	make_long_id( connection_id_t id ) const noexcept;
 
-	//! Вспомогательный метод для перехода в состояние приема новых
-	//! подключений, если это позволяет конфигурация.
+	//! Attempt to go into accepting state if it is possible.
 	void
 	try_switch_to_accepting_if_necessary_and_possible();
 
-	//! Обновление статистики по удаленным connection-handler-ам.
+	//! Update the stats for removed connection-handlers.
 	void
 	update_remove_handle_stats( remove_reason_t reason ) noexcept;
 };
