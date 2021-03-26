@@ -1,6 +1,6 @@
 # What is arataga?
 
-*arataga* is a working prototype of socks5+http/1.1 proxy server. arataga was developed by [stiffstream] (https://stiffstream.com) for a customer who then abandoned the project. So as not to throw away the result, the source code of arataga was opened under the GNU Affero GPL v3.
+*arataga* is a working prototype of socks5+http/1.1 proxy server. arataga was developed by [stiffstream](https://stiffstream.com) for a customer who then abandoned the project. So as not to throw away the result, the source code of arataga was opened under the GNU Affero GPL v3.
 
 arataga was created under the following conditions:
 
