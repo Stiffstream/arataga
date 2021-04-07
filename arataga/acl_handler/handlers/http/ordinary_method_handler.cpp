@@ -1098,7 +1098,6 @@ private:
 		// The list of hop-to-hop headers was found here:
 		// https://nathandavison.com/blog/abusing-http-hop-by-hop-request-headers
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
-		//FIXME: should string_literal be used here?
 		using namespace std::string_view_literals;
 		static constexpr std::initializer_list< std::string_view >
 			hop_by_hop_headers{

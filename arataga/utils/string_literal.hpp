@@ -27,7 +27,82 @@ operator""_static_str( const char *, std::size_t ) noexcept;
 //
 // string_literal_t
 //
-//FIXME: document this!
+/*!
+ * @brief Class for representing string literal stored in static memory.
+ *
+ * Some strings in an application is represented as string literals
+ * (those literals are stored in static memory). It means that the
+ * pointer to such literal remains valid while application works.
+ * But it is a question how to distinguish such literals from
+ * temporary values as char arrays on the stack. For example:
+ *
+ * @code
+ * class some_long_living_object
+ * {
+ * 	const char * m_value;
+ *
+ * public:
+ * 	some_long_living_object(const char * value) : m_value{value} {}
+ * 	...
+ * };
+ *
+ * some_long_living_object make_object_ok()
+ * {
+ * 	// It's OK, that pointer remains valid because string literals
+ * 	// are stored in static memory.
+ * 	return some_long_living_object{ "Hello!" };
+ * }
+ *
+ * some_long_living_object make_object_bug()
+ * {
+ * 	// It's a bug because there will be a dangling pointer.
+ *		auto name = "Number #" + std::to_string(1);
+ *		return some_long_living_object{ name.c_str() };
+ * }
+ * @endcode
+ *
+ * By using string_literal_t that problem can be solved that way:
+ * 
+ * @code
+ * class some_long_living_object
+ * {
+ * 	arataga::utils::string_literal_t m_value;
+ *
+ * public:
+ * 	some_long_living_object(
+ * 		arataga::utils::string_literal_t value)
+ * 		: m_value{value}
+ * 	{}
+ * 	...
+ * };
+ *
+ * some_long_living_object make_object_ok()
+ * {
+ * 	// It's OK, that pointer remains valid because string literals
+ * 	// are stored in static memory.
+ * 	using namespace arataga::utils::string_literals;
+ * 	return some_long_living_object{ "Hello!"_static_str };
+ * }
+ *
+ * some_long_living_object make_object_bug()
+ * {
+ * 	// Won't be compiled because there is no way to construct
+ * 	// string_literal_t from ordinary `const char*`.
+ *		auto name = "Number #" + std::to_string(1);
+ *		return some_long_living_object{ name.c_str() };
+ * }
+ * @endcode
+ *
+ * @note
+ * The only way to get an initialized instance of string_literal_t
+ * is use `_static_str` user-defined literal from
+ * aragata::utils::string_literals namespace:
+ * @code
+ * using namespace arataga::utils::string_literals;
+ * const auto content_type = "Content-Type"_static_str;
+ * const auto host = "Host"_static_str;
+ * @endcode
+ */
 class string_literal_t
 {
 	//! Value of string-literal incapsulated into string_view.
