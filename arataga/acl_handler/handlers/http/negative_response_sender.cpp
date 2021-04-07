@@ -97,10 +97,11 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "http-negative-response-send-handler";
+		using namespace arataga::utils::string_literals;
+		return "http-negative-response-send-handler"_static_str;
 	}
 };
 

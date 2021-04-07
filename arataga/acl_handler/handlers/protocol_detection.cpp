@@ -78,10 +78,12 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "protocol-detector";
+		using namespace arataga::utils::string_literals;
+
+		return "protocol-detector"_static_str;
 	}
 
 private:

@@ -88,10 +88,11 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "http-target-connect-handler";
+		using namespace arataga::utils::string_literals;
+		return "http-target-connect-handler"_static_str;
 	}
 
 private:

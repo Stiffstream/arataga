@@ -204,10 +204,11 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "socks5-auth-method-detector";
+		using namespace arataga::utils::string_literals;
+		return "socks5-auth-method-detector"_static_str;
 	}
 
 private:
@@ -496,10 +497,11 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "socks5-username-password-auth-handler";
+		using namespace arataga::utils::string_literals;
+		return "socks5-username-password-auth-handler"_static_str;
 	}
 
 private:
@@ -707,10 +709,11 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "socks5-no-authentification-handler";
+		using namespace arataga::utils::string_literals;
+		return "socks5-no-authentification-handler"_static_str;
 	}
 
 private:
@@ -989,10 +992,11 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "socks5-command-handler";
+		using namespace arataga::utils::string_literals;
+		return "socks5-command-handler"_static_str;
 	}
 
 private:
@@ -1621,7 +1625,7 @@ protected:
 							remove_reason_t::access_denied,
 							spdlog::level::warn,
 							fmt::format( "user is not authentificated, reason: {}",
-									authentification::to_string_view(
+									authentification::to_string_literal(
 											info.m_reason ) ),
 							command_reply_connection_not_allowed );
 				}
@@ -1736,10 +1740,11 @@ public:
 		connect_and_bind_handler_base_t::release();
 	}
 
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "socks5-connect-command-handler";
+		using namespace arataga::utils::string_literals;
+		return "socks5-connect-command-handler"_static_str;
 	}
 
 private:
@@ -1994,10 +1999,11 @@ public:
 		connect_and_bind_handler_base_t::release();
 	}
 
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "socks5-bind-command-handler";
+		using namespace arataga::utils::string_literals;
+		return "socks5-bind-command-handler"_static_str;
 	}
 
 private:

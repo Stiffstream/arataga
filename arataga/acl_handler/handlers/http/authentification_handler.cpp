@@ -253,10 +253,11 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "http-authenitification-handler";
+		using namespace arataga::utils::string_literals;
+		return "http-authenitification-handler"_static_str;
 	}
 
 private:
@@ -635,7 +636,7 @@ private:
 										level,
 										fmt::format(
 												"user is not authentificated, reason: {}",
-												authentification::to_string_view(
+												authentification::to_string_literal(
 														info.m_reason ) ) );
 							} );
 

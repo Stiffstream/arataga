@@ -137,10 +137,11 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "http-connect-method-handler";
+		using namespace arataga::utils::string_literals;
+		return "http-connect-method-handler"_static_str;
 	}
 };
 

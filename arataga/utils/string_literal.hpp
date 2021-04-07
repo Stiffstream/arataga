@@ -51,14 +51,14 @@ public:
 	constexpr operator std::string_view() const noexcept { return m_value; }
 };
 
-namespace string_literals
-{
-
 inline std::ostream &
 operator<<( std::ostream & to, const string_literal_t & str )
 {
 	return (to << str.as_view());
 }
+
+namespace string_literals
+{
 
 [[nodiscard]]
 inline constexpr string_literal_t

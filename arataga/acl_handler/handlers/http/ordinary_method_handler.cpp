@@ -26,6 +26,8 @@ namespace arataga::acl_handler
 namespace handlers::http
 {
 
+using namespace arataga::utils::string_literals;
+
 //
 // ordinary_method_handler_t
 //
@@ -112,11 +114,7 @@ class ordinary_method_handler_t final : public handler_with_out_connection_t
 		asio::ip::tcp::socket & m_channel;
 
 		//! Name of that direction (for logging).
-		/*!
-		 * @attention
-		 * Assuming that name is defined as a string literal.
-		 */
-		const std::string_view m_name;
+		const arataga::utils::string_literal_t m_name;
 
 		//! List of pending outgoing data blocks.
 		out_piece_container_t m_pieces_read;
@@ -157,7 +155,7 @@ class ordinary_method_handler_t final : public handler_with_out_connection_t
 		direction_state_t(
 			http_handling_state_unique_ptr_t http_state,
 			asio::ip::tcp::socket & channel,
-			std::string_view name,
+			arataga::utils::string_literal_t name,
 			traffic_limiter_t::direction_t traffic_direction,
 			write_completed_handler_t on_write_completed )
 			:	m_http_state{ std::move(http_state) }
@@ -239,7 +237,7 @@ public:
 		,	m_user_end{
 				std::move(request_state),
 				m_connection,
-				"user_end",
+				"user_end"_static_str,
 				traffic_limiter_t::direction_t::from_user,
 				&ordinary_method_handler_t::
 						user_end_default_write_completed_handler
@@ -249,7 +247,7 @@ public:
 						context().config().io_chunk_size(),
 						byte_sequence_t{} ),
 				m_out_connection,
-				"target_end",
+				"target_end"_static_str,
 				traffic_limiter_t::direction_t::from_target,
 				&ordinary_method_handler_t::
 						target_end_default_write_completed_handler
@@ -383,10 +381,11 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "http-ordinary-method-handler";
+		using namespace arataga::utils::string_literals;
+		return "http-ordinary-method-handler"_static_str;
 	}
 
 private:
@@ -846,7 +845,7 @@ private:
 	int
 	user_end__on_chunk_complete( can_throw_t /*can_throw*/ )
 	{
-		m_user_end.m_pieces_read.push_back( std::string_view{ "\r\n" } );
+		m_user_end.m_pieces_read.push_back( ("\r\n"_static_str).as_view() );
 
 		return 0;
 	}
@@ -1099,6 +1098,7 @@ private:
 		// The list of hop-to-hop headers was found here:
 		// https://nathandavison.com/blog/abusing-http-hop-by-hop-request-headers
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
+		//FIXME: should string_literal be used here?
 		using namespace std::string_view_literals;
 		static constexpr std::initializer_list< std::string_view >
 			hop_by_hop_headers{
@@ -1196,7 +1196,7 @@ private:
 	int
 	target_end__on_chunk_complete( can_throw_t /*can_throw*/ )
 	{
-		m_target_end.m_pieces_read.push_back( std::string_view{ "\r\n" } );
+		m_target_end.m_pieces_read.push_back( ("\r\n"_static_str).as_view() );
 
 		return 0;
 	}

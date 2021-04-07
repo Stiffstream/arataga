@@ -251,10 +251,11 @@ protected:
 			} );
 	}
 
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "data-transfer-handler";
+		using namespace arataga::utils::string_literals;
+		return "data-transfer-handler"_static_str;
 	}
 
 	// We have to redefine this method because we have another connection

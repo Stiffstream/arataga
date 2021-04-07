@@ -162,10 +162,11 @@ protected:
 	}
 
 public:
-	std::string_view
+	arataga::utils::string_literal_t
 	name() const noexcept override
 	{
-		return "http-initial-handler";
+		using namespace arataga::utils::string_literals;
+		return "http-initial-handler"_static_str;
 	}
 
 private:
@@ -828,6 +829,7 @@ private:
 		// A list of hop-to-hop headers was found here:
 		// https://nathandavison.com/blog/abusing-http-hop-by-hop-request-headers
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
+		//FIXME: should string_literal_t be used here?
 		static constexpr std::initializer_list< std::string_view >
 			hop_by_hop_headers{
 					"Keep-Alive"sv, "TE"sv, "Trailer"sv, "Proxy-Authentificate"sv

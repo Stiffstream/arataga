@@ -148,80 +148,81 @@ enum remove_reason_t
 	http_no_incoming_request
 };
 
-//FIXME: should it return string_literal?
 [[nodiscard]]
-inline std::string_view
-to_string_view( remove_reason_t reason )
+inline constexpr arataga::utils::string_literal_t
+to_string_literal( remove_reason_t reason )
 {
-	std::string_view result{ "<unknown>" };
+	using namespace arataga::utils::string_literals;
+
+	auto result = "<unknown>"_static_str;
 	switch( reason )
 	{
 	case remove_reason_t::normal_completion:
-		result = "normal_completion";
+		result = "normal_completion"_static_str;
 	break;
 
 	case remove_reason_t::io_error:
-		result = "io_error";
+		result = "io_error"_static_str;
 	break;
 
 	case remove_reason_t::current_operation_timed_out:
-		result = "current_operation_timed_out";
+		result = "current_operation_timed_out"_static_str;
 	break;
 
 	case remove_reason_t::unsupported_protocol:
-		result = "unsupported_protocol";
+		result = "unsupported_protocol"_static_str;
 	break;
 
 	case remove_reason_t::protocol_error:
-		result = "protocol_error";
+		result = "protocol_error"_static_str;
 	break;
 
 	case remove_reason_t::unexpected_and_unsupported_case:
-		result = "unexpected_and_unsupported_case";
+		result = "unexpected_and_unsupported_case"_static_str;
 	break;
 
 	case remove_reason_t::no_activity_for_too_long:
-		result = "no_activity_for_too_long";
+		result = "no_activity_for_too_long"_static_str;
 	break;
 
 	case remove_reason_t::current_operation_canceled:
-		result = "current_operation_canceled";
+		result = "current_operation_canceled"_static_str;
 	break;
 
 	case remove_reason_t::unhandled_exception:
-		result = "unhandled_exception";
+		result = "unhandled_exception"_static_str;
 	break;
 
 	case remove_reason_t::ip_version_mismatch:
-		result = "ip_version_mismatch";
+		result = "ip_version_mismatch"_static_str;
 	break;
 
 	case remove_reason_t::access_denied:
-		result = "access_denied";
+		result = "access_denied"_static_str;
 	break;
 
 	case remove_reason_t::unresolved_target:
-		result = "unresolved_target";
+		result = "unresolved_target"_static_str;
 	break;
 
 	case remove_reason_t::target_end_broken:
-		result = "target_end_broken";
+		result = "target_end_broken"_static_str;
 	break;
 
 	case remove_reason_t::user_end_broken:
-		result = "user_end_broken";
+		result = "user_end_broken"_static_str;
 	break;
 
 	case remove_reason_t::http_response_before_completion_of_http_request:
-		result = "http_response_before_completion_of_http_request";
+		result = "http_response_before_completion_of_http_request"_static_str;
 	break;
 
 	case remove_reason_t::user_end_closed_by_client:
-		result = "user_end_closed_by_client";
+		result = "user_end_closed_by_client"_static_str;
 	break;
 
 	case remove_reason_t::http_no_incoming_request:
-		result = "http_no_incoming_request";
+		result = "http_no_incoming_request"_static_str;
 	break;
 	}
 
@@ -231,7 +232,7 @@ to_string_view( remove_reason_t reason )
 inline std::ostream &
 operator<<( std::ostream & to, remove_reason_t reason )
 {
-	return (to << to_string_view(reason));
+	return (to << to_string_literal(reason));
 }
 
 // The definition is going below.
@@ -373,18 +374,21 @@ enum class failure_reason_t
 	target_blocked
 };
 
-//FIXME: should it return string_literal?
 [[nodiscard]]
-inline std::string_view
-to_string_view( failure_reason_t reason )
+inline constexpr arataga::utils::string_literal_t
+to_string_literal( failure_reason_t reason )
 {
+	using namespace arataga::utils::string_literals;
+
 	switch( reason )
 	{
-	case failure_reason_t::unknown_user: return "user unknown";
-	case failure_reason_t::target_blocked: return "target is blocked for user";
+	case failure_reason_t::unknown_user:
+		return "user unknown"_static_str;
+	case failure_reason_t::target_blocked:
+		return "target is blocked for user"_static_str;
 	}
 
-	return "<unknown>";
+	return "<unknown>"_static_str;
 }
 
 //! Type of negative authentification result.
@@ -1053,9 +1057,8 @@ public:
 	void
 	on_timer();
 
-	//FIXME: should string_literal be used here?
 	[[nodiscard]]
-	virtual std::string_view
+	virtual arataga::utils::string_literal_t
 	name() const noexcept = 0;
 
 	// The default implementation closes m_connection if it is not closed yet.
