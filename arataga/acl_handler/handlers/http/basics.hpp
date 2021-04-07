@@ -149,7 +149,7 @@ protected:
 			delete_protector_t delete_protector,
 			can_throw_t can_throw,
 			remove_reason_t reason,
-			std::string_view whole_response );
+			arataga::utils::string_literal_t whole_response );
 };
 
 //

@@ -8,6 +8,7 @@
 #include <arataga/acl_handler/sequence_number.hpp>
 
 #include <arataga/utils/can_throw.hpp>
+#include <arataga/utils/string_literal.hpp>
 
 #include <arataga/config.hpp>
 
@@ -147,6 +148,7 @@ enum remove_reason_t
 	http_no_incoming_request
 };
 
+//FIXME: should it return string_literal?
 [[nodiscard]]
 inline std::string_view
 to_string_view( remove_reason_t reason )
@@ -371,6 +373,7 @@ enum class failure_reason_t
 	target_blocked
 };
 
+//FIXME: should it return string_literal?
 [[nodiscard]]
 inline std::string_view
 to_string_view( failure_reason_t reason )
@@ -955,9 +958,9 @@ protected:
 	[[nodiscard]]
 	auto
 	make_read_write_completion_handler(
-		// ATTENTION: this argument has to be valid until the end
-		// of completion-handler work. So it has to be a string literal.
-		std::string_view op_name,
+		// Require string-literal because this value has to be valid
+		// until the end of completion-handler work.
+		arataga::utils::string_literal_t op_name,
 		Completion && completion )
 	{
 		return with<const asio::error_code &, std::size_t>()
@@ -991,10 +994,12 @@ protected:
 		Buffer & buffer,
 		Completion && completion )
 	{
+		using namespace arataga::utils::string_literals;
+
 		connection.async_read_some(
 				buffer.asio_buffer(),
 				make_read_write_completion_handler(
-					"read",
+					"read"_static_str,
 					[completion_func = std::move(completion), &buffer](
 						delete_protector_t delete_protector,
 						can_throw_t can_throw,
@@ -1016,11 +1021,13 @@ protected:
 		Buffer & buffer,
 		Completion && completion )
 	{
+		using namespace arataga::utils::string_literals;
+
 		asio::async_write(
 				connection,
 				buffer.asio_buffer(),
 				make_read_write_completion_handler(
-					"write",
+					"write"_static_str,
 					[&buffer, completion_func = std::move(completion)](
 						delete_protector_t delete_protector,
 						can_throw_t can_throw,
@@ -1046,6 +1053,7 @@ public:
 	void
 	on_timer();
 
+	//FIXME: should string_literal be used here?
 	[[nodiscard]]
 	virtual std::string_view
 	name() const noexcept = 0;

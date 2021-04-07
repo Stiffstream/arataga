@@ -17,6 +17,8 @@ namespace arataga::acl_handler
 namespace handlers::data_transfer
 {
 
+using namespace arataga::utils::string_literals;
+
 //
 // data_transfer_handler_t
 //
@@ -68,11 +70,7 @@ class data_transfer_handler_t final : public connection_handler_t
 		asio::ip::tcp::socket & m_channel;
 
 		//! Name for this direction.
-		/*!
-		 * @attention
-		 * Assume that this is a string-literal.
-		 */
-		const std::string_view m_name;
+		const arataga::utils::string_literal_t m_name;
 
 		//! A single buffer for I/O operations.
 		struct io_buffer_t
@@ -120,8 +118,7 @@ class data_transfer_handler_t final : public connection_handler_t
 
 		direction_state_t(
 			asio::ip::tcp::socket & channel,
-			// Assume that it is a string-literal.
-			std::string_view name,
+			arataga::utils::string_literal_t name,
 			std::size_t io_chunk_size,
 			std::size_t io_chunk_count,
 			traffic_limiter_t::direction_t traffic_direction )
@@ -177,13 +174,13 @@ public:
 			}
 		,	m_io_chunk_size{ context().config().io_chunk_size() }
 		,	m_user_end{
-				m_connection, "user-end",
+				m_connection, "user-end"_static_str,
 				m_io_chunk_size,
 				context().config().io_chunk_count(),
 				traffic_limiter_t::direction_t::from_user
 			}
 		,	m_target_end{
-				m_out_connection, "target-end",
+				m_out_connection, "target-end"_static_str,
 				m_io_chunk_size,
 				context().config().io_chunk_count(),
 				traffic_limiter_t::direction_t::from_target

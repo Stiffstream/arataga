@@ -39,7 +39,7 @@ public:
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket connection,
 		remove_reason_t remove_reason,
-		std::string_view negative_response )
+		arataga::utils::string_literal_t negative_response )
 		:	connection_handler_t{ std::move(ctx), id, std::move(connection) }
 		,	m_created_at{ std::chrono::steady_clock::now() }
 		,	m_remove_reason{ remove_reason }
@@ -114,7 +114,7 @@ make_negative_response_sender(
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket connection,
 	remove_reason_t remove_reason,
-	std::string_view negative_response )
+	arataga::utils::string_literal_t negative_response )
 {
 	return std::make_shared< negative_response_send_handler_t >(
 			std::move(ctx),

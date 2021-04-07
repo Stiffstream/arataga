@@ -43,7 +43,7 @@ class initial_http_handler_t final : public basic_http_handler_t
 	struct invalid_state_t
 	{
 		//! Description that should be sent to the user.
-		std::string_view m_response;
+		arataga::utils::string_literal_t m_response;
 	};
 
 	//! The result of validity check of the incoming request.

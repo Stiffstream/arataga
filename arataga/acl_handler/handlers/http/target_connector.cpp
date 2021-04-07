@@ -198,7 +198,7 @@ private:
 		remove_reason_t remove_reason,
 		spdlog::level::level_enum log_level,
 		std::string_view log_message,
-		std::string_view negative_response )
+		arataga::utils::string_literal_t negative_response )
 	{
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
