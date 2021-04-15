@@ -37,7 +37,8 @@
 namespace {
 
 const char version_string[] =
-R"ver(arataga v.0.3.0
+R"ver(arataga v.0.3.1
+--io-threads allcores
 
 (c) 2020-2021 stiffstream (https://stiffstream.com)
 )ver";
@@ -211,7 +212,8 @@ struct cmd_line_args_t
 	 * If that value is missed then the count of io_threads has to
 	 * be detected automatically.
 	 */
-	std::optional< std::size_t > m_io_threads_count;
+	arataga::io_threads_count_t m_io_threads_count{
+			arataga::io_threads_count::default_t{} };
 };
 
 std::ostream &
@@ -240,8 +242,7 @@ operator<<( std::ostream & o, const cmd_line_args_t & args )
 	fmt::print( o, "(max_stage_startup_time {}) ",
 			args.m_max_stage_startup_time );
 
-	if( args.m_io_threads_count )
-		fmt::print( o, "(io_threads {}) ", *(args.m_io_threads_count) );
+	fmt::print( o, "(io_threads {}) ", args.m_io_threads_count );
 
 	return o;
 }
@@ -387,12 +388,11 @@ parse_cmd_line( int argc, char ** argv )
 					result.m_max_stage_startup_time.count() ),
 			{"max-stage-startup-time"});
 
-	args::ValueFlag<unsigned int> io_threads_count( parser,
-			"uint",
+	args::ValueFlag<std::string> io_threads_count( parser,
+			"uint|default|all",
 			"Count of IO-threads to be created "
-					"(default: detected automatically)",
+					"(default: detected automatically as nCPU-2)",
 			{"io-threads"});
-
 
 	try
 	{
@@ -495,13 +495,18 @@ parse_cmd_line( int argc, char ** argv )
 
 	if( io_threads_count )
 	{
-		if( const auto v = args::get( io_threads_count );
-				0u != v )
-		{
-			result.m_io_threads_count = v;
-		}
+		const auto v = args::get( io_threads_count );
+		if( "default" == v )
+			result.m_io_threads_count = arataga::io_threads_count::default_t{};
+		else if( "all" == v )
+			result.m_io_threads_count = arataga::io_threads_count::all_cores_t{};
 		else
-			throw std::runtime_error( "param --io-threads can't be zero" );
+		{
+			const auto n = std::stoul( v );
+			if( 0u == n )
+				throw std::runtime_error( "param --io-threads can't be zero" );
+			result.m_io_threads_count = arataga::io_threads_count::exact_t{n};
+		}
 	}
 
 	return result;

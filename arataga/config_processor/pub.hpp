@@ -9,6 +9,8 @@
 
 #include <arataga/admin_http_entry/pub.hpp>
 
+#include <arataga/io_threads_count.hpp>
+
 #include <filesystem>
 
 namespace arataga::config_processor
@@ -29,7 +31,7 @@ struct params_t
 	so_5::mbox_t m_startup_notify_mbox;
 
 	//! Number of io_threads to be created.
-	std::optional< std::size_t > m_io_threads_count;
+	io_threads_count_t m_io_threads_count{ io_threads_count::default_t{} };
 };
 
 //

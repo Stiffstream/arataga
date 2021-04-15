@@ -516,6 +516,21 @@ a_processor_t::handle_upcoming_acl_list(
 	launch_new_acls( config );
 }
 
+namespace
+{
+
+[[nodiscard]]
+std::size_t
+detect_io_threads_count(
+	const io_threads_count_t & count ) noexcept
+{
+	return std::visit(
+			[]( const auto & v ) noexcept -> std::size_t { return v.detect(); },
+			count );
+}
+
+} /* namespace anonymous */
+
 void
 a_processor_t::create_dispatchers_if_necessary(
 	const config_t & config )
@@ -523,19 +538,8 @@ a_processor_t::create_dispatchers_if_necessary(
 	if( !m_io_threads.empty() )
 		return;
 
-	// If there are many CPUs then two of them will be left for the OS
-	// and admin parts of arataga. All other CPUs will be allocated
-	// for IO-threads.
-	const std::size_t threads_count = [this]( const auto & /*cfg*/ ) {
-		auto count = m_params.m_io_threads_count;
-		if( !count )
-		{
-			const auto cpus = std::thread::hardware_concurrency();
-			count = (cpus > 2u ? (cpus - 2u) : 1u);
-		}
-
-		return count.value();
-	}( config );
+	const std::size_t threads_count = detect_io_threads_count(
+			m_params.m_io_threads_count );
 
 	m_io_threads.reserve( threads_count );
 

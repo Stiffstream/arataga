@@ -6,6 +6,7 @@
 #pragma once
 
 #include <arataga/application_context.hpp>
+#include <arataga/io_threads_count.hpp>
 
 #include <so_5/all.hpp>
 
@@ -35,11 +36,7 @@ struct params_t
 	std::chrono::seconds m_max_stage_startup_time;
 
 	//! Number of IO-threads to be created.
-	/*!
-	 * If this value is empty then the number of IO-thread
-	 * will be detected automatically.
-	 */
-	std::optional< std::size_t > m_io_threads_count;
+	io_threads_count_t m_io_threads_count{ io_threads_count::default_t{} };
 
 	//! IP-address of admin HTTP-entry.
 	asio::ip::address m_admin_http_ip;
