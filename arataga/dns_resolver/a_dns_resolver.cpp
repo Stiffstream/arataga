@@ -243,7 +243,7 @@ a_dns_resolver_t::on_clear_cache( so_5::mhood_t<clear_cache_t> )
 
 	::arataga::logging::wrap_logging(
 			direct_logging_mode,
-			spdlog::level::trace,
+			spdlog::level::debug,
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -361,7 +361,7 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 			{
 				logger.log(
 						level,
-						"{}: request added to waiting list: id={}",
+						"{}: request will be added to waiting list: id={}",
 						m_params.m_name,
 						req.m_req_id);
 			} );
@@ -392,6 +392,19 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 					ec, results,
 					std::move(name) );
 			} );
+
+		::arataga::logging::wrap_logging(
+				direct_logging_mode,
+				spdlog::level::debug,
+				[&]( auto & logger, auto level )
+				{
+					logger.log(
+							level,
+							"{}: async_resolve initiated: id={}, name={}",
+							m_params.m_name,
+							req.m_req_id,
+							req.m_name );
+				} );
 	}
 }
 
