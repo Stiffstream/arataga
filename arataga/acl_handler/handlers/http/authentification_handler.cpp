@@ -643,7 +643,7 @@ private:
 					send_negative_response_then_close_connection(
 							delete_protector,
 							can_throw,
-							remove_reason_t::protocol_error,
+							remove_reason_t::access_denied,
 							response_proxy_auth_required_not_authorized );
 				}
 			},

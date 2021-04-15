@@ -37,7 +37,7 @@
 namespace {
 
 const char version_string[] =
-R"ver(arataga v.0.3.1
+R"ver(arataga v.0.3.1.1
 --io-threads allcores
 
 (c) 2020-2021 stiffstream (https://stiffstream.com)

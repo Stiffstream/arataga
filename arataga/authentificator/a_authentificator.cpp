@@ -224,11 +224,15 @@ a_authentificator_t::complete_failed_auth(
 				logger.log(
 						level,
 						"{}: auth_request failed, "
-								"req_id={}, reason={}, reply_timeout={}",
+								"req_id={}, reason={}, reply_timeout={}, "
+								"user_ip={}, username={} (password={})",
 						m_params.m_name,
 						req.m_req_id,
 						to_string_view( reason ),
-						m_failed_auth_reply_timeout );
+						m_failed_auth_reply_timeout,
+						req.m_user_ip,
+						opt_username_dumper_t{req.m_username},
+						opt_password_dumper_t{req.m_password} );
 			} );
 
 	so_5::send_delayed< auth_reply_t >(
