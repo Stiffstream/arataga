@@ -342,8 +342,23 @@ a_dns_resolver_t::handle_resolve_result(
 		// The stats for failed DNS lookups has to be updated.
 		m_dns_stats.m_dns_failed_lookups += 1u;
 
+		const auto error_desc = make_error_description(ec);
 		forward::resolve_result_t result = forward::failed_resolve_t{
-			make_error_description(ec) };
+				 error_desc
+			};
+
+		::arataga::logging::wrap_logging(
+				direct_logging_mode,
+				spdlog::level::warn,
+				[&]( auto & logger, auto level )
+				{
+					logger.log(
+							level,
+							"{}: domain resolution failure: name={}, error={}",
+							m_params.m_name,
+							name,
+							error_desc );
+				} );
 
 		m_waiting_forward_requests.handle_waiting_requests(
 			name, std::move(result), log_func );
