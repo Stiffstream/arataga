@@ -9,6 +9,8 @@
 #include <arataga/authentificator/pub.hpp>
 #include <arataga/dns_resolver/pub.hpp>
 
+#include <arataga/utils/acl_req_id.hpp>
+
 #include <arataga/config.hpp>
 
 #include <so_5_extra/disp/asio_one_thread/pub.hpp>
@@ -125,6 +127,18 @@ private:
 	 * It's used for making names of children agents.
 	 */
 	std::uint_fast64_t m_config_update_counter{ 0u };
+
+	//! The last value of ACL ID seed.
+	/*!
+	 * @since v.0.3.1.2
+	 */
+	arataga::utils::acl_req_id_seed_t m_acl_id_seed;
+
+	//! The ACL ID seed for debug requests.
+	/*!
+	 * @since v.0.3.1.2
+	 */
+	arataga::utils::acl_req_id_seed_t m_own_acl_id_seed;
 
 	//! Handler for a new config.
 	void

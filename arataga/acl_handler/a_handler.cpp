@@ -415,7 +415,9 @@ a_handler_t::so_evt_start()
 			{
 				logger.log(
 						level,
-						"{}: created", m_params.m_name );
+						"{}: created, acl_id_seed: {}",
+						m_params.m_name,
+						m_params.m_acl_id_seed );
 			} );
 
 	so_5::send< try_create_entry_point_t >( *this );
@@ -1180,7 +1182,7 @@ a_handler_t::user_authentificated(
 ::arataga::utils::acl_req_id_t
 a_handler_t::make_long_id( connection_id_t id ) const noexcept
 {
-	return { m_params.m_acl_config.m_port, id };
+	return { m_params.m_acl_id_seed, m_params.m_acl_config.m_port, id };
 }
 
 void

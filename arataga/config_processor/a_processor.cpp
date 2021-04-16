@@ -27,6 +27,8 @@
 #include <algorithm>
 #include <fstream>
 #include <iterator>
+#include <random>
+#include <limits>
 
 namespace arataga::config_processor
 {
@@ -116,6 +118,32 @@ struct tricky_acl_comparator_t
 	}
 };
 
+// Helper for generation the first ACL ID seed.
+[[nodiscard]]
+arataga::utils::acl_req_id_seed_t
+make_initial_acl_req_id_seed()
+{
+	using seed_t = arataga::utils::acl_req_id_seed_t::seed_t;
+	std::mt19937 generator{ std::random_device{}() };
+	std::uniform_int_distribution< seed_t > distribution{
+			0u,
+			// It seems that at most 4 decimal digits are enough.
+			9999u
+	};
+
+	return { distribution( generator ), 0u };
+}
+
+// NOTE: modifies its parameter!
+[[nodiscard]]
+arataga::utils::acl_req_id_seed_t
+make_next_acl_req_id_seed(
+	arataga::utils::acl_req_id_seed_t & last_value )
+{
+	last_value.m_ordinal += 1u;
+	return last_value;
+}
+
 } /* namespace anonymous */
 
 //
@@ -130,7 +158,10 @@ a_processor_t::a_processor_t(
 	,	m_params{ std::move(params) }
 	,	m_local_config_file_name{
 			m_params.m_local_config_path / "local-config.cfg" }
-{}
+	,	m_acl_id_seed{ make_initial_acl_req_id_seed() }
+	,	m_own_acl_id_seed{ make_next_acl_req_id_seed( m_acl_id_seed ) }
+{
+}
 
 void
 a_processor_t::so_define_agent()
@@ -671,6 +702,10 @@ a_processor_t::launch_new_acls(
 							acl_conf );
 				} );
 
+		// Create ACL ID seed for a new ACL.
+		const auto acl_id_seed = make_next_acl_req_id_seed( m_acl_id_seed );
+
+		// Now the new ACL can be created.
 		m_running_acls.emplace_back(
 				acl_conf,
 				io_thread_index,
@@ -690,6 +725,7 @@ a_processor_t::launch_new_acls(
 										acl_conf.m_in_addr,
 										io_thread_index,
 										m_config_update_counter ),
+								acl_id_seed,
 								config.m_common_acl_params
 						}
 				)
@@ -853,7 +889,7 @@ a_processor_t::initiate_debug_auth_processing(
 		auto auth_msg = std::make_unique< auth::auth_request_t >();
 
 		// Request ID doesn't matter here.
-		auth_msg->m_req_id = auth::auth_req_id_t{ 0u, 0u };
+		auth_msg->m_req_id = auth::auth_req_id_t{ m_own_acl_id_seed, 0u, 0u };
 		// Wait the reply on the direct mbox.
 		auth_msg->m_reply_to = so_direct_mbox();
 		// Our completion token for the request.
@@ -954,7 +990,7 @@ a_processor_t::initiate_debug_dns_resolve_processing(
 		auto dns_msg = std::make_unique< dns::resolve_request_t >();
 
 		// Request ID doesn't matter here.
-		dns_msg->m_req_id = dns::resolve_req_id_t{ 0u, 0u };
+		dns_msg->m_req_id = dns::resolve_req_id_t{ m_own_acl_id_seed, 0u, 0u };
 		// Wait the response on the direct mbox.
 		dns_msg->m_reply_to = so_direct_mbox();
 		// Our completion token.

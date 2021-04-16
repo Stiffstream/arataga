@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <arataga/utils/acl_req_id.hpp>
+
 #include <arataga/application_context.hpp>
 
 #include <arataga/config.hpp>
@@ -36,6 +38,12 @@ struct params_t
 
 	//! Unique name to be used for logging.
 	std::string m_name;
+
+	//! Unique ACL ID seed to be used by this ACL.
+	/*!
+	 * @since v.0.3.1.2
+	 */
+	arataga::utils::acl_req_id_seed_t m_acl_id_seed;
 
 	//! Common parameters for all ACLs.
 	common_acl_params_t m_common_acl_params;
