@@ -369,9 +369,6 @@ TEST_CASE("valid auth PDU") {
 		REQUIRE( data.size() == written );
 	}
 
-std::this_thread::sleep_for( 1s );
-chs::dump_trace( (std::cout << ">>>>>\n"), simulator.get_trace() );
-
 	{
 		std::array< std::uint8_t, 20 > response;
 		std::size_t read;
@@ -411,9 +408,6 @@ TEST_CASE("auth method with auth PDU as one package") {
 		REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(first_pdu) ) );
 		REQUIRE( first_pdu.size() == written );
 	}
-
-std::this_thread::sleep_for( 1s );
-chs::dump_trace( (std::cout << ">>>>>\n"), simulator.get_trace() );
 
 	{
 		std::array< std::uint8_t, 2 > response;

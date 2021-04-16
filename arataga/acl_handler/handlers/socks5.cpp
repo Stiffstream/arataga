@@ -251,16 +251,17 @@ private:
 		{
 			std::size_t methods = std::to_integer< std::size_t >(
 					m_first_pdu.read_byte() );
+			// NOTE: it seems that some clients send auth PDU and
+			// username/password PDU as a single package without
+			// waiting for a responce from the proxy.
+			// In that case m_first_pdu can contain more data than we need
+			// at the moment.
 			if( methods <= m_first_pdu.remaining() )
 			{
-				// NOTE: handle_auth_methods doesn't change the read position
-				// in m_first_pdu.
 				handle_auth_methods( can_throw, methods );
 				
-				// We should move read position in m_first_pdu and commit
-				// the data read even if handle_auth_methods
+				// All required data read even if handle_auth_methods()
 				// initiated the disconnection of the client.
-				(void)m_first_pdu.read_bytes_as_sequence( methods );
 				read_trx.commit();
 
 				return data_parsing_result_t::success;
@@ -278,30 +279,29 @@ private:
 		can_throw_t can_throw,
 		std::size_t methods_to_handle )
 	{
-		// For simplicity of diagnostic collect all authentification
-		// method IDs.
-		std::string found_method_ids = collect_method_ids(
-				can_throw,
+		// Get the list of auth methods as byte sequence to process it
+		// without touching m_first_pdu anymore.
+		const auto methods_sequence = m_first_pdu.read_bytes_as_sequence(
 				methods_to_handle );
 
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				spdlog::level::trace,
-				[this, can_throw, &found_method_ids]( auto level )
+				[this, can_throw, methods_sequence]( auto level )
 				{
 					log_message_for_connection( can_throw, level,
 							fmt::format( "socks5: auth methods from client: {}",
-									found_method_ids ) );
+									collect_method_ids( can_throw, methods_sequence )
+							)
+					);
 				} );
 
 		// Prefer "username/password" method. Then "no_auth" method.
-		try_find_specific_auth_method(
-				username_password_auth_method,
-				methods_to_handle );
+		m_accepted_method = try_find_specific_auth_method(
+				username_password_auth_method, methods_sequence );
 		if( !m_accepted_method )
-			try_find_specific_auth_method(
-					no_authentification_method,
-					methods_to_handle );
+			m_accepted_method = try_find_specific_auth_method(
+					no_authentification_method, methods_sequence );
 
 		if( m_accepted_method )
 		{
@@ -344,7 +344,8 @@ private:
 					can_throw,
 					m_connection,
 					m_response,
-					[this, method_ids = std::move(found_method_ids)]
+					[this, method_ids = collect_method_ids(
+							can_throw, methods_sequence )]
 					( delete_protector_t delete_protector, can_throw_t can_throw )
 					{
 						log_and_remove_connection(
@@ -360,21 +361,15 @@ private:
 	}
 
 	[[nodiscard]]
-	std::string
+	static std::string
 	collect_method_ids(
 		can_throw_t,
-		std::size_t methods_to_handle )
+		byte_sequence_t methods_sequence )
 	{
 		std::string result;
 
-		// Will read all remaining part of m_first_pdu and then
-		// return the current read position back.
-		buffer_read_trx_t read_trx{ m_first_pdu };
-
-		for( std::size_t i = 0u; i != methods_to_handle; ++i )
+		for( const auto method : methods_sequence )
 		{
-			const auto method = m_first_pdu.read_byte();
-
 			if( !result.empty() )
 				result += ", ";
 			result += fmt::format( "{:#x}", method );
@@ -383,30 +378,41 @@ private:
 		return result;
 	}
 
-	void
+	[[nodiscard]]
+	static std::optional< std::byte >
 	try_find_specific_auth_method(
 		const std::byte expected_method,
-		std::size_t methods_to_handle ) noexcept
+		byte_sequence_t methods_sequence ) noexcept
 	{
-		// Will read all remaining part of m_first_pdu and then
-		// return the current read position back.
-		buffer_read_trx_t read_trx{ m_first_pdu };
-
-		for( std::size_t i = 0u; i != methods_to_handle; ++i )
+		for( const auto method : methods_sequence )
 		{
-			const auto method = m_first_pdu.read_byte();
 			if( expected_method == method )
 			{
-				m_accepted_method = method;
-				break;
+				return method;
 			}
 		}
+
+		return std::nullopt;
 	}
 
+	[[nodiscard]]
 	connection_handler_shptr_t
 	make_appropriate_handler( can_throw_t )
 	{
+		// NOTE: it seems that some clients send auth PDU and
+		// username/password PDU as a single package without
+		// waiting for a responce from the proxy.
+		// In that case some non-processed data can remain in m_first_pdu.
+		// That data has to be passed to the next connection-handler.
+		byte_sequence_t initial_bytes;
+		if( const auto bytes_left = m_first_pdu.remaining();
+				0u != bytes_left )
+		{
+			initial_bytes = m_first_pdu.read_bytes_as_sequence( bytes_left );
+		}
+
 		if( no_authentification_method == m_accepted_method.value() )
+			//FIXME: initial_bytes should be passed here too!
 			return make_no_authentification_stage_handler(
 					m_ctx,
 					m_id,
@@ -414,16 +420,6 @@ private:
 					m_created_at );
 		else
 		{
-//FIXME: document this!
-			byte_sequence_t initial_bytes;
-			if( const auto bytes_left = m_first_pdu.remaining();
-					0u != bytes_left )
-			{
-				initial_bytes = m_first_pdu.read_bytes_as_sequence( bytes_left );
-			}
-
-std::cout << "initial_bytes.size=" << initial_bytes.size() << std::endl;
-
 			return make_username_password_auth_stage_handler(
 					m_ctx,
 					m_id,
@@ -484,6 +480,8 @@ public:
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket connection,
+		// NOTE: this initial data is required for the case when
+		// client sends auth+username/password PDUs as a single package.
 		byte_sequence_t initial_bytes,
 		std::chrono::steady_clock::time_point created_at )
 		:	connection_handler_t{ std::move(ctx), id, std::move(connection) }
@@ -544,7 +542,6 @@ private:
 				delete_protector, can_throw );
 				data_parsing_result_t::need_more == read_result )
 		{
-std::cout << "Needs to read more!" << std::endl;
 			// Has to read the next portion of data.
 			read_some(
 					can_throw,
@@ -565,10 +562,6 @@ std::cout << "Needs to read more!" << std::endl;
 		delete_protector_t delete_protector,
 		can_throw_t can_throw )
 	{
-std::cout << "try_handle_data_read. m_auth_pdu.total_size="
-<< m_auth_pdu.total_size() << ", m_auth_pdu.remaining="
-<< m_auth_pdu.remaining() << std::endl;
-
 		// Since v.0.3.2 this method can be called when m_auth_pdu is empty.
 		if( 0u == m_auth_pdu.total_size() )
 			return data_parsing_result_t::need_more;
@@ -579,7 +572,6 @@ std::cout << "try_handle_data_read. m_auth_pdu.total_size="
 		const auto version = m_auth_pdu.read_byte();
 		if( expected_version != version )
 		{
-std::cout << "Unexpected byte read: " << std::to_integer<unsigned short>(version) << std::endl;
 			log_and_remove_connection(
 					delete_protector,
 					can_throw,
