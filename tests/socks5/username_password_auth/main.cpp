@@ -369,6 +369,61 @@ TEST_CASE("valid auth PDU") {
 		REQUIRE( data.size() == written );
 	}
 
+std::this_thread::sleep_for( 1s );
+chs::dump_trace( (std::cout << ">>>>>\n"), simulator.get_trace() );
+
+	{
+		std::array< std::uint8_t, 20 > response;
+		std::size_t read;
+		REQUIRE_NOTHROW( read = connection.read_some( asio::buffer(response) ) );
+		REQUIRE( 2u == read );
+		REQUIRE( 0x1u == response[ 0 ] );
+		REQUIRE( 0x0u == response[ 1 ] );
+	}
+
+	chs::dump_trace( (std::cout << "-----\n"), simulator.get_trace() );
+}
+
+TEST_CASE("auth method with auth PDU as one package") {
+	asio::ip::tcp::endpoint proxy_endpoint{
+			asio::ip::make_address_v4( "127.0.0.1" ),
+			2444
+		};
+
+	chs::simulator_t simulator{
+			proxy_endpoint,
+			chs::handler_config_values_t{}
+	};
+
+	asio::io_context ctx;
+
+	asio::ip::tcp::socket connection{ ctx };
+	REQUIRE_NOTHROW( connection.connect( proxy_endpoint ) );
+
+	{
+		std::array< std::uint8_t, 15 > first_pdu{
+			0x5u, 0x1u, 0x2u, // Auth method selection.
+			0x1, // Auth PDU.
+			0x4, 'u', 's', 'e', 'r',
+			0x5, '1', '2', '3', '4', '5'
+		};
+		std::size_t written;
+		REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(first_pdu) ) );
+		REQUIRE( first_pdu.size() == written );
+	}
+
+std::this_thread::sleep_for( 1s );
+chs::dump_trace( (std::cout << ">>>>>\n"), simulator.get_trace() );
+
+	{
+		std::array< std::uint8_t, 2 > response;
+		std::size_t read;
+		REQUIRE_NOTHROW( read = connection.read_some( asio::buffer(response) ) );
+		REQUIRE( 2u == read );
+		REQUIRE( 0x5u == response[ 0 ] );
+		REQUIRE( 0x2u == response[ 1 ] );
+	}
+
 	{
 		std::array< std::uint8_t, 20 > response;
 		std::size_t read;

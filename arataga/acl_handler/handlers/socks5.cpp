@@ -27,6 +27,7 @@ make_username_password_auth_stage_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket connection,
+	byte_sequence_t initial_bytes,
 	std::chrono::steady_clock::time_point created_at );
 
 [[nodiscard]]
@@ -239,7 +240,7 @@ private:
 	[[nodiscard]]
 	data_parsing_result_t
 	try_handle_data_read(
-		delete_protector_t delete_protector,
+		delete_protector_t /*delete_protector*/,
 		can_throw_t can_throw )
 	{
 		buffer_read_trx_t read_trx{ m_first_pdu };
@@ -250,43 +251,38 @@ private:
 		{
 			std::size_t methods = std::to_integer< std::size_t >(
 					m_first_pdu.read_byte() );
-			if( methods == m_first_pdu.remaining() )
+			if( methods <= m_first_pdu.remaining() )
 			{
+				// NOTE: handle_auth_methods doesn't change the read position
+				// in m_first_pdu.
+				handle_auth_methods( can_throw, methods );
+				
+				// We should move read position in m_first_pdu and commit
+				// the data read even if handle_auth_methods
+				// initiated the disconnection of the client.
+				(void)m_first_pdu.read_bytes_as_sequence( methods );
 				read_trx.commit();
 
-				handle_auth_methods( can_throw );
-
 				return data_parsing_result_t::success;
-			}
-			else if( methods < m_first_pdu.remaining() )
-			{
-				log_and_remove_connection(
-						delete_protector,
-						can_throw,
-						remove_reason_t::protocol_error,
-						spdlog::level::err,
-						fmt::format(
-								"socks5: PDU with auth methods too long, methods: {}, "
-								"bytes read: {}",
-								methods,
-								m_first_pdu.total_size() )
-					);
-
-				return data_parsing_result_t::invalid_data;
 			}
 		}
 
 		return data_parsing_result_t::need_more;
 	}
 
-	// NOTE: this method assumes that m_first_pdu contains the whole
-	// list of supported by user authentification methods.
+	// NOTE: this method assumes that m_first_pdu contains enough
+	// data to hold the whole list of supported by user
+	// authentification methods.
 	void
-	handle_auth_methods( can_throw_t can_throw )
+	handle_auth_methods(
+		can_throw_t can_throw,
+		std::size_t methods_to_handle )
 	{
 		// For simplicity of diagnostic collect all authentification
 		// method IDs.
-		std::string found_method_ids = collect_method_ids( can_throw );
+		std::string found_method_ids = collect_method_ids(
+				can_throw,
+				methods_to_handle );
 
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
@@ -299,9 +295,13 @@ private:
 				} );
 
 		// Prefer "username/password" method. Then "no_auth" method.
-		try_find_specific_auth_method( username_password_auth_method );
+		try_find_specific_auth_method(
+				username_password_auth_method,
+				methods_to_handle );
 		if( !m_accepted_method )
-			try_find_specific_auth_method( no_authentification_method );
+			try_find_specific_auth_method(
+					no_authentification_method,
+					methods_to_handle );
 
 		if( m_accepted_method )
 		{
@@ -361,7 +361,9 @@ private:
 
 	[[nodiscard]]
 	std::string
-	collect_method_ids( can_throw_t )
+	collect_method_ids(
+		can_throw_t,
+		std::size_t methods_to_handle )
 	{
 		std::string result;
 
@@ -369,7 +371,7 @@ private:
 		// return the current read position back.
 		buffer_read_trx_t read_trx{ m_first_pdu };
 
-		while( m_first_pdu.remaining() )
+		for( std::size_t i = 0u; i != methods_to_handle; ++i )
 		{
 			const auto method = m_first_pdu.read_byte();
 
@@ -382,13 +384,15 @@ private:
 	}
 
 	void
-	try_find_specific_auth_method( const std::byte expected_method ) noexcept
+	try_find_specific_auth_method(
+		const std::byte expected_method,
+		std::size_t methods_to_handle ) noexcept
 	{
 		// Will read all remaining part of m_first_pdu and then
 		// return the current read position back.
 		buffer_read_trx_t read_trx{ m_first_pdu };
 
-		while( m_first_pdu.remaining() )
+		for( std::size_t i = 0u; i != methods_to_handle; ++i )
 		{
 			const auto method = m_first_pdu.read_byte();
 			if( expected_method == method )
@@ -404,16 +408,29 @@ private:
 	{
 		if( no_authentification_method == m_accepted_method.value() )
 			return make_no_authentification_stage_handler(
-				m_ctx,
-				m_id,
-				std::move(m_connection),
-				m_created_at );
+					m_ctx,
+					m_id,
+					std::move(m_connection),
+					m_created_at );
 		else
+		{
+//FIXME: document this!
+			byte_sequence_t initial_bytes;
+			if( const auto bytes_left = m_first_pdu.remaining();
+					0u != bytes_left )
+			{
+				initial_bytes = m_first_pdu.read_bytes_as_sequence( bytes_left );
+			}
+
+std::cout << "initial_bytes.size=" << initial_bytes.size() << std::endl;
+
 			return make_username_password_auth_stage_handler(
-				m_ctx,
-				m_id,
-				std::move(m_connection),
-				m_created_at );
+					m_ctx,
+					m_id,
+					std::move(m_connection),
+					initial_bytes,
+					m_created_at );
+		}
 	}
 };
 
@@ -426,17 +443,20 @@ class username_password_auth_handler_t final : public connection_handler_t
 	static constexpr std::byte access_denied{ 0x1u };
 	static constexpr std::byte access_granted{ 0x0u };
 
-	//! The buffer for reading a PDU with authentification data.
-	/*!
-	 * https://tools.ietf.org/html/rfc1929
-	 */
-	in_buffer_fixed_t<
+	//! Max size of auth PDU.
+	static constexpr std::size_t max_auth_pdu_size =
 			1 // VER
 			+ 1 // ULEN
 			+ 255 // UNAME
 			+ 1 // PLEN
 			+ 255 // PASSWD
-		> m_auth_pdu;
+			;
+
+	//! The buffer for reading a PDU with authentification data.
+	/*!
+	 * https://tools.ietf.org/html/rfc1929
+	 */
+	in_buffer_fixed_t< max_auth_pdu_size > m_auth_pdu;
 
 	//! The buffer for the reply.
 	out_buffer_fixed_t< 2 > m_response;
@@ -444,13 +464,30 @@ class username_password_auth_handler_t final : public connection_handler_t
 	//! The timepoint when the connection was accepted.
 	std::chrono::steady_clock::time_point m_created_at;
 
+	[[nodiscard]]
+	static byte_sequence_t
+	ensure_valid_size( byte_sequence_t initial_bytes )
+	{
+		if( initial_bytes.size() > max_auth_pdu_size )
+			throw acl_handler_ex_t{
+					fmt::format( "invalid auth PDU size for socks5: {} bytes, "
+							"up to {} bytes expected",
+							initial_bytes.size(),
+							max_auth_pdu_size )
+				};
+
+		return initial_bytes;
+	}
+
 public:
 	username_password_auth_handler_t(
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket connection,
+		byte_sequence_t initial_bytes,
 		std::chrono::steady_clock::time_point created_at )
 		:	connection_handler_t{ std::move(ctx), id, std::move(connection) }
+		,	m_auth_pdu{ ensure_valid_size( initial_bytes ) }
 		,	m_created_at{ created_at }
 	{}
 
@@ -460,19 +497,12 @@ protected:
 	{
 		wrap_action_and_handle_exceptions(
 			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw )
+			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 			{
-				read_some(
-						can_throw,
-						m_connection,
-						m_auth_pdu,
-						[this]
-						( delete_protector_t delete_protector,
-						 	can_throw_t can_throw )
-						{
-							handle_data_already_read_or_read_more(
-									delete_protector, can_throw );
-						} );
+				// Since v.0.3.2 we assume that some bytes from auth PDU
+				// can already be in m_auth_pdu buffer.
+				handle_data_already_read_or_read_more(
+						delete_protector, can_throw );
 			} );
 	}
 
@@ -514,6 +544,7 @@ private:
 				delete_protector, can_throw );
 				data_parsing_result_t::need_more == read_result )
 		{
+std::cout << "Needs to read more!" << std::endl;
 			// Has to read the next portion of data.
 			read_some(
 					can_throw,
@@ -534,11 +565,21 @@ private:
 		delete_protector_t delete_protector,
 		can_throw_t can_throw )
 	{
+std::cout << "try_handle_data_read. m_auth_pdu.total_size="
+<< m_auth_pdu.total_size() << ", m_auth_pdu.remaining="
+<< m_auth_pdu.remaining() << std::endl;
+
+		// Since v.0.3.2 this method can be called when m_auth_pdu is empty.
+		if( 0u == m_auth_pdu.total_size() )
+			return data_parsing_result_t::need_more;
+
+		// There are something to parse. Let's do it.
 		buffer_read_trx_t read_trx{ m_auth_pdu };
 
 		const auto version = m_auth_pdu.read_byte();
 		if( expected_version != version )
 		{
+std::cout << "Unexpected byte read: " << std::to_integer<unsigned short>(version) << std::endl;
 			log_and_remove_connection(
 					delete_protector,
 					can_throw,
@@ -2285,10 +2326,15 @@ make_username_password_auth_stage_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket connection,
+	byte_sequence_t initial_bytes,
 	std::chrono::steady_clock::time_point created_at )
 {
 	return std::make_shared< username_password_auth_handler_t >(
-			std::move(ctx), id, std::move(connection), created_at );
+			std::move(ctx),
+			id,
+			std::move(connection),
+			initial_bytes,
+			created_at );
 }
 
 //
