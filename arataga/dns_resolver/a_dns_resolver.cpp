@@ -305,7 +305,7 @@ a_dns_resolver_t::handle_resolve_result(
 
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,
-				spdlog::level::debug,
+				spdlog::level::info,
 				[&]( auto & logger, auto level )
 				{
 					std::string ips;
@@ -376,9 +376,10 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 			{
 				logger.log(
 						level,
-						"{}: request will be added to waiting list: id={}",
+						"{}: request will be added to waiting list: id={}, name={}",
 						m_params.m_name,
-						req.m_req_id);
+						req.m_req_id,
+						req.m_name );
 			} );
 
 	bool need_resolve = m_waiting_forward_requests.add_request(
