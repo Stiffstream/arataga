@@ -317,7 +317,7 @@ a_dns_resolver_t::handle_resolve_result(
 
 					logger.log(
 							level,
-							"{}: domain resolved: name={}, results=[{}]",
+							"{}: async_resolve success: name={}, results=[{}]",
 							m_params.m_name,
 							name,
 							ips );
@@ -354,7 +354,7 @@ a_dns_resolver_t::handle_resolve_result(
 				{
 					logger.log(
 							level,
-							"{}: domain resolution failure: name={}, error={}",
+							"{}: async_resolve failure: name={}, error={}",
 							m_params.m_name,
 							name,
 							error_desc );
