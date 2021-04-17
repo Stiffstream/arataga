@@ -1469,7 +1469,7 @@ protected:
 					can_throw,
 					remove_reason_t::current_operation_timed_out,
 					spdlog::level::warn,
-					"socks5: DNS resolving timed out",
+					"socks5: DNS-lookup timed out",
 					command_reply_host_unreachable );
 		}
 	}
