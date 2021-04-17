@@ -104,6 +104,8 @@ TEST_CASE("invalid size of the first PDU") {
 	chs::dump_trace( (std::cout << "-----\n"), simulator.get_trace() );
 }
 
+// Since v.0.3.2 size of packet read is not checked.
+#if 0
 TEST_CASE("garbage at the end of the first PDU") {
 	asio::ip::tcp::endpoint proxy_endpoint{
 			asio::ip::make_address_v4( "127.0.0.1" ),
@@ -136,6 +138,7 @@ TEST_CASE("garbage at the end of the first PDU") {
 
 	chs::dump_trace( (std::cout << "-----\n"), simulator.get_trace() );
 }
+#endif
 
 TEST_CASE("no appropriate auth method") {
 	asio::ip::tcp::endpoint proxy_endpoint{
