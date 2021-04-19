@@ -10,6 +10,8 @@
 /so_5_extra
 /spdlog
 /target
+/oess_2
+/cpp_util_2
 /__*.?pp
 /__*.rb
 /__*.vim

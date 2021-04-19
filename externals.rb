@@ -69,3 +69,10 @@ MxxRu::arch_externals :doctest do |e|
   e.map_file 'doctest/doctest.h' => 'doctest/*'
 end
 
+MxxRu::arch_externals :oess_2 do |e|
+  e.url 'https://sourceforge.net/projects/sobjectizer/files/oess/oess-2/oess-2.2.3-full.tar.bz2'
+
+  e.map_dir 'dev/cpp_util_2' => './'
+  e.map_dir 'dev/oess_2' => './'
+end
+

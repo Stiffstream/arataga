@@ -37,9 +37,10 @@
 namespace {
 
 const char version_string[] =
-R"ver(arataga v.0.3.2.1
+R"ver(arataga v.0.4.0
 [--io-threads all]
 [socks5 auth+username/password PDU workaround]
+[own dns lookup]
 
 (c) 2020-2021 stiffstream (https://stiffstream.com)
 )ver";
