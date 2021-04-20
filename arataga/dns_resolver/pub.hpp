@@ -6,6 +6,8 @@
 #pragma once
 
 #include <arataga/application_context.hpp>
+#include <arataga/ip_version.hpp>
+
 #include <arataga/utils/acl_req_id.hpp>
 #include <arataga/utils/overloaded.hpp>
 
@@ -125,13 +127,6 @@ public:
 using completion_token_shptr_t = std::shared_ptr< completion_token_t >;
 
 } // namespace forward
-
-//! Enumeration for available IP versions.
-enum class ip_version_t
-{
-	ip_v4,
-	ip_v6
-};
 
 /*!
  * @brief Conversion of string value into ip_version enumeration.

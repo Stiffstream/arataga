@@ -589,7 +589,7 @@ a_handler_t::async_resolve_hostname(
 
 	const auto ip_version_for_result =
 			m_params.m_acl_config.m_out_addr.is_v4() ?
-					dnsr::ip_version_t::ip_v4 : dnsr::ip_version_t::ip_v6;
+					ip_version_t::ip_v4 : ip_version_t::ip_v6;
 
 	so_5::send< dnsr::resolve_request_t >( m_params.m_dns_mbox,
 			id,

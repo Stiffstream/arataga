@@ -5,7 +5,7 @@
 
 #include <arataga/dns_resolver/a_dns_resolver.hpp>
 #include <arataga/dns_resolver/resolve_address_from_list.hpp>
-#include <arataga/dns_resolver/a_nameserver_interactor.hpp>
+#include <arataga/dns_resolver/interactor/pub.hpp>
 
 #include <arataga/logging/wrap_logging.hpp>
 
@@ -371,17 +371,13 @@ a_dns_resolver_t::handle_resolve_result(
 void
 a_dns_resolver_t::launch_nameserver_interactor_agent()
 {
-	m_nameserver_interactor_mbox = so_5::introduce_child_coop(
+	m_nameserver_interactor_mbox = interactor::make_interactor(
 			*this,
 			m_params.m_disp_binder,
-			[this]( so_5::coop_t & coop ) {
-				auto * interactor = coop.make_agent< a_nameserver_interactor_t >(
-						a_nameserver_interactor_t::params_t{
-								m_params.m_io_ctx,
-								m_params.m_name + ".interactor"
-						} );
-
-				return interactor->so_direct_mbox();
+			interactor::params_t{
+					m_params.m_io_ctx,
+					m_params.m_name + ".interactor",
+					so_direct_mbox()
 			} );
 }
 

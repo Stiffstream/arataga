@@ -1002,9 +1002,8 @@ a_processor_t::initiate_debug_dns_resolve_processing(
 		dns_msg->m_name = request.m_target_host;
 		dns_msg->m_ip_version =
 			request.m_ip_version.empty()?
-				dns::ip_version_t::ip_v4:
-				dns::from_string(
-					request.m_ip_version );
+				ip_version_t::ip_v4:
+				dns::from_string( request.m_ip_version );
 
 		// This message should be sent as immutable message,
 		// we need message_holder_t for that.
