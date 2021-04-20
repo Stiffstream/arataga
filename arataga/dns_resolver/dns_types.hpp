@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <arataga/utils/string_literal.hpp>
+
 #include <oess_2/defs/h/types.hpp>
 #include <oess_2/io/h/stream.hpp>
 #include <oess_2/io/h/fixed_mem_buf.hpp>
@@ -19,6 +21,36 @@
 #include <string_view>
 
 namespace arataga::dns_resolver {
+
+namespace rcode_values {
+
+	inline constexpr unsigned int ok = 0;
+	inline constexpr unsigned int format_error = 1;
+	inline constexpr unsigned int server_failure = 2;
+	inline constexpr unsigned int name_error = 3;
+	inline constexpr unsigned int not_implemented = 4;
+	inline constexpr unsigned int refused = 5;
+
+	[[nodiscard]]
+	inline arataga::utils::string_literal_t
+	to_string( unsigned int rcode ) noexcept
+	{
+		using namespace arataga::utils::string_literals;
+
+		switch( rcode )
+		{
+		case ok: return "ok"_static_str;
+		case format_error: return "format error"_static_str;
+		case server_failure: return "server failure"_static_str;
+		case name_error: return "name error"_static_str;
+		case not_implemented: return "not implemented"_static_str;
+		case refused: return "refused"_static_str;
+		}
+
+		return "unknown error code"_static_str;
+	}
+
+} /* namespace rcode_values */
 
 //
 // dns_header_t
@@ -683,19 +715,19 @@ operator << ( std::ostream & o, const dns_format_name_t & n )
 	return n.dump_to( o );
 }
 
-namespace dns_type
+namespace qtype_values
 {
-	constexpr int A = 1;
-	constexpr int NS = 2;
-	constexpr int CNAME = 5;
-	constexpr int SOA = 6;
-	constexpr int PTR = 12;
-	constexpr int MX = 15;
-	constexpr int OPT = 41;
-	constexpr int AAAA = 28;
+	inline constexpr oess_2::ushort_t A = 1;
+	inline constexpr oess_2::ushort_t NS = 2;
+	inline constexpr oess_2::ushort_t CNAME = 5;
+	inline constexpr oess_2::ushort_t SOA = 6;
+	inline constexpr oess_2::ushort_t PTR = 12;
+	inline constexpr oess_2::ushort_t MX = 15;
+	inline constexpr oess_2::ushort_t OPT = 41;
+	inline constexpr oess_2::ushort_t AAAA = 28;
 }
 
-namespace qclass
+namespace qclass_values
 {
 	inline constexpr oess_2::ushort_t IN = 1;
 }
@@ -724,8 +756,8 @@ struct dns_question_t
 
 	dns_question_t( std::string_view name )
 		: m_qname{ name }
-		, m_qtype{ dns_type::A } // A-record
-		, m_qclass{ qclass::IN }
+		, m_qtype{ qtype_values::A } // A-record
+		, m_qclass{ qclass_values::IN }
 	{}
 
 	dns_question_t(
@@ -906,17 +938,17 @@ read_from(
 
 	from >> from_memory( all_buffer, to.m_name ) >> to.m_type;
 
-	if( to.m_type != dns_type::OPT )
+	if( to.m_type != qtype_values::OPT )
 	{
 		oess_2::ushort_t resource_data_length;
 
 		from >> to.m_class >> to.m_ttl >> resource_data_length;
 
-		if( to.m_type == dns_type::A )
+		if( to.m_type == qtype_values::A )
 			to.m_resource_data = read_dns_type_A(
 					from,
 					resource_data_length );
-		else if( to.m_type == dns_type::AAAA )
+		else if( to.m_type == qtype_values::AAAA )
 			to.m_resource_data = read_dns_type_AAAA(
 					from,
 					resource_data_length );

@@ -149,13 +149,17 @@ a_nameserver_interactor_t::form_and_send_dns_udp_package(
 
 	// The first question. Ask for A record.
 	{
-		dns_question_t question{ domain_name, dns_type::A, qclass::IN };
+		dns_question_t question{
+				domain_name, qtype_values::A, qclass_values::IN
+		};
 		bin_stream << question;
 	}
 
 	// The second question. Ask for AAAA record.
 	{
-		dns_question_t question{ domain_name, dns_type::AAAA, qclass::IN };
+		dns_question_t question{
+				domain_name, qtype_values::AAAA, qclass_values::IN
+		};
 		bin_stream << question;
 	}
 
@@ -233,8 +237,6 @@ void
 a_nameserver_interactor_t::try_handle_incoming_pkg(
 	std::size_t bytes_transferred )
 {
-	std::cout << "=== starting " << bytes_transferred << std::endl;
-
 	std::string_view all_bin_data{
 			m_incoming_pkg.data(), bytes_transferred
 	};
@@ -246,29 +248,164 @@ a_nameserver_interactor_t::try_handle_incoming_pkg(
 	dns_header_t header;
 	bin_stream >> header;
 
-	std::cout << "parsed header: " << header << std::endl;
+	if( rcode_values::ok == header.rcode() )
+		try_handle_positive_nameserver_response(
+				all_bin_data,
+				bin_stream,
+				header );
+	else
+		try_handle_negative_nameserver_response(
+				header );
+}
 
-	for( oess_2::ushort_t question_i{};
-			question_i < header.m_qdcount;
-			++question_i )
+void
+a_nameserver_interactor_t::try_handle_positive_nameserver_response(
+	std::string_view all_bin_data,
+	oess_2::io::istream_t & bin_stream,
+	dns_header_t header )
+{
+	// Ignore any exceptions related to logging.
+	try
 	{
-		dns_question_t question;
-		bin_stream >> question;
-
-		std::cout << "parsed question: " << question << std::endl;
+		::arataga::logging::wrap_logging(
+				direct_logging_mode,
+				spdlog::level::trace,
+				[&]( auto & logger, auto level )
+				{
+					logger.log(
+							level,
+							"{}: positive name server response, address={}, "
+									"id={}, answer_count={}",
+							m_params.m_name,
+							m_incoming_pkg_endpoint.address(),
+							header.m_id,
+							header.m_ancount );
+				} );
 	}
+	catch( ... ) {}
 
-	for( oess_2::ushort_t answer_i{};
-			answer_i < header.m_ancount;
-			++answer_i )
+	// We should handle the response only if we know about this request.
+	const auto req_id = ongoing_req_id_t{
+			header.m_id, m_incoming_pkg_endpoint.address()
+	};
+	const auto it = m_ongoing_requests.find( req_id );
+	if( it == m_ongoing_requests.end() )
+		return;
+
+	// Exceptions during the collecting IPs and sending the response
+	// should be ignored.
+	try
 	{
-		dns_resource_record_t rr;
-		bin_stream >> from_memory( all_bin_data, rr );
+		// Parse and then ignore the question.
+		for( oess_2::ushort_t question_i{};
+				question_i < header.m_qdcount;
+				++question_i )
+		{
+			dns_question_t question;
+			bin_stream >> question;
+		}
 
-		std::cout << "parsed rr: " << rr << std::endl;
+		// Parse and process resource records.
+		successful_lookup_t::address_container_t ips;
+		for( oess_2::ushort_t answer_i{};
+				answer_i < header.m_ancount;
+				++answer_i )
+		{
+			dns_resource_record_t rr;
+			bin_stream >> from_memory( all_bin_data, rr );
+
+			if( qtype_values::A == rr.m_type ||
+					qtype_values::AAAA == rr.m_type )
+			{
+				ips.push_back( asio::ip::make_address( rr.m_resource_data ) );
+
+std::cout << "==== addr: " << ips.back() << std::endl;
+			}
+		}
+
+		if( ips.empty() )
+		{
+			// No IPs. We can only send negative response.
+			::arataga::logging::wrap_logging(
+					direct_logging_mode,
+					spdlog::level::warn,
+					[&]( auto & logger, auto level )
+					{
+						logger.log(
+								level,
+								"{}: no IPs in positive name server response, id={}",
+								m_params.m_name,
+								req_id );
+					} );
+
+			so_5::send< lookup_response_t >(
+					m_params.m_responses_mbox,
+					failed_lookup_t{ "no IPs in name server response" },
+					it->second.m_result_processor );
+		}
+		else
+		{
+			so_5::send< lookup_response_t >(
+					m_params.m_responses_mbox,
+					successful_lookup_t{ std::move(ips) },
+					it->second.m_result_processor );
+		}
 	}
+	catch( ... ) {}
 
-	std::cout << "=== completed ===" << std::endl;
+	// Information about that request is no more needed.
+	m_ongoing_requests.erase( it );
+}
+
+void
+a_nameserver_interactor_t::try_handle_negative_nameserver_response(
+	dns_header_t header )
+{
+	// Ignore any exceptions related to logging.
+	try
+	{
+		::arataga::logging::wrap_logging(
+				direct_logging_mode,
+				spdlog::level::debug,
+				[&]( auto & logger, auto level )
+				{
+					logger.log(
+							level,
+							"{}: negative name server response, address={}, "
+									"id={}, error={}",
+							m_params.m_name,
+							m_incoming_pkg_endpoint.address(),
+							header.m_id,
+							rcode_values::to_string( header.rcode() ) );
+				} );
+	}
+	catch( ... ) {}
+
+	// If there is info for that request then we should complete it.
+	const auto req_id = ongoing_req_id_t{
+			header.m_id, m_incoming_pkg_endpoint.address()
+	};
+	const auto it = m_ongoing_requests.find( req_id );
+	if( it == m_ongoing_requests.end() )
+		// We don't known about that ID. Just ignore it.
+		return;
+
+	// Now `it` is a valid iterator.
+	// Ignore exceptions related to sending the response.
+	try
+	{
+		so_5::send< lookup_response_t >(
+				m_params.m_responses_mbox,
+				failed_lookup_t{
+					fmt::format( "negative name server reply: {}",
+							rcode_values::to_string( header.rcode() ) )
+				},
+				it->second.m_result_processor );
+	}
+	catch( ... ) {}
+
+	// Information about that request is no more needed.
+	m_ongoing_requests.erase( it );
 }
 
 void

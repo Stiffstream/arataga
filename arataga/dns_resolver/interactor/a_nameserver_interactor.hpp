@@ -10,6 +10,8 @@
 
 #include <arataga/dns_resolver/dns_types.hpp>
 
+#include <oess_2/io/h/stream.hpp>
+
 #include <asio/ip/udp.hpp>
 
 namespace arataga::dns_resolver::interactor
@@ -189,6 +191,16 @@ private:
 	void
 	try_handle_incoming_pkg(
 		std::size_t bytes_transferred );
+
+	void
+	try_handle_positive_nameserver_response(
+		std::string_view all_bin_data,
+		oess_2::io::istream_t & bin_stream,
+		dns_header_t header );
+
+	void
+	try_handle_negative_nameserver_response(
+		dns_header_t header );
 
 	void
 	form_and_send_dns_udp_package(
