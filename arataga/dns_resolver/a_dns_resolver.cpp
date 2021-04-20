@@ -5,6 +5,7 @@
 
 #include <arataga/dns_resolver/a_dns_resolver.hpp>
 #include <arataga/dns_resolver/resolve_address_from_list.hpp>
+#include <arataga/dns_resolver/a_nameserver_interactor.hpp>
 
 #include <arataga/logging/wrap_logging.hpp>
 
@@ -144,6 +145,8 @@ a_dns_resolver_t::so_evt_start()
 						level,
 						"{}: started", m_params.m_name );
 			} );
+
+	launch_nameserver_interactor_agent();
 
 	so_5::send_delayed< clear_cache_t >( *this, m_cache_cleanup_period );
 }
@@ -363,6 +366,23 @@ a_dns_resolver_t::handle_resolve_result(
 		m_waiting_forward_requests.handle_waiting_requests(
 			name, std::move(result), log_func );
 	}
+}
+
+void
+a_dns_resolver_t::launch_nameserver_interactor_agent()
+{
+	m_nameserver_interactor_mbox = so_5::introduce_child_coop(
+			*this,
+			m_params.m_disp_binder,
+			[this]( so_5::coop_t & coop ) {
+				auto * interactor = coop.make_agent< a_nameserver_interactor_t >(
+						a_nameserver_interactor_t::params_t{
+								m_params.m_io_ctx,
+								m_params.m_name + ".interactor"
+						} );
+
+				return interactor->so_direct_mbox();
+			} );
 }
 
 void

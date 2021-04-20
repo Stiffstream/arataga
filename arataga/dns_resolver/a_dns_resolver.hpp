@@ -225,6 +225,19 @@ private:
 	//! The local cache for domain name.
 	local_cache_t m_cache;
 
+	//! Message mbox to be used for communication with nameserver_interactor
+	//! agent.
+	/*!
+	 * @since v.0.4.0
+	 */
+	so_5::mbox_t m_nameserver_interactor_mbox;
+
+	/*!
+	 * @since v.0.4.0
+	 */
+	void
+	launch_nameserver_interactor_agent();
+
 	/*!
 	 * @brief Add a new request to the waiting list or initiate the resolution.
 	 *

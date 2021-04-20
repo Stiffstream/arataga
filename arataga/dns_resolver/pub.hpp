@@ -36,6 +36,9 @@ struct params_t
 	 */
 	asio::io_context & m_io_ctx;
 
+	//! Dispatcher binder to be used for the creation of children agents.
+	so_5::disp_binder_shptr_t m_disp_binder;
+
 	//! Unique name of that agent.
 	/*!
 	 * Intended to be used for logging.

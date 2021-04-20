@@ -608,6 +608,7 @@ a_processor_t::create_dispatchers_if_necessary(
 								m_app_ctx,
 								::arataga::dns_resolver::params_t{
 										info.m_disp.io_context(),
+										info.m_disp.binder(),
 										fmt::format( "io_thr_{}_dns", i ),
 										config.m_dns_cache_cleanup_period
 								}
