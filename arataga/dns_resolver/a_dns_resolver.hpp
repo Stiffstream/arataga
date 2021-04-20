@@ -7,6 +7,8 @@
 
 #include <arataga/dns_resolver/pub.hpp>
 #include <arataga/dns_resolver/waiting_requests_handler.hpp>
+#include <arataga/dns_resolver/interactor/pub.hpp>
+
 #include <arataga/config_processor/notifications.hpp>
 
 #include <arataga/stats/dns/pub.hpp>
@@ -196,6 +198,14 @@ private:
 	on_updated_dns_params(
 		const updated_dns_params_t & msg );
 
+	//! Handler for responses from nameserver_interactor.
+	/*!
+	 * @since v.0.4.0
+	 */
+	void
+	on_lookup_response(
+		const interactor::lookup_response_t & msg );
+
 	//! The reaction to the resolution result.
 	void
 	handle_resolve_result(
@@ -218,9 +228,6 @@ private:
 
 	//! The current period for cache cleanup procedures.
 	std::chrono::milliseconds m_cache_cleanup_period;
-
-	//! The Asio's resolver instance to be used.
-	asio::ip::tcp::resolver m_resolver;
 
 	//! The local cache for domain name.
 	local_cache_t m_cache;

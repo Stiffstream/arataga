@@ -119,7 +119,6 @@ a_dns_resolver_t::a_dns_resolver_t(
 			m_dns_stats
 		}
 	,	m_cache_cleanup_period{ m_params.m_cache_cleanup_period }
-	,	m_resolver{ m_params.m_io_ctx }
 {}
 
 void
@@ -131,6 +130,8 @@ a_dns_resolver_t::so_define_agent()
 
 	so_subscribe( m_app_ctx.m_config_updates_mbox ).event(
 		&a_dns_resolver_t::on_updated_dns_params );
+
+	so_subscribe_self().event( &a_dns_resolver_t::on_lookup_response );
 }
 
 void
@@ -278,6 +279,13 @@ a_dns_resolver_t::on_updated_dns_params(
 }
 
 void
+a_dns_resolver_t::on_lookup_response(
+	const interactor::lookup_response_t & msg )
+{
+	msg.m_result_processor( msg.m_result );
+}
+
+void
 a_dns_resolver_t::handle_resolve_result(
 	const asio::error_code & ec,
 	asio::ip::tcp::resolver::results_type results,
@@ -403,6 +411,7 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 
 	if( need_resolve )
 	{
+#if 0
 		// Service name should be treated as a numeric string
 		//defining a port number and no name resolution should be attempted.
 		auto resolve_flags = asio::ip::tcp::resolver::numeric_service;
@@ -424,6 +433,21 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 					ec, results,
 					std::move(name) );
 			} );
+#endif
+		so_5::send< interactor::lookup_request_t >(
+				m_nameserver_interactor_mbox,
+				req.m_name,
+				req.m_ip_version,
+				// NOTE: there is no need to capture this via smart-pointer
+				// because this handler will be returned via message.
+				// That message will be ignored if the agent is already
+				// deregistered.
+				[this, name = req.m_name]
+				( interactor::lookup_result_t )
+				{
+std::cout << "handler of lookup_result! " << name << std::endl;
+//FIXME: implement this!
+				} );
 
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,

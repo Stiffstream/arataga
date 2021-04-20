@@ -12,6 +12,8 @@ MxxRu::Cpp::exe_target {
 	required_prj 'nodejs/http_parser_mxxru/prj.rb'
 	required_prj 'restinio/platform_specific_libs.rb'
 
+	required_prj 'oess_2/io/prj_s.rb'
+
 	required_prj 'arataga/stats/prj.rb'
 	required_prj 'arataga/config.rb'
 	required_prj 'arataga/logging/logging.rb'

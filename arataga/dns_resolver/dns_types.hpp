@@ -695,6 +695,11 @@ namespace dns_type
 	constexpr int AAAA = 28;
 }
 
+namespace qclass
+{
+	inline constexpr oess_2::ushort_t IN = 1;
+}
+
 //
 // dns_question_t
 //
@@ -720,7 +725,7 @@ struct dns_question_t
 	dns_question_t( std::string_view name )
 		: m_qname{ name }
 		, m_qtype{ dns_type::A } // A-record
-		, m_qclass{ 1 } // 1 - INTERNET
+		, m_qclass{ qclass::IN }
 	{}
 
 	dns_question_t(
