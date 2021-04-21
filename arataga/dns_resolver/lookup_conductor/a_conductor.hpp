@@ -151,18 +151,17 @@ operator<<( std::ostream & o, const local_cache_t & cache )
 	return o;
 }
 
-//FIXME: should be renamed to a_lookup_conductor_t.
 //
-// a_dns_resolver_t
+// a_conductor_t
 //
 /*!
  * @brief Agent for performing domain name resolution.
  */
-class a_dns_resolver_t final : public so_5::agent_t
+class a_conductor_t final : public so_5::agent_t
 {
 public:
 	//! Initializing constructor.
-	a_dns_resolver_t(
+	a_conductor_t(
 		//! SOEnv and SObjectizer-related parameters.
 		context_t ctx,
 		//! Aragata's context.

@@ -3,7 +3,7 @@
  * @brief Implementation of dns_resolver-agent.
  */
 
-#include <arataga/dns_resolver/lookup_conductor/a_dns_resolver.hpp>
+#include <arataga/dns_resolver/lookup_conductor/a_conductor.hpp>
 #include <arataga/dns_resolver/lookup_conductor/resolve_address_from_list.hpp>
 
 #include <arataga/dns_resolver/interactor/pub.hpp>
@@ -108,7 +108,7 @@ local_cache_t::clear()
 //
 // a_dns_resolver
 //
-a_dns_resolver_t::a_dns_resolver_t(
+a_conductor_t::a_conductor_t(
 	context_t ctx,
 	application_context_t app_ctx,
 	std::string name,
@@ -130,7 +130,7 @@ a_dns_resolver_t::a_dns_resolver_t(
 {}
 
 void
-a_dns_resolver_t::so_define_agent()
+a_conductor_t::so_define_agent()
 {
 	// We want to receive only requests for our IP-version.
 	so_set_delivery_filter(
@@ -140,18 +140,18 @@ a_dns_resolver_t::so_define_agent()
 			} );
 
 	so_subscribe( m_incoming_requests_mbox )
-		.event( &a_dns_resolver_t::on_resolve );
+		.event( &a_conductor_t::on_resolve );
 
-	so_subscribe_self().event( &a_dns_resolver_t::on_clear_cache );
+	so_subscribe_self().event( &a_conductor_t::on_clear_cache );
 
 	so_subscribe( m_app_ctx.m_config_updates_mbox ).event(
-		&a_dns_resolver_t::on_updated_dns_params );
+		&a_conductor_t::on_updated_dns_params );
 
-	so_subscribe_self().event( &a_dns_resolver_t::on_lookup_response );
+	so_subscribe_self().event( &a_conductor_t::on_lookup_response );
 }
 
 void
-a_dns_resolver_t::so_evt_start()
+a_conductor_t::so_evt_start()
 {
 	::arataga::logging::wrap_logging(
 			direct_logging_mode,
@@ -167,7 +167,7 @@ a_dns_resolver_t::so_evt_start()
 }
 
 void
-a_dns_resolver_t::so_evt_finish()
+a_conductor_t::so_evt_finish()
 {
 	::arataga::logging::wrap_logging(
 			direct_logging_mode,
@@ -181,7 +181,7 @@ a_dns_resolver_t::so_evt_finish()
 }
 
 void
-a_dns_resolver_t::on_resolve( const resolve_request_t & msg )
+a_conductor_t::on_resolve( const resolve_request_t & msg )
 {
 	::arataga::logging::wrap_logging(
 			direct_logging_mode,
@@ -247,7 +247,7 @@ a_dns_resolver_t::on_resolve( const resolve_request_t & msg )
 }
 
 void
-a_dns_resolver_t::on_clear_cache( so_5::mhood_t<clear_cache_t> )
+a_conductor_t::on_clear_cache( so_5::mhood_t<clear_cache_t> )
 {
 // This code fragment is kept here for the case when some debugging
 // will be necessary.
@@ -276,7 +276,7 @@ a_dns_resolver_t::on_clear_cache( so_5::mhood_t<clear_cache_t> )
 }
 
 void
-a_dns_resolver_t::on_updated_dns_params(
+a_conductor_t::on_updated_dns_params(
 	const updated_dns_params_t & msg )
 {
 	::arataga::logging::wrap_logging(
@@ -293,7 +293,7 @@ a_dns_resolver_t::on_updated_dns_params(
 }
 
 void
-a_dns_resolver_t::on_lookup_response(
+a_conductor_t::on_lookup_response(
 	const interactor::lookup_response_t & msg )
 {
 	//FIXME: should a possible exception be handled?
@@ -301,7 +301,7 @@ a_dns_resolver_t::on_lookup_response(
 }
 
 void
-a_dns_resolver_t::handle_lookup_result(
+a_conductor_t::handle_lookup_result(
 	std::string domain_name,
 	interactor::lookup_result_t lookup_result )
 {
@@ -399,7 +399,7 @@ a_dns_resolver_t::handle_lookup_result(
 }
 
 void
-a_dns_resolver_t::add_to_waiting_and_resolve(
+a_conductor_t::add_to_waiting_and_resolve(
 	const resolve_request_t & req )
 {
 	::arataga::logging::wrap_logging(
@@ -464,14 +464,14 @@ add_lookup_conductors_to_coop(
 	const so_5::mbox_t & nameserver_interactor_mbox )
 {
 	// For IPv4.
-	coop.make_agent< a_dns_resolver_t >(
+	coop.make_agent< a_conductor_t >(
 			app_ctx,
 			name_prefix + ".ipv4",
 			ip_version_t::ip_v4,
 			incoming_requests_mbox,
 			nameserver_interactor_mbox );
 	// For IPv6.
-	coop.make_agent< a_dns_resolver_t >(
+	coop.make_agent< a_conductor_t >(
 			app_ctx,
 			name_prefix + ".ipv6",
 			ip_version_t::ip_v6,

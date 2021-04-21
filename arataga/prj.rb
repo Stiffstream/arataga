@@ -28,7 +28,7 @@ MxxRu::Cpp::exe_target {
 	cpp_source 'authentificator/a_authentificator.cpp'
 
 	cpp_source 'dns_resolver/interactor/a_nameserver_interactor.cpp'
-	cpp_source 'dns_resolver/lookup_conductor/a_dns_resolver.cpp'
+	cpp_source 'dns_resolver/lookup_conductor/a_conductor.cpp'
 	cpp_source 'dns_resolver/pub.cpp'
 
 	cpp_source 'acl_handler/bandlim_manager.cpp'
