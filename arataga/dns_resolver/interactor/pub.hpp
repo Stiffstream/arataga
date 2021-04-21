@@ -67,15 +67,20 @@ struct lookup_request_t final : public so_5::message_t
 	//! Version of desired IP address (IPv4 or IPv6).
 	ip_version_t m_ip_version;
 
+	//! Mbox for the result.
+	so_5::mbox_t m_reply_to;
+
 	//! Handler of the lookup result.
 	result_processor_t m_result_processor;
 
 	lookup_request_t(
 		std::string domain_name,
 		ip_version_t ip_version,
+		so_5::mbox_t reply_to,
 		result_processor_t result_processor )
 		:	m_domain_name{ std::move(domain_name) }
 		,	m_ip_version{ ip_version }
+		,	m_reply_to{ std::move(reply_to) }
 		,	m_result_processor{ std::move(result_processor) }
 	{}
 };
@@ -124,19 +129,15 @@ struct params_t
 	 * Intended to be used for logging.
 	 */
 	std::string m_name;
-
-	//! Mbox for lookup_response messages.
-	so_5::mbox_t m_responses_mbox;
 };
 
 //
-// make_interactor
+// add_interactor_to_coop
 //
 [[nodiscard]]
 so_5::mbox_t
-make_interactor(
-	so_5::agent_t & parent,
-	so_5::disp_binder_shptr_t disp_binder,
+add_interactor_to_coop(
+	so_5::coop_t & coop,
 	params_t params );
 
 } /* namespace arataga::dns_resolver::interactor */

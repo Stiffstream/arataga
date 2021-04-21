@@ -398,22 +398,6 @@ a_dns_resolver_t::handle_lookup_result(
 			lookup_result );
 }
 
-//FIXME: remove after refactoring!
-#if 0
-void
-a_dns_resolver_t::launch_nameserver_interactor_agent()
-{
-	m_nameserver_interactor_mbox = interactor::make_interactor(
-			*this,
-			m_params.m_disp_binder,
-			interactor::params_t{
-					m_params.m_io_ctx,
-					m_name + ".interactor",
-					so_direct_mbox()
-			} );
-}
-#endif
-
 void
 a_dns_resolver_t::add_to_waiting_and_resolve(
 	const resolve_request_t & req )
@@ -440,6 +424,7 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 				m_nameserver_interactor_mbox,
 				req.m_name,
 				req.m_ip_version,
+				so_direct_mbox(),
 				// NOTE: there is no need to capture this via smart-pointer
 				// because this handler will be returned via message.
 				// That message will be ignored if the agent is already
@@ -468,61 +453,31 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 }
 
 //
-// introduce_lookup_conductors
+// add_lookup_conductors_to_coop
 //
 void
-introduce_lookup_conductors(
-	so_5::environment_t & env,
-	so_5::coop_handle_t parent_coop,
-	so_5::disp_binder_shptr_t disp_binder,
+add_lookup_conductors_to_coop(
+	so_5::coop_t & coop,
 	application_context_t app_ctx,
 	const std::string & name_prefix,
 	const so_5::mbox_t & incoming_requests_mbox,
 	const so_5::mbox_t & nameserver_interactor_mbox )
 {
-	so_5::introduce_child_coop( parent_coop, disp_binder,
-		[&]( so_5::coop_t & coop ) {
-			// For IPv4.
-			coop.make_agent< a_dns_resolver_t >(
-					app_ctx,
-					name_prefix + ".ipv4",
-					ip_version_t::ip_v4,
-					incoming_requests_mbox,
-					nameserver_interactor_mbox );
-			// For IPv6.
-			coop.make_agent< a_dns_resolver_t >(
-					app_ctx,
-					name_prefix + ".ipv6",
-					ip_version_t::ip_v6,
-					incoming_requests_mbox,
-					nameserver_interactor_mbox );
-		} );
+	// For IPv4.
+	coop.make_agent< a_dns_resolver_t >(
+			app_ctx,
+			name_prefix + ".ipv4",
+			ip_version_t::ip_v4,
+			incoming_requests_mbox,
+			nameserver_interactor_mbox );
+	// For IPv6.
+	coop.make_agent< a_dns_resolver_t >(
+			app_ctx,
+			name_prefix + ".ipv6",
+			ip_version_t::ip_v6,
+			incoming_requests_mbox,
+			nameserver_interactor_mbox );
 }
-
-//FIXME: remove after refactoring.
-#if 0
-//
-// introduce_dns_resolver
-//
-
-std::tuple< so_5::coop_handle_t, so_5::mbox_t >
-introduce_dns_resolver(
-	so_5::environment_t & env,
-	so_5::coop_handle_t parent_coop,
-	so_5::disp_binder_shptr_t disp_binder,
-	application_context_t app_ctx,
-	params_t params )
-{
-	auto coop_holder = env.make_coop( parent_coop, std::move(disp_binder) );
-	auto dns_mbox = coop_holder->make_agent< a_dns_resolver_t >(
-			std::move(app_ctx),
-			std::move(params) )->so_direct_mbox();
-
-	auto h_coop = env.register_coop( std::move(coop_holder) );
-
-	return { std::move(h_coop), std::move(dns_mbox) };
-}
-#endif
 
 } /* namespace arataga::dns_resolver::lookup_conductor */
 

@@ -33,6 +33,9 @@ inline constexpr std::size_t max_dns_udp_package_size = 512u;
 //
 struct ongoing_req_data_t
 {
+	//! Mbox for the result.
+	so_5::mbox_t m_reply_to;
+
 	//! Result processor for that request.
 	result_processor_t m_result_processor;
 
@@ -44,8 +47,10 @@ struct ongoing_req_data_t
 
 	//! Initializing constructor.
 	ongoing_req_data_t(
+		so_5::mbox_t reply_to,
 		result_processor_t result_processor )
-		:	m_result_processor{ std::move(result_processor) }
+		:	m_reply_to{ std::move(reply_to) }
+		,	m_result_processor{ std::move(result_processor) }
 		,	m_start_time{ std::chrono::steady_clock::now() }
 	{}
 };

@@ -70,7 +70,7 @@ a_nameserver_interactor_t::evt_lookup_request(
 	{
 		// List of name servers is empty. We can handle that request.
 		so_5::send< lookup_response_t >(
-				m_params.m_responses_mbox,
+				cmd->m_reply_to,
 				failed_lookup_t{ "no name servers to use" },
 				cmd->m_result_processor );
 
@@ -81,12 +81,13 @@ a_nameserver_interactor_t::evt_lookup_request(
 	const auto req_id = ++(nsrv_to_use->m_req_id_counter);
 	const auto insertion_result = m_ongoing_requests.try_emplace(
 			ongoing_req_id_t{ req_id, nsrv_to_use->m_address },
+			cmd->m_reply_to,
 			cmd->m_result_processor );
 	if( !insertion_result.second )
 	{
 		// ID is not unqiue. The request can't be handled.
 		so_5::send< lookup_response_t >(
-				m_params.m_responses_mbox,
+				cmd->m_reply_to,
 				failed_lookup_t{
 					"unable to make unique ID for request to name server"
 				},
@@ -338,14 +339,14 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 					} );
 
 			so_5::send< lookup_response_t >(
-					m_params.m_responses_mbox,
+					it->second.m_reply_to,
 					failed_lookup_t{ "no IPs in name server response" },
 					it->second.m_result_processor );
 		}
 		else
 		{
 			so_5::send< lookup_response_t >(
-					m_params.m_responses_mbox,
+					it->second.m_reply_to,
 					successful_lookup_t{ std::move(ips) },
 					it->second.m_result_processor );
 		}
@@ -394,7 +395,7 @@ a_nameserver_interactor_t::try_handle_negative_nameserver_response(
 	try
 	{
 		so_5::send< lookup_response_t >(
-				m_params.m_responses_mbox,
+				it->second.m_reply_to,
 				failed_lookup_t{
 					fmt::format( "negative name server reply: {}",
 							rcode_values::to_string( header.rcode() ) )
@@ -445,7 +446,7 @@ a_nameserver_interactor_t::handle_async_send_result(
 		try
 		{
 			so_5::send< lookup_response_t >(
-					m_params.m_responses_mbox,
+					it->second.m_reply_to,
 					failed_lookup_t{
 							"unable to send DNS UDP package"
 					},
@@ -460,20 +461,13 @@ a_nameserver_interactor_t::handle_async_send_result(
 
 [[nodiscard]]
 so_5::mbox_t
-make_interactor(
-	so_5::agent_t & parent,
-	so_5::disp_binder_shptr_t disp_binder,
+add_interactor_to_coop(
+	so_5::coop_t & coop,
 	params_t params )
 {
-	return so_5::introduce_child_coop(
-			parent,
-			disp_binder,
-			[&params]( so_5::coop_t & coop ) {
-				auto * interactor = coop.make_agent< a_nameserver_interactor_t >(
-						std::move(params) );
-
-				return interactor->so_direct_mbox();
-			} );
+	return coop.make_agent< a_nameserver_interactor_t >(
+			std::move(params)
+		)->so_direct_mbox();
 }
 
 } /* namespace arataga::dns_resolver::interactor */

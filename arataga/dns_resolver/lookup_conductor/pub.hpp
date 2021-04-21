@@ -13,21 +13,16 @@ namespace arataga::dns_resolver::lookup_conductor
 {
 
 //
-// introduce_lookup_conductors
+// add_lookup_conductors_to_coop
 //
 /*!
  * @brief A factory for the creation of lookup_conductor-agents with
  * the binding to the specified dispatcher.
  */
-[[nodiscard]]
 void
-introduce_lookup_conductors(
-	//! SObjectizer Environment to work within.
-	so_5::environment_t & env,
-	//! The parent coop for a new coop with lookup_conductor-agents.
-	so_5::coop_handle_t parent_coop,
-	//! The dispatcher for a new dns_resolver-agent.
-	so_5::disp_binder_shptr_t disp_binder,
+add_lookup_conductors_to_coop(
+	//! The target coop.
+	so_5::coop_t & coop,
 	//! The context of the whole application.
 	application_context_t app_ctx,
 	//! Unique prefix for agents names.
