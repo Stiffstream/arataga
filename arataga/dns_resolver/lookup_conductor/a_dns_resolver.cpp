@@ -3,15 +3,16 @@
  * @brief Implementation of dns_resolver-agent.
  */
 
-#include <arataga/dns_resolver/a_dns_resolver.hpp>
-#include <arataga/dns_resolver/resolve_address_from_list.hpp>
+#include <arataga/dns_resolver/lookup_conductor/a_dns_resolver.hpp>
+#include <arataga/dns_resolver/lookup_conductor/resolve_address_from_list.hpp>
+
 #include <arataga/dns_resolver/interactor/pub.hpp>
 
 #include <arataga/logging/wrap_logging.hpp>
 
 #include <fmt/ostream.h>
 
-namespace arataga::dns_resolver
+namespace arataga::dns_resolver::lookup_conductor
 {
 
 namespace
@@ -110,21 +111,36 @@ local_cache_t::clear()
 a_dns_resolver_t::a_dns_resolver_t(
 	context_t ctx,
 	application_context_t app_ctx,
-	params_t params )
+	std::string name,
+	ip_version_t ip_version,
+	const so_5::mbox_t & incoming_requests_mbox,
+	const so_5::mbox_t & nameserver_interactor_mbox )
 	:	so_5::agent_t{ std::move(ctx) }
 	,	m_app_ctx{ std::move(app_ctx) }
-	,	m_params{ std::move(params) }
+	,	m_name{ std::move(name) }
+	,	m_ip_version{ ip_version }
+	,	m_incoming_requests_mbox{ incoming_requests_mbox }
+	,	m_nameserver_interactor_mbox{ nameserver_interactor_mbox }
 	,	m_dns_stats_reg{
 			m_app_ctx.m_dns_stats_manager,
 			m_dns_stats
 		}
-	,	m_cache_cleanup_period{ m_params.m_cache_cleanup_period }
+//FIXME: hardcoding?
+	,	m_cache_cleanup_period{ std::chrono::seconds{5} }
 {}
 
 void
 a_dns_resolver_t::so_define_agent()
 {
-	so_subscribe_self().event( &a_dns_resolver_t::on_resolve );
+	// We want to receive only requests for our IP-version.
+	so_set_delivery_filter(
+			m_incoming_requests_mbox,
+			[ip_ver = m_ip_version]( const resolve_request_t & req ) {
+				return ip_ver == req.m_ip_version;
+			} );
+
+	so_subscribe( m_incoming_requests_mbox )
+		.event( &a_dns_resolver_t::on_resolve );
 
 	so_subscribe_self().event( &a_dns_resolver_t::on_clear_cache );
 
@@ -144,10 +160,8 @@ a_dns_resolver_t::so_evt_start()
 			{
 				logger.log(
 						level,
-						"{}: started", m_params.m_name );
+						"{}: started", m_name );
 			} );
-
-	launch_nameserver_interactor_agent();
 
 	so_5::send_delayed< clear_cache_t >( *this, m_cache_cleanup_period );
 }
@@ -162,7 +176,7 @@ a_dns_resolver_t::so_evt_finish()
 			{
 				logger.log(
 						level,
-						"{}: shutdown completed", m_params.m_name );
+						"{}: shutdown completed", m_name );
 			} );
 }
 
@@ -177,7 +191,7 @@ a_dns_resolver_t::on_resolve( const resolve_request_t & msg )
 				logger.log(
 						level,
 						"{}: resolve request: id={}, name={}, ip version={}",
-						m_params.m_name,
+						m_name,
 						msg.m_req_id,
 						msg.m_name,
 						to_string( msg.m_ip_version ) );
@@ -196,7 +210,7 @@ a_dns_resolver_t::on_resolve( const resolve_request_t & msg )
 							level,
 							"{}: request resolved from cache: id={}, "
 								"name={}, address={}",
-							m_params.m_name,
+							m_name,
 							msg.m_req_id,
 							msg.m_name,
 							resolve->to_string() );
@@ -222,7 +236,7 @@ a_dns_resolver_t::on_resolve( const resolve_request_t & msg )
 					logger.log(
 							level,
 							"{}: resolve reply sent: id={}",
-							m_params.m_name,
+							m_name,
 							msg.m_req_id);
 				} );
 	}
@@ -253,7 +267,7 @@ a_dns_resolver_t::on_clear_cache( so_5::mhood_t<clear_cache_t> )
 				logger.log(
 						level,
 						"{}: DNS cache cleaned up ({} item(s) removed)",
-						m_params.m_name,
+						m_name,
 						n_removed );
 			} );
 
@@ -272,7 +286,7 @@ a_dns_resolver_t::on_updated_dns_params(
 			{
 				logger.log(
 						level,
-						"{}: update dns params", m_params.m_name );
+						"{}: update dns params", m_name );
 			} );
 
 	m_cache_cleanup_period = msg.m_cache_cleanup_period;
@@ -303,7 +317,7 @@ a_dns_resolver_t::handle_lookup_result(
 						logger.log(
 								level,
 								"{}: resolve reply sent: id={}, result={}",
-								m_params.m_name,
+								m_name,
 								req_id,
 								result );
 					} );
@@ -332,7 +346,7 @@ a_dns_resolver_t::handle_lookup_result(
 						logger.log(
 								level,
 								"{}: async_resolve success: name={}, results=[{}]",
-								m_params.m_name,
+								m_name,
 								domain_name,
 								ips );
 					} );
@@ -365,7 +379,7 @@ a_dns_resolver_t::handle_lookup_result(
 						logger.log(
 								level,
 								"{}: async_resolve failure: name={}, error={}",
-								m_params.m_name,
+								m_name,
 								domain_name,
 								lr.m_description );
 					} );
@@ -384,6 +398,8 @@ a_dns_resolver_t::handle_lookup_result(
 			lookup_result );
 }
 
+//FIXME: remove after refactoring!
+#if 0
 void
 a_dns_resolver_t::launch_nameserver_interactor_agent()
 {
@@ -392,10 +408,11 @@ a_dns_resolver_t::launch_nameserver_interactor_agent()
 			m_params.m_disp_binder,
 			interactor::params_t{
 					m_params.m_io_ctx,
-					m_params.m_name + ".interactor",
+					m_name + ".interactor",
 					so_direct_mbox()
 			} );
 }
+#endif
 
 void
 a_dns_resolver_t::add_to_waiting_and_resolve(
@@ -409,7 +426,7 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 				logger.log(
 						level,
 						"{}: request will be added to waiting list: id={}, name={}",
-						m_params.m_name,
+						m_name,
 						req.m_req_id,
 						req.m_name );
 			} );
@@ -443,13 +460,47 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 					logger.log(
 							level,
 							"{}: async_resolve initiated: id={}, name={}",
-							m_params.m_name,
+							m_name,
 							req.m_req_id,
 							req.m_name );
 				} );
 	}
 }
 
+//
+// introduce_lookup_conductors
+//
+void
+introduce_lookup_conductors(
+	so_5::environment_t & env,
+	so_5::coop_handle_t parent_coop,
+	so_5::disp_binder_shptr_t disp_binder,
+	application_context_t app_ctx,
+	const std::string & name_prefix,
+	const so_5::mbox_t & incoming_requests_mbox,
+	const so_5::mbox_t & nameserver_interactor_mbox )
+{
+	so_5::introduce_child_coop( parent_coop, disp_binder,
+		[&]( so_5::coop_t & coop ) {
+			// For IPv4.
+			coop.make_agent< a_dns_resolver_t >(
+					app_ctx,
+					name_prefix + ".ipv4",
+					ip_version_t::ip_v4,
+					incoming_requests_mbox,
+					nameserver_interactor_mbox );
+			// For IPv6.
+			coop.make_agent< a_dns_resolver_t >(
+					app_ctx,
+					name_prefix + ".ipv6",
+					ip_version_t::ip_v6,
+					incoming_requests_mbox,
+					nameserver_interactor_mbox );
+		} );
+}
+
+//FIXME: remove after refactoring.
+#if 0
 //
 // introduce_dns_resolver
 //
@@ -471,6 +522,7 @@ introduce_dns_resolver(
 
 	return { std::move(h_coop), std::move(dns_mbox) };
 }
+#endif
 
-} /* namespace arataga::dns_resolver */
+} /* namespace arataga::dns_resolver::lookup_conductor */
 

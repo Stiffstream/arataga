@@ -6,8 +6,9 @@
 #pragma once
 
 #include <arataga/dns_resolver/pub.hpp>
-#include <arataga/dns_resolver/waiting_requests_handler.hpp>
 #include <arataga/dns_resolver/interactor/pub.hpp>
+
+#include <arataga/dns_resolver/lookup_conductor/waiting_requests_handler.hpp>
 
 #include <arataga/config_processor/notifications.hpp>
 
@@ -19,7 +20,7 @@
 #include <chrono>
 #include <list>
 
-namespace arataga::dns_resolver
+namespace arataga::dns_resolver::lookup_conductor
 {
 
 /*!
@@ -150,6 +151,7 @@ operator<<( std::ostream & o, const local_cache_t & cache )
 	return o;
 }
 
+//FIXME: should be renamed to a_lookup_conductor_t.
 //
 // a_dns_resolver_t
 //
@@ -165,8 +167,14 @@ public:
 		context_t ctx,
 		//! Aragata's context.
 		application_context_t app_ctx,
-		//! Initial parameters for that agent.
-		params_t params );
+		//! Unique name of that agent.
+		std::string name,
+		//! IP version to handle.
+		ip_version_t ip_version,
+		//! Mbox to be used for subscription to incoming requests.
+		const so_5::mbox_t & incoming_requests_mbox,
+		//! Mbox for outgoing requests to nameserver_interactor.
+		const so_5::mbox_t & nameserver_interactor_mbox );
 
 	void
 	so_define_agent() override;
@@ -178,9 +186,39 @@ public:
 	so_evt_finish() override;
 
 private:
-
 	//! The signal for cache cleanup.
 	struct clear_cache_t final : public so_5::signal_t {};
+
+	//! Arataga's context.
+	const application_context_t m_app_ctx;
+
+	//! Name of that agent.
+	const std::string m_name;
+
+	//! IP version to handle.
+	const ip_version_t m_ip_version;
+
+	//! Mbox to be used for subscription to incoming requests.
+	const so_5::mbox_t m_incoming_requests_mbox;
+	//! Mbox for outgoing requests to nameserver_interactor.
+	const so_5::mbox_t m_nameserver_interactor_mbox;
+
+	//! Agent's stats.
+	::arataga::stats::dns::dns_stats_t m_dns_stats;
+	::arataga::stats::dns::auto_reg_t m_dns_stats_reg;
+
+	//! The current period for cache cleanup procedures.
+	std::chrono::milliseconds m_cache_cleanup_period;
+
+	//! The local cache for domain name.
+	local_cache_t m_cache;
+
+	//! List of waiting domain names.
+	waiting_requests_handler_t<
+			std::string,
+			resolve_request_t,
+			resolve_reply_t
+		> m_waiting_forward_requests;
 
 	//! Handler for a new resolution request.
 	void
@@ -214,35 +252,6 @@ private:
 		//! The result of DNS-lookup.
 		interactor::lookup_result_t lookup_result );
 
-	//! Arataga's context.
-	const application_context_t m_app_ctx;
-
-	//! Initial parameters for that agent.
-	const params_t m_params;
-
-	//! Agent's stats.
-	::arataga::stats::dns::dns_stats_t m_dns_stats;
-	::arataga::stats::dns::auto_reg_t m_dns_stats_reg;
-
-	//! The current period for cache cleanup procedures.
-	std::chrono::milliseconds m_cache_cleanup_period;
-
-	//! The local cache for domain name.
-	local_cache_t m_cache;
-
-	//! Message mbox to be used for communication with nameserver_interactor
-	//! agent.
-	/*!
-	 * @since v.0.4.0
-	 */
-	so_5::mbox_t m_nameserver_interactor_mbox;
-
-	/*!
-	 * @since v.0.4.0
-	 */
-	void
-	launch_nameserver_interactor_agent();
-
 	/*!
 	 * @brief Add a new request to the waiting list or initiate the resolution.
 	 *
@@ -251,12 +260,7 @@ private:
 	 */
 	void
 	add_to_waiting_and_resolve( const resolve_request_t & req );
-
-	waiting_requests_handler_t<
-		std::string,
-		resolve_request_t,
-		resolve_reply_t > m_waiting_forward_requests;
 };
 
-} /* namespace arataga::dns_resolver */
+} /* namespace arataga::dns_resolver::lookup_conductor */
 

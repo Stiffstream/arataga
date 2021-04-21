@@ -5,11 +5,13 @@
 
 #pragma once
 
+#include <arataga/dns_resolver/lookup_conductor/resolve_address_from_list.hpp>
+
 #include <arataga/dns_resolver/pub.hpp>
 
 #include <list>
 
-namespace arataga::dns_resolver
+namespace arataga::dns_resolver::lookup_conductor
 {
 
 /*!
@@ -199,5 +201,5 @@ private:
 	std::map< Key, resolve_requests_info_list_t > m_waiting_requests;
 };
 
-} /* namespace arataga::dns_resolver */
+} /* namespace arataga::dns_resolver::lookup_conductor */
 

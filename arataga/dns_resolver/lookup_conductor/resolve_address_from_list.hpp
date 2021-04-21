@@ -9,7 +9,7 @@
 #include <arataga/dns_resolver/pub.hpp>
 #include <arataga/exception.hpp>
 
-namespace arataga::dns_resolver
+namespace arataga::dns_resolver::lookup_conductor
 {
 
 /*!
@@ -101,5 +101,5 @@ get_resolve_result(
 	return result;
 }
 
-} /* namespace arataga::dns_resolver */
+} /* namespace arataga::dns_resolver::lookup_conductor */
 

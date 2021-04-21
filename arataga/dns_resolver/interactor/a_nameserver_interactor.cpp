@@ -129,7 +129,7 @@ a_nameserver_interactor_t::initiate_next_async_read()
 void
 a_nameserver_interactor_t::form_and_send_dns_udp_package(
 	const std::string_view domain_name,
-	ip_version_t /*ip_version*/,
+	ip_version_t ip_version,
 	const ongoing_req_id_t & req_id,
 	ongoing_req_data_t & req_data )
 {
@@ -142,25 +142,26 @@ a_nameserver_interactor_t::form_and_send_dns_udp_package(
 	{
 		dns_header_t header{ req_id.m_id, true };
 		header.set_qr( dns_header_t::REQUEST );
-		header.m_qdcount = 2u;
+		header.m_qdcount = 1u;
 
 		bin_stream << header;
 	}
 
-	// The first question. Ask for A record.
+	switch( ip_version )
 	{
-		dns_question_t question{
-				domain_name, qtype_values::A, qclass_values::IN
-		};
-		bin_stream << question;
-	}
+	case ip_version_t::ip_v4:
+		// For IPv4 ask for A record.
+		bin_stream << dns_question_t{
+					domain_name, qtype_values::A, qclass_values::IN
+			};
+	break;
 
-	// The second question. Ask for AAAA record.
-	{
-		dns_question_t question{
+	case ip_version_t::ip_v6:
+		// For IPv6 ask for AAAA record.
+		bin_stream << dns_question_t{
 				domain_name, qtype_values::AAAA, qclass_values::IN
-		};
-		bin_stream << question;
+			};
+	break;
 	}
 
 	const auto bin_size = bin_stream.size();
