@@ -125,8 +125,10 @@ a_conductor_t::a_conductor_t(
 			m_app_ctx.m_dns_stats_manager,
 			m_dns_stats
 		}
-//FIXME: hardcoding?
-	,	m_cache_cleanup_period{ std::chrono::seconds{5} }
+	// NOTE: just a hardcoded value.
+	// The actual value from config will be received after
+	// the subscription to config_updates_mbox.
+	,	m_cache_cleanup_period{ std::chrono::seconds{60} }
 {}
 
 void
@@ -144,9 +146,6 @@ a_conductor_t::so_define_agent()
 
 	so_subscribe_self().event( &a_conductor_t::on_clear_cache );
 
-	so_subscribe( m_app_ctx.m_config_updates_mbox ).event(
-		&a_conductor_t::on_updated_dns_params );
-
 	so_subscribe_self().event( &a_conductor_t::on_lookup_response );
 }
 
@@ -162,6 +161,11 @@ a_conductor_t::so_evt_start()
 						level,
 						"{}: started", m_name );
 			} );
+
+	// Subscription for config-updates should be made here because
+	// config_updates_mbox is a retained mbox.
+	so_subscribe( m_app_ctx.m_config_updates_mbox ).event(
+		&a_conductor_t::on_updated_dns_params );
 
 	so_5::send_delayed< clear_cache_t >( *this, m_cache_cleanup_period );
 }
