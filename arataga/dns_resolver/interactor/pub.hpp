@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <arataga/application_context.hpp>
 #include <arataga/ip_version.hpp>
 
 #include <asio/ip/address.hpp>
@@ -137,7 +138,11 @@ struct params_t
 [[nodiscard]]
 so_5::mbox_t
 add_interactor_to_coop(
+	//! Coop to that a new agent should be added.
 	so_5::coop_t & coop,
+	//! The context of the whole application.
+	application_context_t app_ctx,
+	//! Parameters for a new interactor agent.
 	params_t params );
 
 } /* namespace arataga::dns_resolver::interactor */

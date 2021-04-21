@@ -10,6 +10,10 @@
 
 #include <arataga/dns_resolver/dns_types.hpp>
 
+#include <arataga/config_processor/notifications.hpp>
+
+#include <arataga/one_second_timer.hpp>
+
 #include <oess_2/io/h/stream.hpp>
 
 #include <asio/ip/udp.hpp>
@@ -135,6 +139,7 @@ class a_nameserver_interactor_t final : public so_5::agent_t
 public:
 	a_nameserver_interactor_t(
 		context_t ctx,
+		application_context_t app_ctx,
 		params_t params );
 
 	void
@@ -152,8 +157,14 @@ private:
 	//! Type of a container for holding info about name servers.
 	using nameserver_info_container_t = std::vector< nameserver_info_t >;
 
+	//! Arataga's context.
+	const application_context_t m_app_ctx;
+
 	//! Personal parameters for that agent.
 	const params_t m_params;
+
+	//! Time for waiting the reply from name server.
+	std::chrono::milliseconds m_dns_resolving_timeout;
 
 	//! UPD socket to be user for interaction with nameservers.
 	asio::ip::udp::socket m_socket;
@@ -176,9 +187,23 @@ private:
 	//! Ongoing requests.
 	ongoing_req_map_t m_ongoing_requests;
 
+	//! Handler for a new lookup_request.
 	void
 	evt_lookup_request(
 		mhood_t< lookup_request_t > cmd );
+
+	//! Handler for configuration updates.
+	void
+	evt_updated_dns_params(
+		mhood_t< arataga::config_processor::updated_dns_params_t > msg );
+
+	//! Handler for timer events.
+	/*!
+	 * Checks lifetimes of ongoing requests.
+	 */
+	void
+	evt_one_second_timer(
+		mhood_t< arataga::one_second_timer_t > );
 
 	// Returns nullptr if there is no name servers to be used.
 	[[nodiscard]]

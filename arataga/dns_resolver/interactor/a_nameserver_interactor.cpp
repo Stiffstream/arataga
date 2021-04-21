@@ -18,25 +18,41 @@ namespace arataga::dns_resolver::interactor
 
 a_nameserver_interactor_t::a_nameserver_interactor_t(
 	context_t ctx,
+	application_context_t app_ctx,
 	params_t params )
 	:	so_5::agent_t{ std::move(ctx) }
+	,	m_app_ctx{ std::move(app_ctx) }
 	,	m_params{ std::move(params) }
+	// NOTE: just a hardcoded value.
+	// The actual value from config will be received after
+	// the subscription to config_updates_mbox.
+	,	m_dns_resolving_timeout{ std::chrono::seconds{4} }
 	,	m_socket{ m_params.m_io_ctx }
 {
 //FIXME: only for testing!
-m_nservers.push_back( asio::ip::make_address( "8.8.8.8" ) );
+m_nservers.push_back( asio::ip::make_address( "127.0.0.1" ) );
+//m_nservers.push_back( asio::ip::make_address( "8.8.8.8" ) );
 }
 
 void
 a_nameserver_interactor_t::so_define_agent()
 {
-	so_subscribe_self().event(
-			&a_nameserver_interactor_t::evt_lookup_request );
+	so_subscribe_self()
+		.event( &a_nameserver_interactor_t::evt_lookup_request );
+
+	so_subscribe( m_app_ctx.m_global_timer_mbox )
+		.event( &a_nameserver_interactor_t::evt_one_second_timer );
 }
 
 void
 a_nameserver_interactor_t::so_evt_start()
 {
+	// Subscription for config-updates should be made here because
+	// config_updates_mbox is a retained mbox.
+	so_subscribe( m_app_ctx.m_config_updates_mbox ).event(
+		&a_nameserver_interactor_t::evt_updated_dns_params );
+
+	// Now we can try to open socket for outgoing packages.
 	::arataga::logging::wrap_logging(
 			direct_logging_mode,
 			spdlog::level::trace,
@@ -102,6 +118,78 @@ a_nameserver_interactor_t::evt_lookup_request(
 			cmd->m_ip_version,
 			insertion_result.first->first,
 			insertion_result.first->second );
+}
+
+void
+a_nameserver_interactor_t::evt_updated_dns_params(
+	mhood_t< arataga::config_processor::updated_dns_params_t > msg )
+{
+	::arataga::logging::wrap_logging(
+			direct_logging_mode,
+			spdlog::level::trace,
+			[&]( auto & logger, auto level )
+			{
+				logger.log(
+						level,
+						"{}: update dns params", m_params.m_name );
+			} );
+
+	m_dns_resolving_timeout = msg->m_dns_resolving_timeout;
+}
+
+void
+a_nameserver_interactor_t::evt_one_second_timer(
+	mhood_t< arataga::one_second_timer_t > )
+{
+	// NOTE: don't expect exceptions here.
+	const auto now = std::chrono::steady_clock::now();
+
+	for( auto it = m_ongoing_requests.begin();
+			it != m_ongoing_requests.end(); )
+	{
+		if( it->second.m_start_time + m_dns_resolving_timeout < now )
+		{
+			// This item has to be deleted due to timeout.
+
+			// Ignore exceptions from logger.
+			try
+			{
+				::arataga::logging::wrap_logging(
+						direct_logging_mode,
+						spdlog::level::debug,
+						[&]( auto & logger, auto level )
+						{
+							logger.log(
+									level,
+									"{}: request timed out, "
+											"id={}",
+									m_params.m_name,
+									it->first );
+						} );
+			}
+			catch( ... ) {}
+
+			// Ignore exceptions from send operation.
+			try
+			{
+				so_5::send< lookup_response_t >(
+						it->second.m_reply_to,
+						failed_lookup_t{ "request timed out" },
+						it->second.m_result_processor );
+			}
+			catch( ... ) {}
+
+			// Item is no more needed.
+			try
+			{
+				auto it_to_erase = it++; // Hope it doesn't throw.
+				m_ongoing_requests.erase( it_to_erase );
+			}
+			catch( ... ) {}
+		}
+		else
+			++it;
+	}
 }
 
 nameserver_info_t *
@@ -463,9 +551,11 @@ a_nameserver_interactor_t::handle_async_send_result(
 so_5::mbox_t
 add_interactor_to_coop(
 	so_5::coop_t & coop,
+	application_context_t app_ctx,
 	params_t params )
 {
 	return coop.make_agent< a_nameserver_interactor_t >(
+			std::move(app_ctx),
 			std::move(params)
 		)->so_direct_mbox();
 }

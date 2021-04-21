@@ -521,7 +521,8 @@ a_processor_t::send_updated_config_messages(
 {
 	so_5::send< updated_dns_params_t >(
 			m_app_ctx.m_config_updates_mbox,
-			config.m_dns_cache_cleanup_period );
+			config.m_dns_cache_cleanup_period,
+			config.m_common_acl_params.m_dns_resolving_timeout );
 
 	so_5::send< updated_common_acl_params_t >(
 			m_app_ctx.m_config_updates_mbox,

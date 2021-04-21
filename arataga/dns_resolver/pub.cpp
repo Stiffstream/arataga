@@ -30,6 +30,7 @@ introduce_dns_resolver(
 
 	auto interactor_mbox = interactor::add_interactor_to_coop(
 			*coop_holder,
+			app_ctx,
 			interactor::params_t{
 					params.m_io_ctx,
 					params.m_name + ".interactor"
@@ -37,7 +38,7 @@ introduce_dns_resolver(
 
 	lookup_conductor::add_lookup_conductors_to_coop(
 			*coop_holder,
-			std::move(app_ctx),
+			app_ctx,
 			params.m_name + ".conductor",
 			dns_mbox,
 			interactor_mbox );

@@ -29,10 +29,13 @@ struct started_t final : public so_5::signal_t {};
 struct updated_dns_params_t final : public so_5::message_t
 {
 	std::chrono::milliseconds m_cache_cleanup_period;
+	std::chrono::milliseconds m_dns_resolving_timeout;
 
 	updated_dns_params_t(
-		std::chrono::milliseconds cache_cleanup_period )
+		std::chrono::milliseconds cache_cleanup_period,
+		std::chrono::milliseconds dns_resolving_timeout )
 		:	m_cache_cleanup_period{ cache_cleanup_period }
+		,	m_dns_resolving_timeout{ dns_resolving_timeout }
 	{}
 };
 
