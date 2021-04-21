@@ -83,19 +83,19 @@ local_cache_t::remove_outdated_records( const std::chrono::seconds & time_to_liv
 void
 local_cache_t::add_records(
 	std::string name,
-	const asio::ip::tcp::resolver::results_type & results )
+	const interactor::successful_lookup_t::address_container_t & addresses )
 {
+	//FIXME: it seems that this method is not exception safe.
+	//If assignement of m_addresses throws then an empty entry remains
+	//in m_data.
 	auto resolve_info = m_data.emplace(
 		std::move(name),
-		resolve_info_t(
+		resolve_info_t{
 			// The current timepoint is used as the creation time.
-			std::chrono::steady_clock::now() ) );
+			std::chrono::steady_clock::now()
+		} );
 
-	for( const auto & ep: results )
-	{
-		resolve_info.first->second.m_addresses.push_back(
-			ep.endpoint().address() );
-	}
+	resolve_info.first->second.m_addresses = addresses;
 }
 
 void
@@ -282,98 +282,106 @@ void
 a_dns_resolver_t::on_lookup_response(
 	const interactor::lookup_response_t & msg )
 {
+	//FIXME: should a possible exception be handled?
 	msg.m_result_processor( msg.m_result );
 }
 
 void
-a_dns_resolver_t::handle_resolve_result(
-	const asio::error_code & ec,
-	asio::ip::tcp::resolver::results_type results,
-	std::string name )
+a_dns_resolver_t::handle_lookup_result(
+	std::string domain_name,
+	interactor::lookup_result_t lookup_result )
 {
 	auto log_func =
 		[this]( resolve_req_id_t req_id,
-				forward::resolve_result_t result )
-	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::trace,
-				[&]( auto & logger, auto level )
-				{
-					logger.log(
-							level,
-							"{}: resolve reply sent: id={}, result={}",
-							m_params.m_name,
-							req_id,
-							result );
-				} );
-	};
-
-	if( !ec )
-	{
-		// The stats for successful DNS lookups has to be updated.
-		m_dns_stats.m_dns_successful_lookups += 1u;
-
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::info,
-				[&]( auto & logger, auto level )
-				{
-					std::string ips;
-					for( const auto & ep: results )
+			const forward::resolve_result_t & result )
+		{
+			::arataga::logging::wrap_logging(
+					direct_logging_mode,
+					spdlog::level::trace,
+					[&]( auto & logger, auto level )
 					{
-						ips += ep.endpoint().address().to_string();
-						ips += ' ';
-					}
+						logger.log(
+								level,
+								"{}: resolve reply sent: id={}, result={}",
+								m_params.m_name,
+								req_id,
+								result );
+					} );
+		};
 
-					logger.log(
-							level,
-							"{}: async_resolve success: name={}, results=[{}]",
-							m_params.m_name,
-							name,
-							ips );
-				} );
+	const auto success_handler =
+		[this, &domain_name, &log_func]
+		( const interactor::successful_lookup_t & lr )
+		{
+			// The stats for successful DNS lookups has to be updated.
+			m_dns_stats.m_dns_successful_lookups += 1u;
 
-		m_cache.add_records( name, results );
+			//FIXME: should possible exceptions be ignored?
+			::arataga::logging::wrap_logging(
+					direct_logging_mode,
+					spdlog::level::info,
+					[&]( auto & logger, auto level )
+					{
+						std::string ips;
+						for( const auto & addr: lr.m_addresses )
+						{
+							ips += addr.to_string();
+							ips += ' ';
+						}
 
-		using resolver_value_type =
-			asio::ip::tcp::resolver::results_type::value_type;
+						logger.log(
+								level,
+								"{}: async_resolve success: name={}, results=[{}]",
+								m_params.m_name,
+								domain_name,
+								ips );
+					} );
 
-		m_waiting_forward_requests.handle_waiting_requests(
-			name,
-			results,
-			log_func,
-			[]( const resolver_value_type & el )
-			{
-				return el.endpoint().address();
-			} );
-	}
-	else
-	{
-		// The stats for failed DNS lookups has to be updated.
-		m_dns_stats.m_dns_failed_lookups += 1u;
+			m_cache.add_records( domain_name, lr.m_addresses );
 
-		const auto error_desc = make_error_description(ec);
-		forward::resolve_result_t result = forward::failed_resolve_t{
-				 error_desc
-			};
-
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::warn,
-				[&]( auto & logger, auto level )
+			m_waiting_forward_requests.handle_waiting_requests(
+				domain_name,
+				lr.m_addresses,
+				log_func,
+				[]( const asio::ip::address & addr )
 				{
-					logger.log(
-							level,
-							"{}: async_resolve failure: name={}, error={}",
-							m_params.m_name,
-							name,
-							error_desc );
+					return addr;
 				} );
+		};
 
-		m_waiting_forward_requests.handle_waiting_requests(
-			name, std::move(result), log_func );
-	}
+	const auto failure_handler =
+		[this, &domain_name, &log_func]
+		(const interactor::failed_lookup_t & lr )
+		{
+			// The stats for failed DNS lookups has to be updated.
+			m_dns_stats.m_dns_failed_lookups += 1u;
+
+			//FIXME: should possible exceptions be ignored?
+			::arataga::logging::wrap_logging(
+					direct_logging_mode,
+					spdlog::level::warn,
+					[&]( auto & logger, auto level )
+					{
+						logger.log(
+								level,
+								"{}: async_resolve failure: name={}, error={}",
+								m_params.m_name,
+								domain_name,
+								lr.m_description );
+					} );
+
+			m_waiting_forward_requests.handle_waiting_requests(
+				domain_name,
+				forward::failed_resolve_t{ lr.m_description },
+				log_func );
+		};
+
+	std::visit(
+			::arataga::utils::overloaded{
+					success_handler,
+					failure_handler
+			},
+			lookup_result );
 }
 
 void
@@ -411,29 +419,6 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 
 	if( need_resolve )
 	{
-#if 0
-		// Service name should be treated as a numeric string
-		//defining a port number and no name resolution should be attempted.
-		auto resolve_flags = asio::ip::tcp::resolver::numeric_service;
-		// If used with v4_mapped, return all matching IPv6 and IPv4 addresses.
-		resolve_flags |= asio::ip::tcp::resolver::all_matching;
-		// If the query protocol family is specified as IPv6, return IPv4-mapped
-		// IPv6 addresses on finding no IPv6 addresses.
-		resolve_flags |= asio::ip::tcp::resolver::v4_mapped;
-
-		m_resolver.async_resolve(
-			req.m_name,
-			std::string(),
-			resolve_flags,
-			[self = so_5::make_agent_ref(this), name = req.m_name]
-			( const asio::error_code & ec,
-				asio::ip::tcp::resolver::results_type results )
-			{
-				self->handle_resolve_result(
-					ec, results,
-					std::move(name) );
-			} );
-#endif
 		so_5::send< interactor::lookup_request_t >(
 				m_nameserver_interactor_mbox,
 				req.m_name,
@@ -443,10 +428,11 @@ a_dns_resolver_t::add_to_waiting_and_resolve(
 				// That message will be ignored if the agent is already
 				// deregistered.
 				[this, name = req.m_name]
-				( interactor::lookup_result_t )
+				( interactor::lookup_result_t lookup_result )
 				{
-std::cout << "handler of lookup_result! " << name << std::endl;
-//FIXME: implement this!
+					handle_lookup_result(
+							std::move(name),
+							std::move(lookup_result) );
 				} );
 
 		::arataga::logging::wrap_logging(

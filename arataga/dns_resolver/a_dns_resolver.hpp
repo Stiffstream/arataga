@@ -66,7 +66,7 @@ public:
 		//! Domain name to be added.
 		std::string name,
 		//! IP-addresses for that domain.
-		const asio::ip::tcp::resolver::results_type & results );
+		const interactor::successful_lookup_t::address_container_t & addresses );
 
 	/*!
 	 * @brief Clear the cache.
@@ -102,7 +102,7 @@ private:
 	 */
 	struct resolve_info_t
 	{
-		std::list< asio::ip::address > m_addresses;
+		interactor::successful_lookup_t::address_container_t m_addresses;
 
 		std::chrono::steady_clock::time_point m_creation_time;
 
@@ -206,15 +206,13 @@ private:
 	on_lookup_response(
 		const interactor::lookup_response_t & msg );
 
-	//! The reaction to the resolution result.
+	//! The reaction to the result of DNS-lookup.
 	void
-	handle_resolve_result(
-		//! Low-level error from Asio.
-		const asio::error_code & ec,
-		//! IP-addresses for the domain name.
-		asio::ip::tcp::resolver::results_type results,
-		//! Domain name.
-		std::string name );
+	handle_lookup_result(
+		//! Domain name to be resolved.
+		std::string domain_name,
+		//! The result of DNS-lookup.
+		interactor::lookup_result_t lookup_result );
 
 	//! Arataga's context.
 	const application_context_t m_app_ctx;

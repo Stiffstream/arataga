@@ -318,8 +318,6 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 					qtype_values::AAAA == rr.m_type )
 			{
 				ips.push_back( asio::ip::make_address( rr.m_resource_data ) );
-
-std::cout << "==== addr: " << ips.back() << std::endl;
 			}
 		}
 
