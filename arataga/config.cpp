@@ -708,6 +708,53 @@ public:
 };
 
 //
+// nserver_handler_t
+//
+/*!
+ * @brief Handler for `nserver` command.
+ */
+class nserver_handler_t : public command_handler_t
+{
+public:
+	command_handling_result_t
+	try_handle(
+		std::string_view content,
+		config_t & current_cfg ) const override
+	{
+		using namespace restinio::http_field_parsers;
+
+		using ipv4_addr_container_t = std::vector< asio::ip::address_v4 >;
+
+		using arataga::utils::parsers::ipv4_address_p;
+
+		const auto address_list_p = produce< ipv4_addr_container_t >(
+				ipv4_address_p() >> to_container(),
+				repeat( 0u, N,
+					ows(),
+					symbol(','),
+					ows(),
+					ipv4_address_p() >> to_container() ),
+				maybe( ows(), symbol(',') )
+			);
+
+		return perform_parsing(
+			content,
+			address_list_p,
+			[&]( auto & container ) -> command_handling_result_t {
+				// List of new IPs should be added to the existing values.
+				std::transform(
+						std::begin(container), std::end(container),
+						std::back_inserter(current_cfg.m_nameserver_ips),
+						[]( asio::ip::address_v4 v ) -> asio::ip::address {
+							return { v };
+						} );
+
+				return success_t{};
+			} );
+	}
+};
+
+//
 // spaces
 //
 //! Set of space symbols.
@@ -850,9 +897,13 @@ config_parser_t::config_parser_t()
 	m_impl->m_commands.emplace(
 			"log_level"s,
 			std::make_unique< log_level_handler_t >() );
+
 	m_impl->m_commands.emplace(
 			"dns_cache_cleanup_period"s,
 			std::make_unique< dns_cache_cleanup_period_handler_t >() );
+	m_impl->m_commands.emplace(
+			"nserver"s,
+			std::make_unique< nserver_handler_t >() );
 
 	m_impl->m_commands.emplace(
 			"bandlim.in"s,
@@ -1032,6 +1083,11 @@ config_parser_t::parse( std::string_view content )
 
 	if( !commands_processed )
 		throw parser_exception_t{ "Empty config" };
+
+	if( result.m_nameserver_ips.empty() )
+		throw parser_exception_t{
+			"At least one name server IP should be specified"
+		};
 
 	return result;
 }

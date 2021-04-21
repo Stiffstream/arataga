@@ -258,6 +258,10 @@ private:
 		ongoing_req_id_t req_id,
 		const asio::error_code & ec,
 		std::size_t bytes_transferred ) noexcept;
+
+	void
+	update_nameservers_list(
+		config_t::nameserver_ip_container_t nameserver_ips );
 };
 
 } /* namespace arataga::dns_resolver::interactor */

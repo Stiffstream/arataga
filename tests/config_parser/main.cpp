@@ -19,6 +19,7 @@ R"(
 	# This is an another comment
 
 log_level debug
+nserver 1.1.1.1
 				)"sv;
 
 		config_t cfg;
@@ -55,6 +56,67 @@ log_level debug
 	}
 }
 
+TEST_CASE("nserver") {
+	using namespace arataga;
+
+	config_parser_t parser;
+
+	{
+		const auto what = 
+R"(
+nserver 1.1.1.1
+)"sv;
+
+		config_t cfg;
+		REQUIRE_NOTHROW( cfg = parser.parse( what ) );
+
+		REQUIRE( cfg.m_nameserver_ips ==
+			config_t::nameserver_ip_container_t{
+				asio::ip::make_address("1.1.1.1")
+			} );
+	}
+
+	{
+		const auto what = 
+R"(
+nserver 1.1.1.1, 1.0.0.1, 8.8.8.8
+)"sv;
+
+		config_t cfg;
+		REQUIRE_NOTHROW( cfg = parser.parse( what ) );
+
+		REQUIRE( cfg.m_nameserver_ips ==
+			config_t::nameserver_ip_container_t{
+				asio::ip::make_address("1.1.1.1")
+				, asio::ip::make_address("1.0.0.1")
+				, asio::ip::make_address("8.8.8.8")
+			} );
+	}
+
+	{
+		const auto what = 
+R"(
+nserver 1.1.1.1, 1.0.0.1, 8.8.8.8
+nserver 8.8.4.4
+nserver 9.9.9.9, 
+nserver 149.112.112.112
+)"sv;
+
+		config_t cfg;
+		REQUIRE_NOTHROW( cfg = parser.parse( what ) );
+
+		REQUIRE( cfg.m_nameserver_ips ==
+			config_t::nameserver_ip_container_t{
+				asio::ip::make_address("1.1.1.1")
+				, asio::ip::make_address("1.0.0.1")
+				, asio::ip::make_address("8.8.8.8")
+				, asio::ip::make_address("8.8.4.4")
+				, asio::ip::make_address("9.9.9.9")
+				, asio::ip::make_address("149.112.112.112")
+			} );
+	}
+}
+
 TEST_CASE("log_levels") {
 	using namespace arataga;
 
@@ -64,6 +126,7 @@ TEST_CASE("log_levels") {
 		const auto what = 
 R"(
 log_level debug
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -76,6 +139,7 @@ log_level debug
 		const auto what = 
 R"(
 log_level off
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -88,6 +152,7 @@ log_level off
 		const auto what = 
 R"(
 log_level 
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -100,6 +165,7 @@ log_level
 		const auto what = 
 R"(
 log_level 123
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -118,6 +184,7 @@ TEST_CASE("dns_cache_cleanup_period") {
 		const auto what = 
 R"(
 dns_cache_cleanup_period 3
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -130,6 +197,7 @@ dns_cache_cleanup_period 3
 		const auto what = 
 R"(
 dns_cache_cleanup_period 5s
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -142,6 +210,7 @@ dns_cache_cleanup_period 5s
 		const auto what = 
 R"(
 dns_cache_cleanup_period 250ms
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -154,6 +223,7 @@ dns_cache_cleanup_period 250ms
 		const auto what = 
 R"(
 dns_cache_cleanup_period 0
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -166,6 +236,7 @@ dns_cache_cleanup_period 0
 		const auto what = 
 R"(
 dns_cache_cleanup_period 2min
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -184,6 +255,7 @@ TEST_CASE("acl.max.conn") {
 		const auto what = 
 R"(
 acl.max.conn 256
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -196,6 +268,7 @@ acl.max.conn 256
 		const auto what = 
 R"(
 acl.max.conn off
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -208,6 +281,7 @@ acl.max.conn off
 		const auto what = 
 R"(
 acl.max.conn 0
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -220,6 +294,7 @@ acl.max.conn 0
 		const auto what = 
 R"(
 acl.max.conn -120
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -238,6 +313,7 @@ TEST_CASE("io_chunk_size") {
 		const auto what = 
 R"(
 acl.io.chunk_size 128
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -250,6 +326,7 @@ acl.io.chunk_size 128
 		const auto what = 
 R"(
 acl.io.chunk_size 256b
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -262,6 +339,7 @@ acl.io.chunk_size 256b
 		const auto what = 
 R"(
 acl.io.chunk_size 2kib
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -274,6 +352,7 @@ acl.io.chunk_size 2kib
 		const auto what = 
 R"(
 acl.io.chunk_size 5mib
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -286,6 +365,7 @@ acl.io.chunk_size 5mib
 		const auto what = 
 R"(
 acl.io.chunk_size off
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -298,6 +378,7 @@ acl.io.chunk_size off
 		const auto what = 
 R"(
 acl.io.chunk_size 0
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -310,6 +391,7 @@ acl.io.chunk_size 0
 		const auto what = 
 R"(
 acl.io.chunk_size -120
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -328,6 +410,7 @@ TEST_CASE("io_chunk_count") {
 		const auto what = 
 R"(
 acl.io.chunk_count 128
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -340,6 +423,7 @@ acl.io.chunk_count 128
 		const auto what = 
 R"(
 acl.io.chunk_count off
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -352,6 +436,7 @@ acl.io.chunk_count off
 		const auto what = 
 R"(
 acl.io.chunk_count 0
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -364,6 +449,7 @@ acl.io.chunk_count 0
 		const auto what = 
 R"(
 acl.io.chunk_count -120
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -382,6 +468,7 @@ TEST_CASE("failed_auth_reply_timeout") {
 		const auto what = 
 R"(
 timeout.failed_auth_reply 3
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -394,6 +481,7 @@ timeout.failed_auth_reply 3
 		const auto what = 
 R"(
 timeout.failed_auth_reply 5s
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -406,6 +494,7 @@ timeout.failed_auth_reply 5s
 		const auto what = 
 R"(
 timeout.failed_auth_reply 250ms
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -418,6 +507,7 @@ timeout.failed_auth_reply 250ms
 		const auto what = 
 R"(
 timeout.failed_auth_reply 0
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -430,6 +520,7 @@ timeout.failed_auth_reply 0
 		const auto what = 
 R"(
 timeout.failed_auth_reply 0ms
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -442,6 +533,7 @@ timeout.failed_auth_reply 0ms
 		const auto what = 
 R"(
 timeout.socks.bind 2min
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -468,6 +560,8 @@ timeout.connect_target 3s
 timeout.idle_connection 10min
 timeout.http.headers_complete 1min
 timeout.http.negative_response 650ms
+
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -494,6 +588,7 @@ TEST_CASE("bandlim") {
 		const auto what = 
 R"(
 bandlim.in 10240
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -508,6 +603,7 @@ bandlim.in 10240
 		const auto what = 
 R"(
 bandlim.in 10KiB
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -522,6 +618,7 @@ bandlim.in 10KiB
 		const auto what = 
 R"(
 bandlim.in 1MiB
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -536,6 +633,7 @@ bandlim.in 1MiB
 		const auto what = 
 R"(
 bandlim.out 10240
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -551,6 +649,7 @@ bandlim.out 10240
 R"(
 bandlim.in 0
 bandlim.out 0
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -567,6 +666,7 @@ bandlim.out 0
 R"(
 bandlim.in 10240
 bandlim.out 81920
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -581,6 +681,7 @@ bandlim.out 81920
 R"(
 bandlim.in 80kbps
 bandlim.out 160kbps
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -595,6 +696,7 @@ bandlim.out 160kbps
 R"(
 bandlim.in 80KiBps
 bandlim.out 160KiBps
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -608,6 +710,7 @@ bandlim.out 160KiBps
 		const auto what = 
 R"(
 bandlim.in non-digit
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -620,6 +723,7 @@ bandlim.in non-digit
 		const auto what = 
 R"(
 bandlim.out -120
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -640,6 +744,7 @@ TEST_CASE("denied_ports") {
 		const auto what = 
 R"(
 denied_ports 25
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -658,6 +763,7 @@ denied_ports 25
 		const auto what = 
 R"(
 denied_ports 25-100
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -680,6 +786,7 @@ denied_ports 25-100
 		const auto what = 
 R"(
 denied_ports 25-100, 443 ,  500 -604   ,700,800-  950
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -718,6 +825,7 @@ denied_ports 25-100, 443 ,  500 -604   ,700,800-  950
 		const auto what = 
 R"(
 denied_ports 256-100
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -730,6 +838,7 @@ denied_ports 256-100
 		const auto what = 
 R"(
 denied_ports 256-
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -743,6 +852,7 @@ denied_ports 256-
 		const auto what = 
 R"(
 denied_ports 256-257,
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -765,6 +875,7 @@ TEST_CASE("acls") {
 		const auto what = 
 R"(
 acl auto, port=3000, in_ip=127.0.0.1, out_ip=192.168.100.1
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -789,6 +900,7 @@ acl socks, port=3002, in_ip=127.0.0.1, out_ip=192.168.100.2
 acl http,  port=3003, in_ip=127.0.0.1, out_ip=192.168.100.3
 acl http,  port=3004, in_ip=127.0.0.1, out_ip=2a0a:5686:0001:1b1f:0695:e6ff:fed4:2a8b
 acl http,  port=3005, in_ip=127.0.0.1, out_ip=2a0a:5686::0b46:0e80:63ff:fe7a:966d
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -831,6 +943,7 @@ R"(
 acl auto,  port=3000, in_ip=127.0.0.1, out_ip=192.168.100.1 ,
 acl socks, port=3002, in_ip=127.0.0.1, out_ip=192.168.100.2,
 acl http,  port=3003, in_ip=127.0.0.1, out_ip=192.168.100.3     ,
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -863,6 +976,7 @@ R"(
 acl auto,  in_ip=127.0.0.1, port=3000, out_ip=192.168.100.1
 acl socks, out_ip=192.168.100.2, in_ip=127.0.0.1, port=3002
 acl http,  port=3003, in_ip=127.0.0.1, out_ip=192.168.100.3
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -895,6 +1009,7 @@ R"(
 acl auto,  in_ip = 127.0.0.1 , port= 3000  ,out_ip  =192.168.100.1
 acl socks  , out_ip=192.168.100.2    , in_ip   =   127.0.0.1, port=  3002
 acl http   ,port=3003,in_ip=127.0.0.1,out_ip=192.168.100.3
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -925,6 +1040,7 @@ acl http   ,port=3003,in_ip=127.0.0.1,out_ip=192.168.100.3
 		const auto what = 
 R"(
 acl auto, in_ip=127.0.0.1, out_ip=192.168.100.1
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -937,6 +1053,7 @@ acl auto, in_ip=127.0.0.1, out_ip=192.168.100.1
 		const auto what = 
 R"(
 acl auto, port=3000, out_ip=192.168.100.1
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -949,6 +1066,7 @@ acl auto, port=3000, out_ip=192.168.100.1
 		const auto what = 
 R"(
 acl auto, port=3000, in_ip=192.168.100.1
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -961,6 +1079,7 @@ acl auto, port=3000, in_ip=192.168.100.1
 		const auto what = 
 R"(
 acl auto, port=-20, in_ip=192.168.100.1, out_ip=192.168.1.100
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -973,6 +1092,7 @@ acl auto, port=-20, in_ip=192.168.100.1, out_ip=192.168.1.100
 		const auto what = 
 R"(
 acl auto, port=200, in_ip=123444.2938383.33939, out_ip=192.168.1.100
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -985,6 +1105,7 @@ acl auto, port=200, in_ip=123444.2938383.33939, out_ip=192.168.1.100
 		const auto what = 
 R"(
 acl auto, port=200, in_ip=192.168.1.100, out_ip=123444.2938383.33939
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -1007,6 +1128,7 @@ http.limits.field_name 1kib
 http.limits.field_value 20kib
 http.limits.total_headers_size 1mib
 http.limits.status_line 512b
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -1028,6 +1150,7 @@ http.limits.status_line 512b
 		const auto what = 
 R"(
 http.limits.request_target off
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -1040,6 +1163,7 @@ http.limits.request_target off
 		const auto what = 
 R"(
 http.limits.request_target 0
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;
@@ -1052,6 +1176,7 @@ http.limits.request_target 0
 		const auto what = 
 R"(
 http.limits.request_target -120
+nserver 1.1.1.1
 )"sv;
 
 		config_t cfg;

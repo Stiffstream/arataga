@@ -29,9 +29,6 @@ a_nameserver_interactor_t::a_nameserver_interactor_t(
 	,	m_dns_resolving_timeout{ std::chrono::seconds{4} }
 	,	m_socket{ m_params.m_io_ctx }
 {
-//FIXME: only for testing!
-//m_nservers.push_back( asio::ip::make_address( "127.0.0.1" ) );
-m_nservers.push_back( asio::ip::make_address( "8.8.8.8" ) );
 }
 
 void
@@ -141,6 +138,8 @@ a_nameserver_interactor_t::evt_updated_dns_params(
 			} );
 
 	m_dns_resolving_timeout = msg->m_dns_resolving_timeout;
+
+	update_nameservers_list( msg->m_nameserver_ips );
 }
 
 void
@@ -567,6 +566,59 @@ a_nameserver_interactor_t::handle_async_send_result(
 
 		// Data for that request is no more needed.
 		m_ongoing_requests.erase( it );
+	}
+}
+
+void
+a_nameserver_interactor_t::update_nameservers_list(
+	config_t::nameserver_ip_container_t nameserver_ips )
+{
+	// Assume that nameserver_ips is a small vector. So it's cheap to
+	// use simplest linear search.
+	nameserver_info_container_t updated_list{ m_nservers };
+
+	bool modified = false;
+
+	// First pass: go thru updated_list and remove items not found
+	// in nameserver_ips. If an item is found in nameserver_ips then it's
+	// removed from nameserver_ips.
+	{
+		for( std::size_t i{}; i < updated_list.size(); )
+		{
+			const auto it_new = std::find(
+					nameserver_ips.begin(), nameserver_ips.end(),
+					updated_list[ i ].m_address );
+			if( it_new != nameserver_ips.end() )
+			{
+				// We already know that IP.
+				nameserver_ips.erase( it_new );
+
+				++i;
+			}
+			else
+			{
+				// The current item is obsolete.
+				updated_list.erase( updated_list.begin() + i );
+				modified = true;
+			}
+		}
+	}
+
+	// Second pass: go thru the remaining items in nameserver_ips and
+	// make new items in updated_list.
+	for( const auto & ip : nameserver_ips )
+	{
+		updated_list.emplace_back( ip );
+		modified = true;
+	}
+
+	if( modified )
+	{
+		using std::swap;
+		swap( m_nservers, updated_list );
+
+		// It's very important to reinitialize that counter.
+		m_last_nserver_index = 0u;
 	}
 }
 

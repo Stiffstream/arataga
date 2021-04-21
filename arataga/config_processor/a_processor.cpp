@@ -377,7 +377,7 @@ a_processor_t::try_load_local_config_first_time()
 	{
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,
-				spdlog::level::info,
+				spdlog::level::warn,
 				[&x]( auto & logger, auto level )
 				{
 					logger.log(
@@ -522,7 +522,8 @@ a_processor_t::send_updated_config_messages(
 	so_5::send< updated_dns_params_t >(
 			m_app_ctx.m_config_updates_mbox,
 			config.m_dns_cache_cleanup_period,
-			config.m_common_acl_params.m_dns_resolving_timeout );
+			config.m_common_acl_params.m_dns_resolving_timeout,
+			config.m_nameserver_ips );
 
 	so_5::send< updated_common_acl_params_t >(
 			m_app_ctx.m_config_updates_mbox,

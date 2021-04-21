@@ -297,6 +297,12 @@ struct common_acl_params_t
  */
 struct config_t
 {
+	//! Type of container for IPs of name servers.
+	/*!
+	 * @since v.0.4.0
+	 */
+	using nameserver_ip_container_t = std::vector< asio::ip::address >;
+
 	/*!
 	 * @brief Log level to be used for logging.
 	 *
@@ -309,6 +315,16 @@ struct config_t
 	 * @brief Clearing period for DNS cache.
 	 */
 	std::chrono::milliseconds m_dns_cache_cleanup_period{ 30*1000 };
+
+	/*!
+	 * @brief IPs of name servers to be used.
+	 *
+	 * @attention
+	 * Shouldn't be empty.
+	 *
+	 * @since v.0.4.0
+	 */
+	nameserver_ip_container_t m_nameserver_ips;
 
 	/*!
 	 * @brief Denied TCP-ports.
