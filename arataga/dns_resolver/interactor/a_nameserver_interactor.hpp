@@ -148,6 +148,9 @@ public:
 	void
 	so_evt_start() override;
 
+	void
+	so_evt_finish() override;
+
 private:
 	//! Type of a container for holding ongoing requests.
 	using ongoing_req_map_t = std::map<
@@ -186,6 +189,15 @@ private:
 
 	//! Ongoing requests.
 	ongoing_req_map_t m_ongoing_requests;
+
+	//! Is the agent finished its work?
+	/*!
+	 * Set to `true` in so_evt_finish.
+	 *
+	 * While it is not `true` the next async_receive_from has to be called
+	 * even if the previous call completed with an error.
+	 */
+	bool m_is_finished = false;
 
 	//! Handler for a new lookup_request.
 	void

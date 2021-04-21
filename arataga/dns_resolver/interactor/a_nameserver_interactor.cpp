@@ -30,8 +30,8 @@ a_nameserver_interactor_t::a_nameserver_interactor_t(
 	,	m_socket{ m_params.m_io_ctx }
 {
 //FIXME: only for testing!
-m_nservers.push_back( asio::ip::make_address( "127.0.0.1" ) );
-//m_nservers.push_back( asio::ip::make_address( "8.8.8.8" ) );
+//m_nservers.push_back( asio::ip::make_address( "127.0.0.1" ) );
+m_nservers.push_back( asio::ip::make_address( "8.8.8.8" ) );
 }
 
 void
@@ -75,6 +75,12 @@ a_nameserver_interactor_t::so_evt_start()
 						level,
 						"{}: started", m_params.m_name );
 			} );
+}
+
+void
+a_nameserver_interactor_t::so_evt_finish()
+{
+	m_is_finished = true;
 }
 
 void
@@ -312,15 +318,32 @@ a_nameserver_interactor_t::handle_async_receive_result(
 		catch( ... )
 		{}
 
+	}
+	else
+	{
+		// Ignore all exceptions during logging.
+		try
+		{
+			::arataga::logging::wrap_logging(
+					direct_logging_mode,
+					spdlog::level::warn,
+					[&]( auto & logger, auto level )
+					{
+						logger.log(
+								level,
+								"{}: async_receive_from failed: {}",
+								m_params.m_name,
+								ec );
+					} );
+		}
+		catch( ... ) {}
+
+	}
+
+	// If the agent is still working then we have to initiate next read.
+	if( !m_is_finished )
 		// If we can't start a new operation then it's better to abort.
 		initiate_next_async_read();
-	}
-//FIXME: for debugging purposes only.
-else
-{
-std::cout << "async_receive_from failure: " << ec << std::endl;
-}
-
 }
 
 void
