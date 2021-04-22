@@ -13,6 +13,8 @@
 
 #include <arataga/logging/wrap_logging.hpp>
 
+#include <arataga/nothrow_block/macros.hpp>
+
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <fmt/chrono.h>
@@ -1057,8 +1059,12 @@ void
 a_handler_t::accept_new_connection(
 	asio::ip::tcp::socket connection ) noexcept
 {
+ARATAGA_NOTHROW_BLOCK_BEGIN()
+
 	// A new ID for the new connection.
 	const auto id = ++m_connection_id_counter;
+
+	ARATAGA_NOTHROW_BLOCK_STAGE(log_info_about_new_connection)
 
 	::arataga::logging::wrap_logging(
 			direct_logging_mode,
@@ -1072,6 +1078,8 @@ a_handler_t::accept_new_connection(
 						make_long_id(id),
 						connection.remote_endpoint() );
 			} );
+
+	ARATAGA_NOTHROW_BLOCK_STAGE(switch_new_socket_to_non_blocking_mode)
 
 	asio::error_code ec;
 	connection.non_blocking( true, ec );
@@ -1094,18 +1102,29 @@ a_handler_t::accept_new_connection(
 		return;
 	}
 
+	ARATAGA_NOTHROW_BLOCK_STAGE(make_protocol_detection_handler)
+
 	// Initial handler for the new connection.
 	connection_handler_shptr_t handler = make_protocol_detection_handler(
 			handler_context_holder_t{ so_5::make_agent_ref(this), *this },
 			id,
 			std::move(connection) );
 
+	ARATAGA_NOTHROW_BLOCK_STAGE(call_new_handler_on_start)
+
 	// This handler should be started manually.
 	handler->on_start();
+
+	//FIXME: what if emplace will throw?
+	//Will handler be closed correctly?
+
+	ARATAGA_NOTHROW_BLOCK_STAGE(store_new_handler_to_connections_map)
 
 	// New connection has to be stored in the list of known connections.
 	m_connections.emplace( id,
 			connection_info_t{ std::move(handler) } );
+
+ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 }
 
 void

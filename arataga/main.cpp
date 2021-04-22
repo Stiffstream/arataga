@@ -37,7 +37,7 @@
 namespace {
 
 const char version_string[] =
-R"ver(arataga v.0.4.0
+R"ver(arataga v.0.4.1
 [--io-threads all]
 [socks5 auth+username/password PDU workaround]
 [own dns lookup]

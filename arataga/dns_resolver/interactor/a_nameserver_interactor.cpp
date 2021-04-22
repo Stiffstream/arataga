@@ -7,6 +7,8 @@
 
 #include <arataga/logging/wrap_logging.hpp>
 
+#include <arataga/nothrow_block/macros.hpp>
+
 #include <noexcept_ctcheck/pub.hpp>
 
 #include <fmt/ostream.h>
@@ -160,8 +162,9 @@ a_nameserver_interactor_t::evt_one_second_timer(
 			// This item has to be deleted due to timeout.
 
 			// Ignore exceptions from logger.
-			try
-			{
+			ARATAGA_NOTHROW_BLOCK_BEGIN()
+				ARATAGA_NOTHROW_BLOCK_STAGE(log_timeout)
+
 				::arataga::logging::wrap_logging(
 						direct_logging_mode,
 						spdlog::level::debug,
@@ -174,26 +177,23 @@ a_nameserver_interactor_t::evt_one_second_timer(
 									m_params.m_name,
 									it->first );
 						} );
-			}
-			catch( ... ) {}
+			ARATAGA_NOTHROW_BLOCK_END(JUST_IGNORE)
 
-			// Ignore exceptions from send operation.
-			try
-			{
+			ARATAGA_NOTHROW_BLOCK_BEGIN()
+				ARATAGA_NOTHROW_BLOCK_STAGE(send_negative_response)
+
 				so_5::send< lookup_response_t >(
 						it->second.m_reply_to,
 						failed_lookup_t{ "request timed out" },
 						it->second.m_result_processor );
-			}
-			catch( ... ) {}
+			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 			// Item is no more needed.
-			try
-			{
+			ARATAGA_NOTHROW_BLOCK_BEGIN()
+				ARATAGA_NOTHROW_BLOCK_STAGE(remove_timed_out_req_from_ongoing_requests)
 				auto it_to_erase = it++; // Hope it doesn't throw.
 				m_ongoing_requests.erase( it_to_erase );
-			}
-			catch( ... ) {}
+			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 		}
 		else
 			++it;
@@ -309,8 +309,9 @@ a_nameserver_interactor_t::handle_dns_udp_package_sending_failure(
 	std::string_view failure_description ) noexcept
 {
 	// Ignore all exceptions related to logging.
-	try
-	{
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
+		ARATAGA_NOTHROW_BLOCK_STAGE(log_failure_reason)
+
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,
 				spdlog::level::err,
@@ -324,18 +325,18 @@ a_nameserver_interactor_t::handle_dns_udp_package_sending_failure(
 							req_id,
 							failure_description );
 				} );
-	}
-	catch( ... ) {}
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 	// Ignore all exceptions related to sending of the response.
-	try
-	{
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
+		ARATAGA_NOTHROW_BLOCK_STAGE(send_negative_response)
+
 		so_5::send< lookup_response_t >(
 				req_data.m_reply_to,
 				failed_lookup_t{ "request timed out" },
 				req_data.m_result_processor );
-	}
-	catch( ... ) {}
+
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 }
 
 void
@@ -346,37 +347,19 @@ a_nameserver_interactor_t::handle_async_receive_result(
 	if( !ec )
 	{
 		// Just log exceptions and ignore them.
-		try
-		{
+		ARATAGA_NOTHROW_BLOCK_BEGIN()
+			ARATAGA_NOTHROW_BLOCK_STAGE(handle_incoming_pkg)
+
 			try_handle_incoming_pkg( bytes_transferred );
-		}
-		catch( const std::exception & x )
-		{
-			// Ignore all exceptions during logging.
-			try
-			{
-				::arataga::logging::wrap_logging(
-						direct_logging_mode,
-						spdlog::level::err,
-						[&]( auto & logger, auto level )
-						{
-							logger.log(
-									level,
-									"{}: unable to handle incoming DNS UDP package: {}",
-									m_params.m_name,
-									x.what() );
-						} );
-			}
-			catch( ... ) {}
-		}
-		catch( ... ) {}
+		ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 	}
 	else
 	{
 		// Ignore all exceptions during logging.
-		try
-		{
+		ARATAGA_NOTHROW_BLOCK_BEGIN()
+			ARATAGA_NOTHROW_BLOCK_STAGE(log_async_receive_from_failure)
+
 			::arataga::logging::wrap_logging(
 					direct_logging_mode,
 					spdlog::level::warn,
@@ -388,9 +371,7 @@ a_nameserver_interactor_t::handle_async_receive_result(
 								m_params.m_name,
 								ec );
 					} );
-		}
-		catch( ... ) {}
-
+		ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 	}
 
 	// If the agent is still working then we have to initiate next read.
@@ -430,9 +411,9 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 	oess_2::io::istream_t & bin_stream,
 	dns_header_t header )
 {
-	// Ignore any exceptions related to logging.
-	try
-	{
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
+		ARATAGA_NOTHROW_BLOCK_STAGE(log_positive_response)
+
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,
 				spdlog::level::trace,
@@ -447,8 +428,7 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 							header.m_id,
 							header.m_ancount );
 				} );
-	}
-	catch( ... ) {}
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 	// We should handle the response only if we know about this request.
 	const auto req_id = ongoing_req_id_t{
@@ -460,8 +440,9 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 
 	// Exceptions during the collecting IPs and sending the response
 	// should be ignored.
-	try
-	{
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
+		ARATAGA_NOTHROW_BLOCK_STAGE(parse_question_part)
+
 		// Parse and then ignore the question.
 		for( oess_2::ushort_t question_i{};
 				question_i < header.m_qdcount;
@@ -470,6 +451,8 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 			dns_question_t question;
 			bin_stream >> question;
 		}
+
+		ARATAGA_NOTHROW_BLOCK_STAGE(parse_resource_records)
 
 		// Parse and process resource records.
 		successful_lookup_t::address_container_t ips;
@@ -489,6 +472,8 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 
 		if( ips.empty() )
 		{
+			ARATAGA_NOTHROW_BLOCK_STAGE(no_ips_logging)
+
 			// No IPs. We can only send negative response.
 			::arataga::logging::wrap_logging(
 					direct_logging_mode,
@@ -502,6 +487,8 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 								req_id );
 					} );
 
+			ARATAGA_NOTHROW_BLOCK_STAGE(no_ips_sending_negative_response)
+
 			so_5::send< lookup_response_t >(
 					it->second.m_reply_to,
 					failed_lookup_t{ "no IPs in name server response" },
@@ -509,13 +496,14 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 		}
 		else
 		{
+			ARATAGA_NOTHROW_BLOCK_STAGE(sending_positive_response)
+
 			so_5::send< lookup_response_t >(
 					it->second.m_reply_to,
 					successful_lookup_t{ std::move(ips) },
 					it->second.m_result_processor );
 		}
-	}
-	catch( ... ) {}
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 	// Information about that request is no more needed.
 	m_ongoing_requests.erase( it );
@@ -525,9 +513,9 @@ void
 a_nameserver_interactor_t::try_handle_negative_nameserver_response(
 	dns_header_t header )
 {
-	// Ignore any exceptions related to logging.
-	try
-	{
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
+		ARATAGA_NOTHROW_BLOCK_STAGE(log_negative_response)
+
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,
 				spdlog::level::debug,
@@ -542,8 +530,7 @@ a_nameserver_interactor_t::try_handle_negative_nameserver_response(
 							header.m_id,
 							rcode_values::to_string( header.rcode() ) );
 				} );
-	}
-	catch( ... ) {}
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 	// If there is info for that request then we should complete it.
 	const auto req_id = ongoing_req_id_t{
@@ -556,8 +543,9 @@ a_nameserver_interactor_t::try_handle_negative_nameserver_response(
 
 	// Now `it` is a valid iterator.
 	// Ignore exceptions related to sending the response.
-	try
-	{
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
+		ARATAGA_NOTHROW_BLOCK_STAGE(sending_negative_response)
+
 		so_5::send< lookup_response_t >(
 				it->second.m_reply_to,
 				failed_lookup_t{
@@ -565,8 +553,7 @@ a_nameserver_interactor_t::try_handle_negative_nameserver_response(
 							rcode_values::to_string( header.rcode() ) )
 				},
 				it->second.m_result_processor );
-	}
-	catch( ... ) {}
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 	// Information about that request is no more needed.
 	m_ongoing_requests.erase( it );
@@ -582,9 +569,9 @@ a_nameserver_interactor_t::handle_async_send_result(
 		// No errors. Nothing to do.
 		return;
 
-	// Ignore exceptions here.
-	try
-	{
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
+		ARATAGA_NOTHROW_BLOCK_STAGE(log_async_send_failure)
+
 		::arataga::logging::wrap_logging(
 				direct_logging_mode,
 				spdlog::level::err,
@@ -597,8 +584,7 @@ a_nameserver_interactor_t::handle_async_send_result(
 							req_id,
 							ec );
 				} );
-	}
-	catch( ... ) {}
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 	// A negative response has to be sent.
 	// Don't expect exceptions here. But if any then it's better
@@ -607,16 +593,16 @@ a_nameserver_interactor_t::handle_async_send_result(
 	if( it != m_ongoing_requests.end() )
 	{
 		// There can be exceptions (like std::bad_alloc). Ignore them.
-		try
-		{
+		ARATAGA_NOTHROW_BLOCK_BEGIN()
+			ARATAGA_NOTHROW_BLOCK_STAGE(sending_negative_response)
+
 			so_5::send< lookup_response_t >(
 					it->second.m_reply_to,
 					failed_lookup_t{
 							"unable to send DNS UDP package"
 					},
 					it->second.m_result_processor );
-		}
-		catch( ... ) {}
+		ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 		// Data for that request is no more needed.
 		m_ongoing_requests.erase( it );
