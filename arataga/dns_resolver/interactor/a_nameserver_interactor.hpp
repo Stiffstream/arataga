@@ -244,6 +244,7 @@ private:
 	try_handle_negative_nameserver_response(
 		dns_header_t header );
 
+	// NOTE: handles (ignores) all exceptions.
 	void
 	form_and_send_dns_udp_package(
 		const std::string_view domain_name,
@@ -251,7 +252,14 @@ private:
 		// This is a reference to data stored inside m_ongoing_requests.
 		const ongoing_req_id_t & req_id,
 		// This is a reference to data stored inside m_ongoing_requests.
-		ongoing_req_data_t & req_data );
+		ongoing_req_data_t & req_data ) noexcept;
+
+	// NOTE: suppresses all exceptions.
+	void
+	handle_dns_udp_package_sending_failure(
+		const ongoing_req_id_t & req_id,
+		ongoing_req_data_t & req_data,
+		std::string_view failure_description ) noexcept;
 
 	void
 	handle_async_send_result(

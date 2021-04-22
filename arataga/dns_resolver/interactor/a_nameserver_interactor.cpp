@@ -7,6 +7,8 @@
 
 #include <arataga/logging/wrap_logging.hpp>
 
+#include <noexcept_ctcheck/pub.hpp>
+
 #include <fmt/ostream.h>
 
 namespace arataga::dns_resolver::interactor
@@ -115,12 +117,13 @@ a_nameserver_interactor_t::evt_lookup_request(
 		return;
 	}
 
-//FIXME: exceptions should be caught and handled here.
-	form_and_send_dns_udp_package(
-			cmd->m_domain_name,
-			cmd->m_ip_version,
-			insertion_result.first->first,
-			insertion_result.first->second );
+	NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
+		form_and_send_dns_udp_package(
+				cmd->m_domain_name,
+				cmd->m_ip_version,
+				insertion_result.first->first,
+				insertion_result.first->second )
+	);
 }
 
 void
@@ -225,62 +228,114 @@ a_nameserver_interactor_t::form_and_send_dns_udp_package(
 	const std::string_view domain_name,
 	ip_version_t ip_version,
 	const ongoing_req_id_t & req_id,
-	ongoing_req_data_t & req_data )
+	ongoing_req_data_t & req_data ) noexcept
 {
-	oess_2::io::ofixed_mem_buf_t bin_stream{
-			req_data.m_outgoing_package.data(),
-			req_data.m_outgoing_package.size()
-	};
-
-	// Form the header.
+	try
 	{
-		dns_header_t header{ req_id.m_id, true };
-		header.set_qr( dns_header_t::REQUEST );
-		header.m_qdcount = 1u;
+		oess_2::io::ofixed_mem_buf_t bin_stream{
+				req_data.m_outgoing_package.data(),
+				req_data.m_outgoing_package.size()
+		};
 
-		bin_stream << header;
+		// Form the header.
+		{
+			dns_header_t header{ req_id.m_id, true };
+			header.set_qr( dns_header_t::REQUEST );
+			header.m_qdcount = 1u;
+
+			bin_stream << header;
+		}
+
+		switch( ip_version )
+		{
+		case ip_version_t::ip_v4:
+			// For IPv4 ask for A record.
+			bin_stream << dns_question_t{
+						domain_name, qtype_values::A, qclass_values::IN
+				};
+		break;
+
+		case ip_version_t::ip_v6:
+			// For IPv6 ask for AAAA record.
+			bin_stream << dns_question_t{
+					domain_name, qtype_values::AAAA, qclass_values::IN
+				};
+		break;
+		}
+
+		const auto bin_size = bin_stream.size();
+
+		// Now we can send a request to name server.
+		::arataga::logging::wrap_logging(
+				direct_logging_mode,
+				spdlog::level::trace,
+				[&]( auto & logger, auto level )
+				{
+					logger.log(
+							level,
+							"{}: sending DNS UDP package, id={}, bytes={}",
+							m_params.m_name,
+							req_id,
+							bin_size );
+				} );
+
+		m_socket.async_send_to(
+				asio::buffer( req_data.m_outgoing_package.data(), bin_size ),
+				asio::ip::udp::endpoint{ req_id.m_address, 53u },
+				[self = so_5::make_agent_ref(this), id = req_id]
+				( const asio::error_code & ec, std::size_t bytes_transferred ) {
+					self->handle_async_send_result( id, ec, bytes_transferred );
+				} );
 	}
-
-	switch( ip_version )
+	catch( const std::exception & x )
 	{
-	case ip_version_t::ip_v4:
-		// For IPv4 ask for A record.
-		bin_stream << dns_question_t{
-					domain_name, qtype_values::A, qclass_values::IN
-			};
-	break;
-
-	case ip_version_t::ip_v6:
-		// For IPv6 ask for AAAA record.
-		bin_stream << dns_question_t{
-				domain_name, qtype_values::AAAA, qclass_values::IN
-			};
-	break;
+		NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
+			handle_dns_udp_package_sending_failure( req_id, req_data, x.what() )
+		);
 	}
+	catch( ... )
+	{
+		NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
+			handle_dns_udp_package_sending_failure(
+					req_id, req_data, "unknown exception" )
+		);
+	}
+}
 
-	const auto bin_size = bin_stream.size();
+void
+a_nameserver_interactor_t::handle_dns_udp_package_sending_failure(
+	const ongoing_req_id_t & req_id,
+	ongoing_req_data_t & req_data,
+	std::string_view failure_description ) noexcept
+{
+	// Ignore all exceptions related to logging.
+	try
+	{
+		::arataga::logging::wrap_logging(
+				direct_logging_mode,
+				spdlog::level::err,
+				[&]( auto & logger, auto level )
+				{
+					logger.log(
+							level,
+							"{}: unable to send outgoing DNS UDP package: "
+									"id={}, error={}",
+							m_params.m_name,
+							req_id,
+							failure_description );
+				} );
+	}
+	catch( ... ) {}
 
-	// Now we can send a request to name server.
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
-			[&]( auto & logger, auto level )
-			{
-				logger.log(
-						level,
-						"{}: sending DNS UDP package, id={}, bytes={}",
-						m_params.m_name,
-						req_id,
-						bin_size );
-			} );
-
-	m_socket.async_send_to(
-			asio::buffer( req_data.m_outgoing_package.data(), bin_size ),
-			asio::ip::udp::endpoint{ req_id.m_address, 53u },
-			[self = so_5::make_agent_ref(this), id = req_id]
-			( const asio::error_code & ec, std::size_t bytes_transferred ) {
-				self->handle_async_send_result( id, ec, bytes_transferred );
-			} );
+	// Ignore all exceptions related to sending of the response.
+	try
+	{
+		so_5::send< lookup_response_t >(
+				req_data.m_reply_to,
+				failed_lookup_t{ "request timed out" },
+				req_data.m_result_processor );
+	}
+	catch( ... ) {}
 }
 
 void
@@ -314,8 +369,7 @@ a_nameserver_interactor_t::handle_async_receive_result(
 			}
 			catch( ... ) {}
 		}
-		catch( ... )
-		{}
+		catch( ... ) {}
 
 	}
 	else
