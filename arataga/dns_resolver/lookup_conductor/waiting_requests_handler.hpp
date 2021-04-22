@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include <arataga/dns_resolver/lookup_conductor/resolve_address_from_list.hpp>
-
 #include <arataga/dns_resolver/pub.hpp>
 
 #include <list>
@@ -25,17 +23,13 @@ namespace arataga::dns_resolver::lookup_conductor
  * @tparam ResolveRequest Type of resolution request.
  * @tparam ResolveResponse Type of resolution response.
  */
-template <
-	typename Key,
-	typename ResolveRequest,
-	typename ResolveResponse >
 class waiting_requests_handler_t
 {
 	using completion_token_t =
-		typename ResolveResponse::completion_token_t;
+		typename resolve_reply_t::completion_token_t;
 
 	using resolve_result_t =
-		typename ResolveResponse::resolve_result_t;
+		typename resolve_reply_t::resolve_result_t;
 
 	//! Info about a request.
 	struct resolve_request_info_t
@@ -70,7 +64,9 @@ public:
 	 */
 	[[nodiscard]]
 	bool
-	add_request( const Key & key, const ResolveRequest & req )
+	add_request(
+		const std::string & key,
+		const resolve_request_t & req )
 	{
 		bool need_resolve = false;
 
@@ -119,8 +115,8 @@ public:
 	 */
 	template<typename LoggerFunc>
 	void
-	handle_waiting_requests(
-		const Key & key,
+	handle_failure(
+		const std::string & key,
 		const resolve_result_t & result,
 		LoggerFunc && logger )
 	{
@@ -134,12 +130,13 @@ public:
 			for( const auto & req_info : requests )
 			{
 				//FIXME: what to do if this send throws?
-				so_5::send< ResolveResponse >(
+				so_5::send< resolve_reply_t >(
 					req_info.m_reply_to,
 					req_info.m_req_id,
 					req_info.m_completion_token,
 					result );
 
+				//FIXME: what to do if logger throws?
 				logger( std::move(req_info.m_req_id), result );
 			}
 		}
@@ -151,18 +148,15 @@ public:
 	 * All requests receive the same result.
 	 *
 	 * @param key Key for the request.
-	 * @param result The result for resolution attempt.
+	 * @param ips The container with IPs for @a key.
 	 * @param logger Logging function for logging the result.
-	 * @param address_extractor Functor for extraction of an IP-address
-	 * from the resolution result.
 	 */
-	template<typename List, typename LoggerFunc, typename Extractor>
+	template<typename IpList, typename LoggerFunc>
 	void
-	handle_waiting_requests(
-		const Key & key,
-		const List & results,
-		LoggerFunc && logger,
-		Extractor && address_extractor )
+	handle_success(
+		const std::string & key,
+		const IpList & ips,
+		LoggerFunc && logger )
 	{
 		auto find = m_waiting_requests.find( key );
 
@@ -171,18 +165,19 @@ public:
 			auto requests = std::move( find->second );
 			m_waiting_requests.erase( find );
 
+			auto result = arataga::dns_resolver::forward::successful_resolve_t {
+					*(ips.begin())
+				};
 			for( const auto & req_info : requests )
 			{
-				auto result = get_resolve_result(
-					results, req_info.m_ip_version, address_extractor );
-
 				//FIXME: what to do if this send throws?
-				so_5::send< ResolveResponse >(
+				so_5::send< resolve_reply_t >(
 					req_info.m_reply_to,
 					req_info.m_req_id,
 					req_info.m_completion_token,
 					result );
 
+				//FIXME: what to do if logger throws?
 				logger(
 					std::move(req_info.m_req_id),
 					std::move(result) );
@@ -198,7 +193,7 @@ private:
 	/*!
 	 * @brief A map of waiting requests.
 	 */
-	std::map< Key, resolve_requests_info_list_t > m_waiting_requests;
+	std::map< std::string, resolve_requests_info_list_t > m_waiting_requests;
 };
 
 } /* namespace arataga::dns_resolver::lookup_conductor */

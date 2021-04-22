@@ -45,9 +45,7 @@ public:
 	std::optional<asio::ip::address>
 	resolve(
 		//! Domain name to be resolved.
-		const std::string & name,
-		//! IPv4 or IPv6 address as result?
-		ip_version_t ip_version ) const;
+		const std::string & name ) const;
 
 	/*!
 	 * @brief Remove outdated items.
@@ -213,11 +211,7 @@ private:
 	local_cache_t m_cache;
 
 	//! List of waiting domain names.
-	waiting_requests_handler_t<
-			std::string,
-			resolve_request_t,
-			resolve_reply_t
-		> m_waiting_forward_requests;
+	waiting_requests_handler_t m_waiting_forward_requests;
 
 	//! Handler for a new resolution request.
 	void

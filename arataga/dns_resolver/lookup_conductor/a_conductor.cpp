@@ -4,7 +4,6 @@
  */
 
 #include <arataga/dns_resolver/lookup_conductor/a_conductor.hpp>
-#include <arataga/dns_resolver/lookup_conductor/resolve_address_from_list.hpp>
 
 #include <arataga/dns_resolver/interactor/pub.hpp>
 
@@ -40,23 +39,12 @@ namespace
 //
 
 std::optional<asio::ip::address>
-local_cache_t::resolve(
-	const std::string & name,
-	ip_version_t ip_version ) const
+local_cache_t::resolve( const std::string & name ) const
 {
 	auto it = m_data.find(name);
 	if( it != m_data.cend() )
 	{
-		const auto & addresses = it->second.m_addresses;
-
-		return resolve_address_from_list(
-			addresses,
-			ip_version,
-			[](const asio::ip::address & el)->
-				const asio::ip::address &
-			{
-				return el;
-			});
+		return *(it->second.m_addresses.begin());
 	}
 
 	return std::nullopt;
@@ -201,7 +189,7 @@ a_conductor_t::on_resolve( const resolve_request_t & msg )
 						to_string( msg.m_ip_version ) );
 			} );
 
-	auto resolve = m_cache.resolve( msg.m_name, msg.m_ip_version );
+	auto resolve = m_cache.resolve( msg.m_name );
 
 	if( resolve )
 	{
@@ -357,14 +345,10 @@ a_conductor_t::handle_lookup_result(
 
 			m_cache.add_records( domain_name, lr.m_addresses );
 
-			m_waiting_forward_requests.handle_waiting_requests(
+			m_waiting_forward_requests.handle_success(
 				domain_name,
 				lr.m_addresses,
-				log_func,
-				[]( const asio::ip::address & addr )
-				{
-					return addr;
-				} );
+				log_func );
 		};
 
 	const auto failure_handler =
@@ -388,7 +372,7 @@ a_conductor_t::handle_lookup_result(
 								lr.m_description );
 					} );
 
-			m_waiting_forward_requests.handle_waiting_requests(
+			m_waiting_forward_requests.handle_failure(
 				domain_name,
 				forward::failed_resolve_t{ lr.m_description },
 				log_func );
