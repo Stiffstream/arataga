@@ -83,6 +83,49 @@ catch( ... ) \
 	catch( ... ) {} \
 }
 
+#define ARATAGA_NOTHROW_BLOCK_END_STATEMENT_LOG_THEN_ABORT() \
+} \
+catch( const std::exception & x ) \
+{ \
+	const auto line__ = __LINE__; \
+	const auto file__ = __FILE__; \
+	const auto function__ = __PRETTY_FUNCTION__; \
+	try \
+	{ \
+		if( !arataga_nothrow_block_stage__ ) arataga_nothrow_block_stage__ = "unspecified"; \
+		::arataga::logging::wrap_logging( \
+				::arataga::direct_logging_mode, \
+				::spdlog::level::critical, \
+				[arataga_nothrow_block_stage__, &x, &line__, &file__, &function__] \
+				( auto & logger, auto level ) { \
+					logger.log( level, "{}:{} [{}] unexpected exception at stage '{}' => {}", \
+							file__, line__, function__, arataga_nothrow_block_stage__, x.what() ); \
+				} ); \
+	} \
+	catch( ... ) {} \
+	std::abort(); \
+} \
+catch( ... ) \
+{ \
+	const auto line__ = __LINE__; \
+	const auto file__ = __FILE__; \
+	const auto function__ = __PRETTY_FUNCTION__; \
+	try \
+	{ \
+		if( !arataga_nothrow_block_stage__ ) arataga_nothrow_block_stage__ = "unspecified"; \
+		::arataga::logging::wrap_logging( \
+				::arataga::direct_logging_mode, \
+				::spdlog::level::critical, \
+				[arataga_nothrow_block_stage__, &line__, &file__, &function__] \
+				( auto & logger, auto level ) { \
+					logger.log( level, "{}:{} [{}] unexpected exception at stage '{}', description not available", \
+							file__, line__, function__, arataga_nothrow_block_stage__ ); \
+				} ); \
+	} \
+	catch( ... ) {} \
+	std::abort(); \
+}
+
 #define ARATAGA_NOTHROW_BLOCK_END_STATEMENT_JUST_IGNORE() \
 } \
 catch( ... ) {}
@@ -90,7 +133,7 @@ catch( ... ) {}
 /*!
  * Finishes block started by ARATAGA_NOTHROW_BLOCK_BEGIN.
  *
- * @a action can be LOG_THEN_IGNORE or JUST_IGNORE.
+ * @a action can be LOG_THEN_IGNORE, LOG_THEN_ABORT or JUST_IGNORE.
  *
  * Usage example:
  * @code

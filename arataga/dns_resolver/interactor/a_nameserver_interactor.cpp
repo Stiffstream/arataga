@@ -188,12 +188,13 @@ a_nameserver_interactor_t::evt_one_second_timer(
 						it->second.m_result_processor );
 			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
-			// Item is no more needed.
+			// Item is no more needed. In the case of an exception
+			// we can't trust m_ongoing_requests anymore.
 			ARATAGA_NOTHROW_BLOCK_BEGIN()
 				ARATAGA_NOTHROW_BLOCK_STAGE(remove_timed_out_req_from_ongoing_requests)
 				auto it_to_erase = it++; // Hope it doesn't throw.
 				m_ongoing_requests.erase( it_to_erase );
-			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
+			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_ABORT)
 		}
 		else
 			++it;
