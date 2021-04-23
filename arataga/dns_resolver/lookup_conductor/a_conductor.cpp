@@ -464,23 +464,22 @@ a_conductor_t::try_handle_direct_ip_case(
 		return direct_ip_checking_result_t::domain_name;
 
 	// It's an IP address.
-	const auto [can_continue, ip_to_reply] =
-		[this, &addr]() noexcept -> std::tuple<bool, asio::ip::address> {
+	const auto ip_to_reply =
+		[this, &addr]() noexcept -> std::optional<asio::ip::address> {
 			if( ip_version_t::ip_v4 == m_ip_version && addr.is_v4() )
-				return { true, addr };
+				return { addr };
 			if( ip_version_t::ip_v6 == m_ip_version && addr.is_v6() )
-				return { true, addr };
+				return { addr };
 			if( ip_version_t::ip_v6 == m_ip_version && addr.is_v4() )
-				return { true, asio::ip::make_address_v6(
-						asio::ip::v4_mapped,
-						addr.to_v4() )
+				return {
+					asio::ip::make_address_v6( asio::ip::v4_mapped, addr.to_v4() )
 				};
 
-			return { false, addr };
+			return std::nullopt;
 		}();
 
 	// Now we have to check required IP-version.
-	if( can_continue )
+	if( ip_to_reply )
 	{
 		// Everything is good. We can send the reply right now.
 		ARATAGA_NOTHROW_BLOCK_BEGIN()
@@ -495,7 +494,7 @@ a_conductor_t::try_handle_direct_ip_case(
 								"{}: resolve reply for direct IP: id={}, result={}",
 								m_name,
 								msg.m_req_id,
-								ip_to_reply );
+								ip_to_reply.value() );
 					} );
 
 			ARATAGA_NOTHROW_BLOCK_STAGE(positive_response_sending)
@@ -504,7 +503,7 @@ a_conductor_t::try_handle_direct_ip_case(
 					msg.m_req_id,
 					msg.m_completion_token,
 					forward::resolve_result_t{
-							forward::successful_resolve_t{ ip_to_reply }
+							forward::successful_resolve_t{ ip_to_reply.value() }
 					} );
 		ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 	}
