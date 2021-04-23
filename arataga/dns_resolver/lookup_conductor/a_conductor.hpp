@@ -150,6 +150,20 @@ operator<<( std::ostream & o, const local_cache_t & cache )
 }
 
 //
+// direct_ip_checking_result_t
+//
+/*!
+ * @since v.0.4.2
+ */
+enum class direct_ip_checking_result_t
+{
+	//! direct IP is specified instead of a domain name.
+	direct_ip,
+	//! a name is specified as domain name.
+	domain_name
+};
+
+//
 // a_conductor_t
 //
 /*!
@@ -253,6 +267,19 @@ private:
 	 */
 	void
 	add_to_waiting_and_resolve( const resolve_request_t & req );
+
+	/*!
+	 * @brief Handle a special case when direct IP address is
+	 * specified instead of domain name.
+	 *
+	 * If a direct IP address is found then a response will be sent back.
+	 *
+	 * @since v.0.4.2
+	 */
+	[[nodiscard]]
+	direct_ip_checking_result_t
+	try_handle_direct_ip_case(
+		const resolve_request_t & msg );
 };
 
 } /* namespace arataga::dns_resolver::lookup_conductor */

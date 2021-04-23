@@ -9,6 +9,8 @@
 
 #include <arataga/logging/wrap_logging.hpp>
 
+#include <arataga/nothrow_block/macros.hpp>
+
 #include <fmt/ostream.h>
 
 namespace arataga::dns_resolver::lookup_conductor
@@ -188,6 +190,13 @@ a_conductor_t::on_resolve( const resolve_request_t & msg )
 						msg.m_name,
 						to_string( msg.m_ip_version ) );
 			} );
+
+	// If msg.m_name is a direct IP address then we shouldn't do
+	// domain name resolution.
+	const auto direct_ip_check_result = try_handle_direct_ip_case( msg );
+	if( direct_ip_checking_result_t::direct_ip == direct_ip_check_result )
+		// Nothing to do more.
+		return;
 
 	auto resolve = m_cache.resolve( msg.m_name );
 
@@ -438,6 +447,102 @@ a_conductor_t::add_to_waiting_and_resolve(
 							req.m_name );
 				} );
 	}
+}
+
+[[nodiscard]]
+direct_ip_checking_result_t
+a_conductor_t::try_handle_direct_ip_case(
+	const resolve_request_t & msg )
+{
+	// Very simple approach as a quick-and-dirty solution.
+	// Try to convert name to IP address. Then handle an error.
+	asio::error_code ec;
+	const auto addr = asio::ip::make_address( msg.m_name, ec );
+
+	if( ec )
+		// It isn't an IP address.
+		return direct_ip_checking_result_t::domain_name;
+
+	// It's an IP address.
+	const auto [can_continue, ip_to_reply] =
+		[this, &addr]() noexcept -> std::tuple<bool, asio::ip::address> {
+			if( ip_version_t::ip_v4 == m_ip_version && addr.is_v4() )
+				return { true, addr };
+			if( ip_version_t::ip_v6 == m_ip_version && addr.is_v6() )
+				return { true, addr };
+			if( ip_version_t::ip_v6 == m_ip_version && addr.is_v4() )
+				return { true, asio::ip::make_address_v6(
+						asio::ip::v4_mapped,
+						addr.to_v4() )
+				};
+
+			return { false, addr };
+		}();
+
+	// Now we have to check required IP-version.
+	if( can_continue )
+	{
+		// Everything is good. We can send the reply right now.
+		ARATAGA_NOTHROW_BLOCK_BEGIN()
+			ARATAGA_NOTHROW_BLOCK_STAGE(log_direct_ip_sending)
+			::arataga::logging::wrap_logging(
+					direct_logging_mode,
+					spdlog::level::trace,
+					[&]( auto & logger, auto level )
+					{
+						logger.log(
+								level,
+								"{}: resolve reply for direct IP: id={}, result={}",
+								m_name,
+								msg.m_req_id,
+								ip_to_reply );
+					} );
+
+			ARATAGA_NOTHROW_BLOCK_STAGE(positive_response_sending)
+			so_5::send< resolve_reply_t >(
+					msg.m_reply_to,
+					msg.m_req_id,
+					msg.m_completion_token,
+					forward::resolve_result_t{
+							forward::successful_resolve_t{ ip_to_reply }
+					} );
+		ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
+	}
+	else
+	{
+		// IP versions mismatch. Negative response should be sent back.
+		ARATAGA_NOTHROW_BLOCK_BEGIN()
+			ARATAGA_NOTHROW_BLOCK_STAGE(
+					log_negative_reply_for_direct_ip_version_mismatch)
+			::arataga::logging::wrap_logging(
+					direct_logging_mode,
+					spdlog::level::warn,
+					[&]( auto & logger, auto level )
+					{
+						logger.log(
+								level,
+								"{}: resolve reply for direct IP of different "
+										"version: id={}, ip={}, conductor_ip_version={}",
+								m_name,
+								msg.m_req_id,
+								addr,
+								to_string( m_ip_version ) );
+					} );
+
+			ARATAGA_NOTHROW_BLOCK_STAGE(negative_response_sending)
+			so_5::send< resolve_reply_t >(
+					msg.m_reply_to,
+					msg.m_req_id,
+					msg.m_completion_token,
+					forward::resolve_result_t{
+							forward::failed_resolve_t{
+								"IP version mismatch for direct IP address"
+							}
+					} );
+		ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
+	}
+
+	return direct_ip_checking_result_t::direct_ip;
 }
 
 //
