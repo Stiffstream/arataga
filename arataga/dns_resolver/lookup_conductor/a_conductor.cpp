@@ -464,8 +464,9 @@ a_conductor_t::try_handle_direct_ip_case(
 		return direct_ip_checking_result_t::domain_name;
 
 	// It's an IP address.
+	// Now we have to check required IP-version.
 	const auto ip_to_reply =
-		[this, &addr]() noexcept -> std::optional<asio::ip::address> {
+		[this, &addr]() -> std::optional<asio::ip::address> {
 			if( ip_version_t::ip_v4 == m_ip_version && addr.is_v4() )
 				return { addr };
 			if( ip_version_t::ip_v6 == m_ip_version && addr.is_v6() )
@@ -478,7 +479,6 @@ a_conductor_t::try_handle_direct_ip_case(
 			return std::nullopt;
 		}();
 
-	// Now we have to check required IP-version.
 	if( ip_to_reply )
 	{
 		// Everything is good. We can send the reply right now.

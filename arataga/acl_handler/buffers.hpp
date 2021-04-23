@@ -98,7 +98,9 @@ public:
 	{
 		if( m_size > Capacity )
 			throw acl_handler_ex_t{
-					fmt::format( "initial content doesn't fit into the buffer, "
+					fmt::format(
+							"in_buffer_fixed_t: "
+							"initial content doesn't fit into the buffer, "
 							"Capacity: {}, initial_content.size(): {}",
 							Capacity, initial_content.size() )
 			};
@@ -112,7 +114,11 @@ public:
 	read_byte()
 	{
 		if( m_read_position >= m_size )
-			throw acl_handler_ex_t{ "no more data in input buffer" };
+			throw acl_handler_ex_t{
+					fmt::format( "in_buffer_fixed_t::read_byte: "
+							"no more data in input buffer (size: {})",
+							m_size )
+			};
 
 		return m_buffer[ m_read_position++ ];
 	}
@@ -129,7 +135,13 @@ public:
 	read_bytes_as_sequence( std::size_t length )
 	{
 		if( m_read_position >= m_size )
-			throw acl_handler_ex_t{ "no more data in input buffer" };
+			throw acl_handler_ex_t{
+					fmt::format(
+							"in_buffer_fixed_t::read_bytes_as_sequence: "
+							"no more data in input buffer (size: {}, "
+							"bytes_to_read: {})",
+							m_size, length )
+			};
 
 		const auto bytes_to_return = std::min(
 				m_size - m_read_position, length );
@@ -175,7 +187,9 @@ public:
 		const auto new_size = m_size + v;
 		if( new_size > Capacity )
 			throw acl_handler_ex_t{
-				fmt::format( "increment_bytes_read: buffer capacity overflow, "
+				fmt::format(
+						"in_buffer_fixed_t::increment_bytes_read: "
+						"buffer capacity overflow, "
 						"Capacity: {}, size: {}, new_size: {}",
 						Capacity, m_size, new_size )
 			};
@@ -202,7 +216,9 @@ public:
 	{
 		if( pos > m_size )
 			throw acl_handler_ex_t{
-				fmt::format( "invalid position to rewind: {}, size: {}",
+				fmt::format(
+						"in_buffer_fixed_t::rewind_read_position: "
+						"invalid position to rewind: {}, size: {}",
 						pos, m_size )
 			};
 
@@ -264,7 +280,9 @@ public:
 	{
 		if( initial_size > capacity )
 			throw acl_handler_ex_t{
-					fmt::format( "initial_size ({}) is greater than capacity ({})",
+					fmt::format(
+							"in_external_buffer_t: "
+							"initial_size ({}) is greater than capacity ({})",
 							initial_size, capacity )
 			};
 	}
@@ -274,7 +292,12 @@ public:
 	read_byte()
 	{
 		if( m_read_position >= m_size )
-			throw acl_handler_ex_t{ "no more data in input buffer" };
+			throw acl_handler_ex_t{
+					fmt::format(
+							"in_external_buffer_t::read_byte: "
+							"no more data in input buffer (size: {})",
+							m_size )
+			};
 
 		return m_buffer[ m_read_position++ ];
 	}
@@ -291,7 +314,14 @@ public:
 	read_bytes_as_sequence( std::size_t length )
 	{
 		if( m_read_position >= m_size )
-			throw acl_handler_ex_t{ "no more data in input buffer" };
+			throw acl_handler_ex_t{
+					fmt::format(
+							"in_external_buffer_t::read_bytes_as_sequence: "
+							"no more data in input buffer (size: {}, "
+							"bytes_to_read: {})",
+							m_size,
+							length )
+			};
 
 		const auto bytes_to_return = std::min(
 				m_size - m_read_position, length );
@@ -337,7 +367,9 @@ public:
 		const auto new_size = m_size + v;
 		if( new_size > m_capacity )
 			throw acl_handler_ex_t{
-				fmt::format( "increment_bytes_read: buffer capacity overflow, "
+				fmt::format(
+						"in_external_buffer_t::increment_bytes_read: "
+						"buffer capacity overflow, "
 						"capacity: {}, size: {}, new_size: {}",
 						m_capacity, m_size, new_size )
 			};
@@ -364,7 +396,9 @@ public:
 	{
 		if( pos > m_size )
 			throw acl_handler_ex_t{
-				fmt::format( "invalid position to rewind: {}, size: {}",
+				fmt::format(
+						"in_external_buffer_t::rewind_read_position: "
+						"invalid position to rewind: {}, size: {}",
 						pos, m_size )
 			};
 
@@ -453,7 +487,9 @@ public:
 	{
 		if( m_size > Capacity )
 			throw acl_handler_ex_t{
-					fmt::format( "initial content doesn't fit into the buffer, "
+					fmt::format(
+							"out_buffer_fixed_t: "
+							"initial content doesn't fit into the buffer, "
 							"Capacity: {}, initial_content.size(): {}",
 							Capacity, initial_content.size() )
 			};
@@ -466,7 +502,13 @@ public:
 	write_byte( std::byte v )
 	{
 		if( m_size >= Capacity )
-			throw acl_handler_ex_t{ "no more space in output buffer" };
+			throw acl_handler_ex_t{
+					fmt::format(
+							"out_buffer_fixed_t::write_byte: "
+							"no more space in output buffer (size: {}, "
+							"capacity: {})",
+							m_size, Capacity )
+			};
 
 		m_buffer[ m_size ] = v;
 		++m_size;
@@ -476,7 +518,13 @@ public:
 	write_string( const std::string & v )
 	{
 		if( Capacity - m_size < v.size() )
-			throw acl_handler_ex_t{ "no enought space in output buffer" };
+			throw acl_handler_ex_t{
+					fmt::format(
+							"out_buffer_fixed_t::write_string: "
+							"no more space in output buffer (size: {}, "
+							"capacity: {}, str.size: {})",
+							m_size, Capacity, v.size() )
+			};
 
 		std::transform( v.begin(), v.end(), &m_buffer[m_size],
 				[]( unsigned char ch ) { return std::byte{ch}; } );
@@ -488,7 +536,13 @@ public:
 	write_string( const std::string_view & v )
 	{
 		if( Capacity - m_size < v.size() )
-			throw acl_handler_ex_t{ "no enought space in output buffer" };
+			throw acl_handler_ex_t{
+					fmt::format(
+							"out_buffer_fixed_t::write_string: "
+							"no more space in output buffer (size: {}, "
+							"capacity: {}, str.size: {})",
+							m_size, Capacity, v.size() )
+			};
 
 		std::transform( v.begin(), v.end(), &m_buffer[m_size],
 				[]( unsigned char ch ) { return std::byte{ch}; } );
@@ -501,7 +555,13 @@ public:
 	write_bytes_from( const std::array<T, C> & arr )
 	{
 		if( Capacity - m_size < C )
-			throw acl_handler_ex_t{ "no enought space in output buffer" };
+			throw acl_handler_ex_t{
+					fmt::format(
+							"out_buffer_fixed_t::write_bytes_from(std::array): "
+							"no more space in output buffer (size: {}, "
+							"capacity: {}, arr.size: {})",
+							m_size, Capacity, C )
+			};
 
 		std::transform( arr.begin(), arr.end(), &m_buffer[m_size],
 				[]( auto ch ) { return std::byte{ch}; } );
@@ -546,7 +606,9 @@ public:
 		const auto new_written = m_bytes_written + v;
 		if( new_written > m_size )
 			throw acl_handler_ex_t{
-				fmt::format( "increment_bytes_written: buffer size overflow, "
+				fmt::format(
+						"out_buffer_fixed_t::increment_bytes_written: "
+						"buffer size overflow, "
 						"Capacity: {}, size: {}, new_written: {}",
 						Capacity, m_size, new_written )
 			};
@@ -637,7 +699,8 @@ public:
 		const auto new_written = m_bytes_written + v;
 		if( new_written > m_data.size() )
 			throw acl_handler_ex_t{
-				fmt::format( "increment_bytes_written: buffer size overflow, "
+				fmt::format( "out_string_view_buffer_t::increment_bytes_written: "
+						"buffer size overflow, "
 						"size: {}, new_written: {}",
 						m_data.size(), new_written )
 			};
@@ -715,7 +778,8 @@ public:
 		const auto new_written = m_bytes_written + v;
 		if( new_written > m_data.size() )
 			throw acl_handler_ex_t{
-				fmt::format( "increment_bytes_written: buffer size overflow, "
+				fmt::format( "out_string_buffer_t::increment_bytes_written: "
+						"buffer size overflow, "
 						"size: {}, new_written: {}",
 						m_data.size(), new_written )
 			};
@@ -793,7 +857,8 @@ public:
 		const auto new_written = m_bytes_written + v;
 		if( new_written > m_data.size() )
 			throw acl_handler_ex_t{
-				fmt::format( "increment_bytes_written: buffer size overflow, "
+				fmt::format( "out_fmt_memory_buffer_t::increment_bytes_written: "
+						"buffer size overflow, "
 						"size: {}, new_written: {}",
 						m_data.size(), new_written )
 			};

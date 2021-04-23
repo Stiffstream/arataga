@@ -243,6 +243,13 @@ private:
 		delete_protector_t /*delete_protector*/,
 		can_throw_t can_throw )
 	{
+		//FIXME: Is this check really needed?
+		if( !m_first_pdu.remaining() )
+			throw acl_handler_ex_t{
+				"auth_method_detection_handler_t::try_handle_data_read: "
+				"m_first_pdu is empty()"
+			};
+
 		buffer_read_trx_t read_trx{ m_first_pdu };
 
 		(void)m_first_pdu.read_byte(); // Skip the version byte.
@@ -779,6 +786,13 @@ private:
 		delete_protector_t delete_protector,
 		can_throw_t can_throw )
 	{
+		//FIXME: Is this check really needed?
+		if( !m_auth_pdu.remaining() )
+			throw acl_handler_ex_t{
+				"no_authentification_handler_t::try_handle_data_read: "
+				"m_auth_pdu is empty()"
+			};
+
 		buffer_read_trx_t read_trx{ m_auth_pdu };
 
 		const auto version = m_auth_pdu.read_byte();
@@ -1063,6 +1077,13 @@ private:
 		delete_protector_t delete_protector,
 		can_throw_t can_throw )
 	{
+		//FIXME: Is this check really needed?
+		if( !m_command_pdu.remaining() )
+			throw acl_handler_ex_t{
+				"command_handler_t::try_handle_data_read: "
+				"m_auth_pdu is empty()"
+			};
+
 		buffer_read_trx_t read_trx{ m_command_pdu };
 
 		const auto version = m_command_pdu.read_byte();
