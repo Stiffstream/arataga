@@ -5,6 +5,8 @@
 
 #include <arataga/logging/wrap_logging.hpp>
 
+#include <arataga/nothrow_block/macros.hpp>
+
 #include <sys/prctl.h>
 #include <signal.h>
 #include <unistd.h>
@@ -37,7 +39,7 @@
 namespace {
 
 const char version_string[] =
-R"ver(arataga v.0.4.2
+R"ver(arataga v.0.4.3
 [--io-threads all]
 [socks5 auth+username/password PDU workaround]
 [own dns lookup]
@@ -762,16 +764,20 @@ make_sobjectizer_params(
 			unsigned int line,
 			const std::string & message ) override
 		{
-			::arataga::logging::wrap_logging(
-					::arataga::direct_logging_mode,
-					spdlog::level::err,
-					[&]( auto & logger, auto level )
-					{
-						logger.log(
-								level,
-								"an error detected by SObjectizer: {} (at {}:{})",
-								message, file_name, line );
-					} );
+			ARATAGA_NOTHROW_BLOCK_BEGIN()
+				ARATAGA_NOTHROW_BLOCK_STAGE(log_error_msg)
+
+				::arataga::logging::wrap_logging(
+						::arataga::direct_logging_mode,
+						spdlog::level::err,
+						[&]( auto & logger, auto level )
+						{
+							logger.log(
+									level,
+									"an error detected by SObjectizer: {} (at {}:{})",
+									message, file_name, line );
+						} );
+			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 		}
 	};
 
@@ -787,8 +793,9 @@ make_sobjectizer_params(
 			const so_5::coop_handle_t & coop ) noexcept override
 		{
 			// This method can't throw. So catch all exceptions.
-			try
-			{
+			ARATAGA_NOTHROW_BLOCK_BEGIN()
+				ARATAGA_NOTHROW_BLOCK_STAGE(log_exception)
+
 				::arataga::logging::wrap_logging(
 						::arataga::direct_logging_mode,
 						spdlog::level::err,
@@ -801,8 +808,7 @@ make_sobjectizer_params(
 									event_exception.what(),
 									coop.id() );
 						} );
-			}
-			catch( ... ) {}
+			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 		}
 	};
 

@@ -7,6 +7,8 @@
 
 #include <arataga/utils/can_throw.hpp>
 
+#include <arataga/nothrow_block/macros.hpp>
+
 #include <nodejs/http_parser/http_parser.h>
 
 #include <utility>
@@ -32,18 +34,12 @@ wrap_http_parser_callback(
 {
 	auto * handler = reinterpret_cast<Handler *>(parser->data);
 
-	try
-	{
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
 		::arataga::utils::exception_handling_context_t ctx;
 
 		return (handler->*callback)( ctx.make_can_throw_marker(),
 				std::forward<Args>(args)... );
-	}
-	catch(...) // All exceptions will be suppressed.
-		// We can't log them because there is no context via that
-		// the logging can be performed.
-	{
-	}
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 	return -1;
 }

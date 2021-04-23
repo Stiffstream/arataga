@@ -14,6 +14,8 @@
 
 #include <arataga/logging/wrap_logging.hpp>
 
+#include <arataga/nothrow_block/macros.hpp>
+
 #include <so_5/all.hpp>
 
 #include <asio/ip/tcp.hpp>
@@ -708,8 +710,9 @@ protected:
 			catch( const std::exception & x )
 			{
 				// Ignore exceptions that can be thrown during the logging.
-				try
-				{
+				ARATAGA_NOTHROW_BLOCK_BEGIN()
+					ARATAGA_NOTHROW_BLOCK_STAGE(log_exception)
+
 					::arataga::logging::wrap_logging(
 							proxy_logging_mode,
 							spdlog::level::err,
@@ -720,8 +723,7 @@ protected:
 										level,
 										x.what() );
 							} );
-				}
-				catch( ... ) {}
+				ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 				NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
 						ctx_holder.ctx().remove_connection_handler(
@@ -817,10 +819,12 @@ protected:
 		catch( const std::exception & x )
 		{
 			// We have to catch and suppress exceptions from here.
-			try
-			{
+			ARATAGA_NOTHROW_BLOCK_BEGIN()
+				ARATAGA_NOTHROW_BLOCK_STAGE(log_and_remove_connection)
+
 				::arataga::utils::exception_handling_context_t ctx;
 
+				//FIXME: what if fmt::format throws?
 				log_and_remove_connection(
 						delete_protector,
 						ctx.make_can_throw_marker(),
@@ -828,23 +832,24 @@ protected:
 						spdlog::level::err,
 						fmt::format( "exception caught: {}", x.what() )
 					);
-			}
-			catch( ... ) {}
+			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 		}
 		catch( ... )
 		{
 			// We have to catch and suppress exceptions from here.
-			try
-			{
+			ARATAGA_NOTHROW_BLOCK_BEGIN()
+				ARATAGA_NOTHROW_BLOCK_STAGE(
+						log_and_remove_connection_on_unknow_exception)
+
 				::arataga::utils::exception_handling_context_t ctx;
 
 				log_and_remove_connection(
 						delete_protector,
 						ctx.make_can_throw_marker(),
 						remove_reason_t::unhandled_exception,
-						spdlog::level::err, "unknown exception caught" );
-			}
-			catch( ... ) {}
+						spdlog::level::err,
+						"unknown exception caught" );
+			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE);
 		}
 	}
 
