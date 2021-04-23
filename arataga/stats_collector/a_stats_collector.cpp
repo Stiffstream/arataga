@@ -91,13 +91,15 @@ a_stats_collector_t::on_get_current_stats(
 				"LOG_MSG_INFO: {}\r\n"
 				"LOG_MSG_WARN: {}\r\n"
 				"LOG_MSG_ERROR: {}\r\n"
-				"LOG_MSG_CRIT: {}\r\n",
+				"LOG_MSG_CRIT: {}\r\n"
+				"EXCEPTIONS_LOG: {}\r\n",
 				value_of( cnts.m_level_trace_count ),
 				value_of( cnts.m_level_debug_count ),
 				value_of( cnts.m_level_info_count ),
 				value_of( cnts.m_level_warn_count ),
 				value_of( cnts.m_level_error_count ),
-				value_of( cnts.m_level_critical_count )
+				value_of( cnts.m_level_critical_count ),
+				value_of( cnts.m_exceptions_during_logging )
 			);
 	}
 

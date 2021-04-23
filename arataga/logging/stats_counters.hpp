@@ -29,6 +29,7 @@ struct counter_values_t
 	alignas(default_aligment) counter_type_t m_level_warn_count{0u};
 	alignas(default_aligment) counter_type_t m_level_error_count{0u};
 	alignas(default_aligment) counter_type_t m_level_critical_count{0u};
+	alignas(default_aligment) counter_type_t m_exceptions_during_logging{0u};
 };
 
 // Get a reference to object with counters.
@@ -42,6 +43,9 @@ namespace impl
 void
 increment_counters_if_neccessary(
 	spdlog::level::level_enum level ) noexcept;
+
+void
+increment_count_of_exceptions_during_logging() noexcept;
 
 } /* namespace impl */
 

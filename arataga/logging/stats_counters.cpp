@@ -60,6 +60,13 @@ increment_counters_if_neccessary(
 	}
 }
 
+void
+increment_count_of_exceptions_during_logging() noexcept
+{
+	auto & cnts = counters();
+	cnts.m_exceptions_during_logging += 1u;
+}
+
 } /* namespace impl */
 
 } /* namespace arataga::logging */

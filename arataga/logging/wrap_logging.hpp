@@ -55,6 +55,30 @@ should_log( spdlog::level::level_enum level ) noexcept
 	return logger().should_log( level );
 }
 
+/*!
+ * @brief Helper for count exceptions during logging.
+ *
+ * @since v.0.4.4
+ */
+class exception_count_guard_t
+{
+	bool m_committed{ false };
+
+public:
+	exception_count_guard_t() = default;
+	exception_count_guard_t( const exception_count_guard_t & ) = delete;
+	exception_count_guard_t( exception_count_guard_t && ) = delete;
+
+	~exception_count_guard_t() noexcept
+	{
+		if( !m_committed )
+			increment_count_of_exceptions_during_logging();
+	}
+
+	void
+	commit() noexcept { m_committed = true; }
+};
+
 } /* namespace impl */
 
 /*!
@@ -144,7 +168,10 @@ wrap_logging(
 	impl::increment_counters_if_neccessary( level );
 	if( impl::should_log( level ) )
 	{
+		// NOTE: action can throw. Exceptions should be counted.
+		impl::exception_count_guard_t guard;
 		action( impl::logger(), processed_log_level_t{ level } );
+		guard.commit();
 	}
 }
 
@@ -169,7 +196,10 @@ wrap_logging(
 	impl::increment_counters_if_neccessary( level );
 	if( impl::should_log( level ) )
 	{
+		// NOTE: action can throw. Exceptions should be counted.
+		impl::exception_count_guard_t guard;
 		action( processed_log_level_t{ level } );
+		guard.commit();
 	}
 }
 
@@ -180,5 +210,4 @@ inline constexpr logging::direct_logging_marker_t direct_logging_mode;
 inline constexpr logging::proxy_logging_marker_t proxy_logging_mode;
 
 } /* namespace arataga */
-
 
