@@ -104,6 +104,7 @@ a_nameserver_interactor_t::evt_lookup_request(
 	const auto req_id = ++(nsrv_to_use->m_req_id_counter);
 	const auto insertion_result = m_ongoing_requests.try_emplace(
 			ongoing_req_id_t{ req_id, nsrv_to_use->m_address },
+			cmd->m_domain_name,
 			cmd->m_reply_to,
 			cmd->m_result_processor );
 	if( !insertion_result.second )
@@ -483,9 +484,10 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 					{
 						logger.log(
 								level,
-								"{}: no IPs in positive name server response, id={}",
+								"{}: no IPs in positive name server response, id={}, domain_name={}",
 								m_params.m_name,
-								req_id );
+								req_id,
+								it->second.m_domain_name );
 					} );
 
 			ARATAGA_NOTHROW_BLOCK_STAGE(no_ips_sending_negative_response)

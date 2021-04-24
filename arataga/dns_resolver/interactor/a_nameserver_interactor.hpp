@@ -37,6 +37,15 @@ inline constexpr std::size_t max_dns_udp_package_size = 512u;
 //
 struct ongoing_req_data_t
 {
+	//FIXME: it should have type domain_name_t. std::string is used
+	// just for quick prototyping.
+	//! Name to be resolved.
+	/*!
+	 * It's needed for logging in the case of some strange responses
+	 * from DNS server.
+	 */
+	std::string m_domain_name;
+
 	//! Mbox for the result.
 	so_5::mbox_t m_reply_to;
 
@@ -51,9 +60,11 @@ struct ongoing_req_data_t
 
 	//! Initializing constructor.
 	ongoing_req_data_t(
+		std::string domain_name,
 		so_5::mbox_t reply_to,
 		result_processor_t result_processor )
-		:	m_reply_to{ std::move(reply_to) }
+		:	m_domain_name{ std::move(domain_name) }
+		,	m_reply_to{ std::move(reply_to) }
 		,	m_result_processor{ std::move(result_processor) }
 		,	m_start_time{ std::chrono::steady_clock::now() }
 	{}
