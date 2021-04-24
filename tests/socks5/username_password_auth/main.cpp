@@ -326,6 +326,61 @@ TEST_CASE("garbage after auth PDU") {
 	chs::dump_trace( (std::cout << "-----\n"), simulator.get_trace() );
 }
 
+TEST_CASE("zero-length username/password") {
+	asio::ip::tcp::endpoint proxy_endpoint{
+			asio::ip::make_address_v4( "127.0.0.1" ),
+			2444
+		};
+
+	chs::simulator_t simulator{
+			proxy_endpoint,
+			chs::handler_config_values_t{}
+	};
+
+	asio::io_context ctx;
+
+	asio::ip::tcp::socket connection{ ctx };
+	REQUIRE_NOTHROW( connection.connect( proxy_endpoint ) );
+
+	{
+		std::array< std::uint8_t, 3 > first_pdu{ 0x5u, 0x1u, 0x2u };
+		std::size_t written;
+		REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(first_pdu) ) );
+		REQUIRE( first_pdu.size() == written );
+	}
+
+	{
+		std::array< std::uint8_t, 20 > response;
+		std::size_t read;
+		REQUIRE_NOTHROW( read = connection.read_some( asio::buffer(response) ) );
+		REQUIRE( 2u == read );
+		REQUIRE( 0x5u == response[ 0 ] );
+		REQUIRE( 0x2u == response[ 1 ] );
+	}
+
+	{
+		std::array< std::uint8_t, 3 > data{
+			0x1,
+			0x0,
+			0x0
+		};
+		std::size_t written;
+		REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(data) ) );
+		REQUIRE( data.size() == written );
+	}
+
+	{
+		std::array< std::uint8_t, 20 > response;
+		std::size_t read;
+		REQUIRE_NOTHROW( read = connection.read_some( asio::buffer(response) ) );
+		REQUIRE( 2u == read );
+		REQUIRE( 0x1u == response[ 0 ] );
+		REQUIRE( 0x0u == response[ 1 ] );
+	}
+
+	chs::dump_trace( (std::cout << "-----\n"), simulator.get_trace() );
+}
+
 TEST_CASE("valid auth PDU") {
 	asio::ip::tcp::endpoint proxy_endpoint{
 			asio::ip::make_address_v4( "127.0.0.1" ),

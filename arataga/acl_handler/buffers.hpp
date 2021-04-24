@@ -134,13 +134,13 @@ public:
 	byte_sequence_t
 	read_bytes_as_sequence( std::size_t length )
 	{
-		if( m_read_position >= m_size )
+		if( m_read_position + length > m_size )
 			throw acl_handler_ex_t{
 					fmt::format(
 							"in_buffer_fixed_t::read_bytes_as_sequence: "
-							"no more data in input buffer (size: {}, "
+							"no enough data in input buffer (size: {}, pos: {}, "
 							"bytes_to_read: {})",
-							m_size, length )
+							m_size, m_read_position, length )
 			};
 
 		const auto bytes_to_return = std::min(
@@ -313,14 +313,13 @@ public:
 	byte_sequence_t
 	read_bytes_as_sequence( std::size_t length )
 	{
-		if( m_read_position >= m_size )
+		if( m_read_position + length > m_size )
 			throw acl_handler_ex_t{
 					fmt::format(
 							"in_external_buffer_t::read_bytes_as_sequence: "
-							"no more data in input buffer (size: {}, "
+							"no enough data in input buffer (size: {}, pos: {}, "
 							"bytes_to_read: {})",
-							m_size,
-							length )
+							m_size, m_read_position, length )
 			};
 
 		const auto bytes_to_return = std::min(
