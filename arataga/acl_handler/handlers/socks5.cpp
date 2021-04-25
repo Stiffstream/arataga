@@ -1540,7 +1540,7 @@ protected:
 		// external IP.
 		if( context().config().out_addr().is_v6() )
 			m_target_endpoint = asio::ip::tcp::endpoint{
-					asio::ip::address{ ipv4 }.to_v6(),
+					asio::ip::make_address_v6( asio::ip::v4_mapped, ipv4 ),
 					m_dst_port 
 				};
 		else
