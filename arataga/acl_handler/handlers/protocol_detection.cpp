@@ -87,7 +87,9 @@ public:
 	}
 
 private:
-	struct unknown_protocol_t {};
+	struct unknown_protocol_t {
+		std::byte m_first_byte;
+	};
 
 	struct connection_accepted_t
 	{
@@ -151,7 +153,7 @@ private:
 							} );
 				},
 				[this, delete_protector, can_throw]
-				( const unknown_protocol_t & )
+				( const unknown_protocol_t & info )
 				{
 					// We don't know the protocol, the connection has to be closed.
 					log_and_remove_connection(
@@ -159,7 +161,10 @@ private:
 							can_throw,
 							remove_reason_t::unsupported_protocol,
 							spdlog::level::warn,
-							"unsupported protocol in the connection" );
+							fmt::format( "unsupported protocol in the connection "
+									"(first byte: {:#02x})",
+									std::to_integer<unsigned short>(info.m_first_byte) )
+							);
 				} },
 				detection_result );
 	}
@@ -170,8 +175,9 @@ private:
 		constexpr std::byte socks5_protocol_first_byte{ 5u };
 
 		buffer_read_trx_t read_trx{ m_in_buffer };
+		const auto first_byte = m_in_buffer.read_byte();
 
-		if( socks5_protocol_first_byte == m_in_buffer.read_byte() )
+		if( socks5_protocol_first_byte == first_byte )
 		{
 			// Assume that is SOCKS5.
 			return {
@@ -187,7 +193,7 @@ private:
 			};
 		}
 
-		return { unknown_protocol_t{} };
+		return { unknown_protocol_t{ first_byte } };
 	}
 
 	detection_result_t
@@ -221,7 +227,7 @@ private:
 			};
 		}
 
-		return { unknown_protocol_t{} };
+		return { unknown_protocol_t{ first_byte } };
 	}
 };
 
