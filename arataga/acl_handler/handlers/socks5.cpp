@@ -1526,6 +1526,16 @@ protected:
 		can_throw_t can_throw,
 		asio::ip::address_v4 ipv4 )
 	{
+		::arataga::logging::wrap_logging(
+				proxy_logging_mode,
+				spdlog::level::trace,
+				[this, can_throw, &ipv4]( auto level )
+				{
+					log_message_for_connection( can_throw, level,
+							fmt::format( "try_start_with_direct_address_v4: {}",
+									ipv4 ) );
+				} );
+
 		// The actual target-endpoint depends on the version of ACL's
 		// external IP.
 		if( context().config().out_addr().is_v6() )
@@ -1546,6 +1556,16 @@ protected:
 		can_throw_t can_throw,
 		asio::ip::address_v6 ipv6 )
 	{
+		::arataga::logging::wrap_logging(
+				proxy_logging_mode,
+				spdlog::level::trace,
+				[this, can_throw, &ipv6]( auto level )
+				{
+					log_message_for_connection( can_throw, level,
+							fmt::format( "try_start_with_direct_address_v6: {}",
+									ipv6 ) );
+				} );
+
 		// If ACL has IPv4 external IP then we can't handle IPv6 address.
 		if( context().config().out_addr().is_v4() )
 		{
@@ -1570,9 +1590,19 @@ protected:
 
 	void
 	initiate_hostname_resolving(
-		can_throw_t /*can_throw*/,
+		can_throw_t can_throw,
 		const std::string & hostname )
 	{
+		::arataga::logging::wrap_logging(
+				proxy_logging_mode,
+				spdlog::level::trace,
+				[this, can_throw, &hostname]( auto level )
+				{
+					log_message_for_connection( can_throw, level,
+							fmt::format( "initiate_hostname_resolving: {}",
+									hostname ) );
+				} );
+
 		set_operation_started_markers(
 				&connect_and_bind_handler_base_t::dns_resolving_timeout_handler );
 
