@@ -52,7 +52,7 @@ bandlim.in 5mib
 
 In that case the the result value for `bandlim.in` will be 5MiB, all the previous values will be ignored.
 
-The only exception is `acl` command.
+The exceptions are `acl` and `nserver` commands.
 
 ## An example of config file
 
@@ -64,6 +64,9 @@ log_level trace
 # Those values will be used if a user has no personal limits.
 bandlim.in 700kib
 bandlim.out 700kib
+
+# IPs of name servers to use.
+nserver 8.8.8.8, 8.8.4.4, 1.1.1.1
 
 # Max number of parallel active connections to a single ACL.
 acl.max.conn 150
@@ -155,6 +158,21 @@ The value can't be zero.
 The larger the value of `acl.io.chunk_size`, the more efficiently large amounts of data will be transferred. But the more memory the ACL will consume as the number of simultaneous connections increases.
 
 The default value is 8kib.
+
+### acl.max.conn
+
+Specifies the max number of active parallel connections for one ACL.
+
+Format:
+```
+acl.max.conn UINT
+```
+
+When the number of simultaneously accepted connections reaches the value set in `acl.max.conn`, accepting new connections to this ACL is paused until the number of connections drops below the threshold set in `acl.max.conn`.
+
+The value can't be zero.
+
+The default value is 100.
 
 ### bandlim.in
 
@@ -318,20 +336,28 @@ By default the value for arataga's command line is used.
 
 If `log_level` is set in the config then its value overrides the value from the command line.
 
-### acl.max.conn
+### nserver
 
-Specifies the max number of active parallel connections for one ACL.
+Enumerates IPv4 addresses of name servers to use.
+
+**Mandatory command.** At least one `nserver` command must be specified in the config file.
 
 Format:
 ```
-acl.max.conn UINT
+nserver <IPv4>[, <IPv4>[, <IPv4> [...]]]
 ```
 
-When the number of simultaneously accepted connections reaches the value set in `acl.max.conn`, accepting new connections to this ACL is paused until the number of connections drops below the threshold set in `acl.max.conn`.
+There could be several `nserver` commands in the config file. Values from all of them are grouped into one list. For example:
 
-The value can't be zero.
+```
+nserver 8.8.8.8, 8.8.4.4
+nserver 9.9.9.9
+nserver 1.1.1.1, 1.0.0.1
+```
 
-The default value is 100.
+In that case arataga will use list of 5 IP-addresses: 8.8.8.8, 8.8.4.4, 9.9.9.9, 1.1.1.1, 1.0.0.1.
+
+*Note.* Since v.0.4.
 
 ### timeout.authentification
 
