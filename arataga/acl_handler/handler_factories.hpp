@@ -6,7 +6,7 @@
 #pragma once
 
 #include <arataga/acl_handler/connection_handler_ifaces.hpp>
-#include <arataga/acl_handler/byte_sequence.hpp>
+#include <arataga/acl_handler/first_chunk.hpp>
 
 namespace arataga::acl_handler
 {
@@ -24,7 +24,7 @@ make_socks5_auth_method_detection_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket connection,
-	byte_sequence_t whole_first_pdu,
+	first_chunk_for_next_handler_t first_chunk,
 	std::chrono::steady_clock::time_point created_at );
 
 [[nodiscard]]
@@ -33,7 +33,7 @@ make_http_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket connection,
-	byte_sequence_t whole_first_pdu,
+	first_chunk_for_next_handler_t first_chunk,
 	std::chrono::steady_clock::time_point created_at );
 
 [[nodiscard]]
@@ -42,6 +42,7 @@ make_data_transfer_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket in_connection,
+	first_chunk_for_next_handler_t first_chunk,
 	asio::ip::tcp::socket out_connection,
 	traffic_limiter_unique_ptr_t traffic_limiter );
 

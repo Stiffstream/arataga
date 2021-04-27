@@ -7,6 +7,7 @@
 
 #include <arataga/acl_handler/exception.hpp>
 #include <arataga/acl_handler/byte_sequence.hpp>
+#include <arataga/acl_handler/first_chunk.hpp>
 
 #include <asio/buffer.hpp>
 
@@ -240,6 +241,13 @@ class in_external_buffer_t
 	//! Max capacity of the external buffer.
 	const std::size_t m_capacity;
 
+	//! The index of the first actual byte in the external buffer.
+	/*!
+	 * This value will be used in rewind_read_position() and reset()
+	 * methods.
+	 */
+	const std::size_t m_first_byte_index{ 0u };
+
 	//! Total number of bytes in the external buffer.
 	std::size_t m_size{ 0u };
 
@@ -376,18 +384,29 @@ public:
 		m_size = new_size;
 	}
 
+#if 0
+	//FIXME: is this method really needed after the intruduction of
+	//first_chunk_t+chunk_fragment_t types?
 	[[nodiscard]]
 	byte_sequence_t
 	whole_data_as_sequence() const noexcept
 	{
 		return { &m_buffer[0], (&m_buffer[0]) + m_size };
 	}
+#endif
 
 	[[nodiscard]]
 	std::size_t
 	read_position() const noexcept
 	{
 		return m_read_position;
+	}
+
+	[[nodiscard]]
+	std::size_t
+	size() const noexcept
+	{
+		return m_size;
 	}
 
 	void
@@ -397,7 +416,7 @@ public:
 			throw acl_handler_ex_t{
 				fmt::format(
 						"in_external_buffer_t::rewind_read_position: "
-						"invalid position to rewind: {}, size: {}",
+						"position to rewind is too big: {}, size: {}",
 						pos, m_size )
 			};
 
@@ -422,7 +441,7 @@ public:
  * Automatically returns the current read position back if
  * `commit` method wasn't called explicitely.
  *
- * That is the main usage scenarion:
+ * That is the main usage scenario:
  *
  * - an instance of buffer_read_trx_t created;
  * - a read operation is performed;

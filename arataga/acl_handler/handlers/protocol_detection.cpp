@@ -20,8 +20,10 @@ class handler_t : public connection_handler_t
 	//! A time when the connection was accepted.
 	std::chrono::steady_clock::time_point m_created_at;
 
-	//! The buffer for the first portion of data.
-	in_buffer_fixed_t< 512 > m_in_buffer;
+	//! The first chunk for the connection.
+	first_chunk_t m_first_chunk;
+	//! In-buffer for parsing incoming data.
+	in_external_buffer_t m_in_buffer;
 
 public :
 	handler_t(
@@ -30,6 +32,12 @@ public :
 		asio::ip::tcp::socket connection )
 		:	connection_handler_t{ std::move(ctx), id, std::move(connection) }
 		,	m_created_at{ std::chrono::steady_clock::now() }
+		,	m_first_chunk{ context().config().io_chunk_size() }
+		,	m_in_buffer{
+				m_first_chunk.buffer(),
+				// There is no incoming data at the moment.
+				m_first_chunk.capacity()
+			}
 	{}
 
 protected:
@@ -174,7 +182,6 @@ private:
 	{
 		constexpr std::byte socks5_protocol_first_byte{ 5u };
 
-		buffer_read_trx_t read_trx{ m_in_buffer };
 		const auto first_byte = m_in_buffer.read_byte();
 
 		if( socks5_protocol_first_byte == first_byte )
@@ -187,7 +194,12 @@ private:
 									m_ctx,
 									m_id,
 									std::move(m_connection),
-									m_in_buffer.whole_data_as_sequence(),
+									// All data in m_first_chunk are going to
+									// the next handler.
+									make_first_chunk_for_next_handler(
+											std::move(m_first_chunk),
+											0u,
+											m_in_buffer.size() ),
 									m_created_at )
 					}
 			};
@@ -200,8 +212,6 @@ private:
 	try_accept_http_connection( can_throw_t can_throw )
 	{
 		(void)can_throw;
-
-		buffer_read_trx_t read_trx{ m_in_buffer };
 
 		// Assume that this is HTTP if the first byte is a capital
 		// latin letter (it is because methods in HTTP are identified
@@ -221,7 +231,12 @@ private:
 									m_ctx,
 									m_id,
 									std::move(m_connection),
-									m_in_buffer.whole_data_as_sequence(),
+									// All data in m_first_chunk are going to
+									// the next handler.
+									make_first_chunk_for_next_handler(
+											std::move(m_first_chunk),
+											0u,
+											m_in_buffer.size() ),
 									m_created_at )
 					}
 			};
