@@ -674,9 +674,16 @@ private:
 								std::move(m_ctx),
 								m_id,
 								std::move(m_connection),
+//FIXME: should be replaced by a normal code!
+#if 0
 								// Give all the remaining data as initial data
 								// for the new handler.
 								remaining_data,
+#endif
+make_first_chunk_for_next_handler(
+first_chunk_t{ context().config().io_chunk_size() },
+0u,
+0u ),
 								std::chrono::steady_clock::now() );
 					} );
 		}

@@ -305,22 +305,25 @@ TEST_CASE("garbage after auth PDU") {
 	}
 
 	{
-		std::array< std::uint8_t, 15 > data{
+		std::array< std::uint8_t, 28 > data{
 			0x1,
 			0x4, 'u', 's', 'e', 'r',
-			0x5, '1', '2', '3', '4', '5', 'a', 'b', 'c'
+			0x5, '1', '2', '3', '4', '5', 'a', 'b', 'c',
+			0x5, 0x1, 0x0,
+			0x3, 0x6, 'y', 'a', '.', 'c', 'o', 'm',
+			0x01, 0x00
 		};
 		std::size_t written;
 		REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(data) ) );
 		REQUIRE( data.size() == written );
 	}
 
-	// The connection has to be closed on the other side.
+	// Since v.0.5.0 the size of auth PDU isn't checked.
 	{
 		std::array< std::uint8_t, 20 > data;
-		asio::error_code ec;
-		REQUIRE_NOTHROW( connection.read_some( asio::buffer(data), ec ) );
-		REQUIRE( asio::error::eof == ec );
+		std::size_t bytes_read{};
+		REQUIRE_NOTHROW( bytes_read = connection.read_some( asio::buffer(data) ) );
+		REQUIRE( 2u == bytes_read );
 	}
 
 	chs::dump_trace( (std::cout << "-----\n"), simulator.get_trace() );

@@ -1038,14 +1038,15 @@ make_http_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket connection,
-	byte_sequence_t whole_first_pdu,
+	first_chunk_for_next_handler_t first_chunk,
 	std::chrono::steady_clock::time_point created_at )
 {
 	return std::make_shared< handlers::http::initial_http_handler_t >(
 			std::move(ctx),
 			id,
 			std::move(connection),
-			whole_first_pdu,
+//FIXME: should be replaced by a normal code!
+			byte_sequence_t{},
 			created_at );
 }
 

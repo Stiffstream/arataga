@@ -47,6 +47,10 @@ using namespace arataga::utils::string_literals;
  * is taken into account for outgoing traffic to target-end direction.
  * If the data is read from target-end connection then its size is taken
  * into account for outgoing traffic to user-end connection.
+ *
+ * Since v.0.5.0 data_transfer_handler_t handles the case when
+ * some data is already read from the incoming connection (in the form
+ * of first_chunk_for_next_handler_t object passed to the constructor).
  */
 class data_transfer_handler_t final : public connection_handler_t
 {
@@ -60,6 +64,9 @@ class data_transfer_handler_t final : public connection_handler_t
 	/*!
 	 * This value is taken from the config at the creation time and
 	 * hasn't been changed anymore.
+	 *
+	 * Since v.0.5.0 this value is obtained from first_chunk_t instance,
+	 * not from the current configuration.
 	 */
 	const std::size_t m_io_chunk_size;
 
@@ -165,6 +172,7 @@ public:
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket in_connection,
+		first_chunk_for_next_handler_t first_chunk_data,
 		asio::ip::tcp::socket out_connection,
 		traffic_limiter_unique_ptr_t traffic_limiter )
 		:	connection_handler_t{ std::move(ctx), id, std::move(in_connection) }
@@ -172,7 +180,7 @@ public:
 		,	m_traffic_limiter{
 				ensure_traffic_limiter_not_null( std::move(traffic_limiter) )
 			}
-		,	m_io_chunk_size{ context().config().io_chunk_size() }
+		,	m_io_chunk_size{ first_chunk_data.chunk().capacity() }
 		,	m_user_end{
 				m_connection, "user-end"_static_str,
 				m_io_chunk_size,
@@ -186,6 +194,21 @@ public:
 				traffic_limiter_t::direction_t::from_target
 			}
 	{
+		//FIXME: this is a very non-efficient version.
+		//More efficient version should pass first_chunk_data object to
+		//the constructor of m_user_end.
+
+		// If first_chunk_data contains some data then we have to
+		// move that data into m_user_end direction object.
+		if( first_chunk_data.remaining_bytes() )
+		{
+			const auto * in_buffer = first_chunk_data.chunk().buffer();
+			std::copy(
+					in_buffer,
+					in_buffer + first_chunk_data.remaining_bytes(),
+					m_user_end.m_in_buffers[ 0u ].m_data_read.get() );
+			m_user_end.m_available_for_read_buffers -= 1u;
+		}
 	}
 
 protected:
@@ -715,6 +738,7 @@ make_data_transfer_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket in_connection,
+	first_chunk_for_next_handler_t first_chunk,
 	asio::ip::tcp::socket out_connection,
 	traffic_limiter_unique_ptr_t traffic_limiter )
 {
@@ -723,6 +747,7 @@ make_data_transfer_handler(
 	return std::make_shared< data_transfer_handler_t >(
 			std::move(ctx), id,
 			std::move(in_connection),
+			std::move(first_chunk),
 			std::move(out_connection),
 			std::move(traffic_limiter) );
 }

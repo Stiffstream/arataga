@@ -107,6 +107,11 @@ protected:
 												std::move(m_ctx),
 												m_id,
 												std::move(m_connection),
+												//FIXME: should be changed to the normal code!
+												make_first_chunk_for_next_handler(
+														first_chunk_t{ context().config().io_chunk_size() },
+														0u,
+														0u ),
 												std::move(m_out_connection),
 												std::move(m_traffic_limiter) );
 									} );

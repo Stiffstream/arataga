@@ -108,6 +108,13 @@ public:
 		first_chunk_for_next_handler_t && ) noexcept = default;
 
 	[[nodiscard]]
+	first_chunk_t &
+	chunk() noexcept
+	{
+		return m_chunk;
+	}
+
+	[[nodiscard]]
 	first_chunk_t
 	giveaway_chunk() noexcept
 	{
@@ -131,7 +138,7 @@ public:
  * It's assumed that @a consumed_bytes is not greater than @a total_bytes.
  */
 [[nodiscard]]
-first_chunk_for_next_handler_t
+inline first_chunk_for_next_handler_t
 make_first_chunk_for_next_handler(
 	first_chunk_t chunk,
 	std::size_t consumed_bytes,

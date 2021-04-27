@@ -71,7 +71,7 @@ TEST_CASE("only one byte in PDU") {
 	chs::dump_trace( (std::cout << "-----\n"), simulator.get_trace() );
 }
 
-TEST_CASE("invalid size of the first PDU") {
+TEST_CASE("first PDU with a garbage") {
 	asio::ip::tcp::endpoint proxy_endpoint{
 			asio::ip::make_address_v4( "127.0.0.1" ),
 			2444
@@ -96,49 +96,17 @@ TEST_CASE("invalid size of the first PDU") {
 	REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(data) ) );
 	REQUIRE( data.size() == written );
 
-	// The connection has to be closed on the other side.
+	// Since v.0.5.0 the size of first PDU isn't checked.
+	// So we have to read auth reply PDU.
 	asio::error_code ec;
-	REQUIRE_NOTHROW( connection.read_some( asio::buffer(data), ec ) );
-	REQUIRE( asio::error::eof == ec );
+	std::size_t bytes_read{};
+	REQUIRE_NOTHROW( bytes_read = connection.read_some( asio::buffer(data) ) );
+	REQUIRE( 2u == bytes_read );
+	REQUIRE( 0x5u == data[ 0 ] );
+	REQUIRE( 0x0u == data[ 1 ] );
 
 	chs::dump_trace( (std::cout << "-----\n"), simulator.get_trace() );
 }
-
-// Since v.0.3.2 size of packet read is not checked.
-#if 0
-TEST_CASE("garbage at the end of the first PDU") {
-	asio::ip::tcp::endpoint proxy_endpoint{
-			asio::ip::make_address_v4( "127.0.0.1" ),
-			2444
-		};
-
-	chs::simulator_t simulator{
-			proxy_endpoint,
-			chs::handler_config_values_t{}
-	};
-
-	asio::io_context ctx;
-
-	asio::ip::tcp::socket connection{ ctx };
-	REQUIRE_NOTHROW( connection.connect( proxy_endpoint ) );
-
-	std::array< std::uint8_t, 100u > data;
-	data[ 0 ] = 0x5u;
-	data[ 1 ] = 0x1u; // methods_count
-	data[ 2 ] = 0x0u; // no authentification.
-
-	std::size_t written;
-	REQUIRE_NOTHROW( written = connection.write_some( asio::buffer(data) ) );
-	REQUIRE( data.size() == written );
-
-	// The connection has to be closed on the other side.
-	asio::error_code ec;
-	REQUIRE_NOTHROW( connection.read_some( asio::buffer(data), ec ) );
-	REQUIRE( asio::error::eof == ec );
-
-	chs::dump_trace( (std::cout << "-----\n"), simulator.get_trace() );
-}
-#endif
 
 TEST_CASE("no appropriate auth method") {
 	asio::ip::tcp::endpoint proxy_endpoint{

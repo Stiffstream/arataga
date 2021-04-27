@@ -52,15 +52,6 @@ make_command_stage_handler(
 
 [[nodiscard]]
 connection_handler_shptr_t
-make_command_stage_handler(
-	handler_context_holder_t ctx,
-	handler_context_t::connection_id_t id,
-	asio::ip::tcp::socket connection,
-	first_chunk_for_next_handler_t first_chunk_data,
-	std::chrono::steady_clock::time_point created_at );
-
-[[nodiscard]]
-connection_handler_shptr_t
 make_connect_command_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
@@ -188,6 +179,7 @@ public:
 			}
 		,	m_first_pdu{
 					m_first_chunk.buffer(),
+					m_first_chunk.capacity(),
 					first_chunk_data.remaining_bytes()
 			}
 		,	m_created_at{ created_at }
@@ -856,6 +848,8 @@ private:
 										// No data read
 										0u,
 										m_auth_pdu.size() ),
+								std::nullopt, // No username.
+								std::nullopt, // No password.
 								m_created_at );
 					} );
 
@@ -967,18 +961,27 @@ class command_handler_t final : public connection_handler_t
 	static constexpr std::byte connect_cmd{ 0x1u };
 	static constexpr std::byte bind_cmd{ 0x2u };
 
-	//! Buffer for the command PDU.
+	//! Max size for the command PDU.
 	/*!
 	 * https://tools.ietf.org/html/rfc1928
 	 */
-	in_buffer_fixed_t<
+	static constexpr std::size_t max_command_pdu_size =
 			1 // VER
 			+ 1 // CMD
 			+ 1 // RESERVED
 			+ 1 // ATYP
 			+ 256 // DST.ADDR (it's the max possible length).
 			+ 2 // DST.PORT
-		> m_command_pdu;
+			;
+
+	//! The first chunk for the incoming connection.
+	/*!
+	 * @since v.0.5.0
+	 */
+	first_chunk_t m_first_chunk;
+
+	//! Buffer for the command PDU.
+	in_external_buffer_t m_command_pdu;
 
 	//! Buffer for the negative reply.
 	/*!
@@ -1003,31 +1006,27 @@ class command_handler_t final : public connection_handler_t
 	std::chrono::steady_clock::time_point m_created_at;
 
 public:
-	// The constructor for the case when auth PDU was read first.
 	command_handler_t(
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket connection,
+		first_chunk_for_next_handler_t first_chunk_data,
 		std::optional<std::string> username,
 		std::optional<std::string> password,
 		std::chrono::steady_clock::time_point created_at )
 		:	connection_handler_t{ std::move(ctx), id, std::move(connection) }
+		,	m_first_chunk{
+				ensure_valid_size(
+						first_chunk_data.giveaway_chunk(),
+						max_command_pdu_size )
+			}
+		,	m_command_pdu{
+				m_first_chunk.buffer(),
+				m_first_chunk.capacity(),
+				first_chunk_data.remaining_bytes()
+			}
 		,	m_username{ std::move(username) }
 		,	m_password{ std::move(password) }
-		,	m_created_at{ created_at }
-	{}
-
-	// The constructor for the case when we waited auth PDU with
-	// empty username/password (such PDU is sent by curl), but
-	// a command PDU was received instead.
-	command_handler_t(
-		handler_context_holder_t ctx,
-		handler_context_t::connection_id_t id,
-		asio::ip::tcp::socket connection,
-		byte_sequence_t first_bytes,
-		std::chrono::steady_clock::time_point created_at )
-		:	connection_handler_t{ std::move(ctx), id, std::move(connection) }
-		,	m_command_pdu{ first_bytes }
 		,	m_created_at{ created_at }
 	{}
 
@@ -1172,21 +1171,9 @@ private:
 				(std::to_integer<std::uint16_t>(m_command_pdu.read_byte()) << 8u) |
 				std::to_integer<std::uint16_t>(m_command_pdu.read_byte());
 
-		// Don't expect additional data here.
-		if( m_command_pdu.remaining() )
-		{
-			log_and_remove_connection(
-					delete_protector,
-					can_throw,
-					remove_reason_t::protocol_error,
-					spdlog::level::err,
-					fmt::format( "some garbage in command PDU after reading "
-							"all the data, remaining bytes: {}",
-							m_command_pdu.remaining() )
-				);
-
-			return data_parsing_result_t::invalid_data;
-		}
+		// Since v.0.5.0 we don't check is there some more data
+		// in the first_chunk. If there are some data that data will
+		// be processed by the next handler.
 
 		// Everything has been read, nothing left in the buffer.
 		read_trx.commit();
@@ -1204,7 +1191,12 @@ private:
 							m_ctx,
 							m_id,
 							std::move(m_connection),
-							std::move(m_username), std::move(m_password),
+							make_first_chunk_for_next_handler(
+									std::move(m_first_chunk),
+									m_command_pdu.read_position(),
+									m_command_pdu.size() ),
+							std::move(m_username),
+							std::move(m_password),
 							atype, dst_addr_bytes, dst_port );
 					} );
 		}
@@ -1221,7 +1213,12 @@ private:
 							m_ctx,
 							m_id,
 							std::move(m_connection),
-							std::move(m_username), std::move(m_password),
+							make_first_chunk_for_next_handler(
+									std::move(m_first_chunk),
+									m_command_pdu.read_position(),
+									m_command_pdu.size() ),
+							std::move(m_username),
+							std::move(m_password),
 							atype, dst_addr_bytes, dst_port );
 					} );
 		}
@@ -1340,6 +1337,12 @@ private:
 class connect_and_bind_handler_base_t : public connection_handler_t
 {
 protected:
+	//! The data for the next handler.
+	/*!
+	 * @since v.0.5.0
+	 */
+	first_chunk_for_next_handler_t m_first_chunk_data;
+
 	//! Buffer for the reply.
 	out_buffer_fixed_t< 
 			1 // VER
@@ -1457,12 +1460,14 @@ public:
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket connection,
+		first_chunk_for_next_handler_t first_chunk_data,
 		std::optional<std::string> username,
 		std::optional<std::string> password,
 		std::byte atype_value,
 		byte_sequence_t dst_addr,
 		std::uint16_t dst_port )
 		:	connection_handler_t{ std::move(ctx), id, std::move(connection) }
+		,	m_first_chunk_data{ std::move(first_chunk_data) }
 		,	m_username{ std::move(username) }
 		,	m_password{ std::move(password) }
 		,	m_dst_addr{ make_destination_addr( atype_value, dst_addr ) }
@@ -1837,13 +1842,17 @@ public:
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket connection,
+		first_chunk_for_next_handler_t first_chunk_data,
 		std::optional<std::string> username,
 		std::optional<std::string> password,
 		std::byte atype_value,
 		byte_sequence_t dst_addr,
 		std::uint16_t dst_port )
 		:	connect_and_bind_handler_base_t{
-				std::move(ctx), id, std::move(connection),
+				std::move(ctx),
+				id,
+				std::move(connection),
+				std::move(first_chunk_data),
 				std::move(username),
 				std::move(password),
 				atype_value,
@@ -2075,11 +2084,12 @@ private:
 							[this]( can_throw_t )
 							{
 								return make_data_transfer_handler(
-									m_ctx,
-									m_id,
-									std::move(m_connection),
-									std::move(m_out_connection),
-									std::move(m_traffic_limiter) );
+										m_ctx,
+										m_id,
+										std::move(m_connection),
+										std::move(m_first_chunk_data),
+										std::move(m_out_connection),
+										std::move(m_traffic_limiter) );
 							} );
 				} );
 	}
@@ -2099,13 +2109,17 @@ public:
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket connection,
+		first_chunk_for_next_handler_t first_chunk_data,
 		std::optional<std::string> username,
 		std::optional<std::string> password,
 		std::byte atype_value,
 		byte_sequence_t dst_addr,
 		std::uint16_t dst_port )
 		:	connect_and_bind_handler_base_t{
-				std::move(ctx), id, std::move(connection),
+				std::move(ctx),
+				id,
+				std::move(connection),
+				std::move(first_chunk_data),
 				std::move(username),
 				std::move(password),
 				atype_value,
@@ -2396,11 +2410,12 @@ private:
 							[this, &in_conn]( can_throw_t )
 							{
 								return make_data_transfer_handler(
-									m_ctx,
-									m_id,
-									std::move(m_connection),
-									std::move(in_conn),
-									std::move(m_traffic_limiter) );
+										m_ctx,
+										m_id,
+										std::move(m_connection),
+										std::move(m_first_chunk_data),
+										std::move(in_conn),
+										std::move(m_traffic_limiter) );
 							} );
 				} );
 	}
@@ -2469,23 +2484,6 @@ make_command_stage_handler(
 			std::move(first_chunk_data),
 			std::move(username),
 			std::move(password),
-			created_at );
-}
-
-[[nodiscard]]
-connection_handler_shptr_t
-make_command_stage_handler(
-	handler_context_holder_t ctx,
-	handler_context_t::connection_id_t id,
-	asio::ip::tcp::socket connection,
-	first_chunk_for_next_handler_t first_chunk_data,
-	std::chrono::steady_clock::time_point created_at )
-{
-	return std::make_shared< command_handler_t >(
-			std::move(ctx),
-			id,
-			std::move(connection),
-			std::move(first_chunk_data),
 			created_at );
 }
 
