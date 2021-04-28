@@ -48,7 +48,7 @@ struct http_handling_state_t
 {
 	http_parser m_parser;
 
-	std::vector< char > m_incoming_data;
+	first_chunk_t m_first_chunk;
 	std::size_t m_incoming_data_size;
 
 	std::size_t m_next_execute_position{};
@@ -57,25 +57,10 @@ struct http_handling_state_t
 	http_handling_state_t( http_handling_state_t && ) = delete;
 
 	http_handling_state_t(
-		std::size_t io_chunk_size,
-		byte_sequence_t whole_first_pdu )
+		first_chunk_for_next_handler_t first_chunk_data )
+		:	m_first_chunk{ first_chunk_data.giveaway_chunk() }
+		,	m_incoming_data_size{ first_chunk_data.remaining_bytes() }
 	{
-		if( io_chunk_size < whole_first_pdu.size() )
-			throw acl_handler_ex_t{
-					fmt::format( "first PDU is too big ({} bytes) to fit "
-							"into io_buffer ({} bytes)",
-							whole_first_pdu.size(),
-							io_chunk_size )
-			};
-
-		m_incoming_data.resize( io_chunk_size );
-		std::transform(
-				std::begin(whole_first_pdu),
-				std::end(whole_first_pdu),
-				std::begin(m_incoming_data),
-				[]( std::byte b ) { return static_cast<char>(b); } );
-		m_incoming_data_size = whole_first_pdu.size();
-
 		http_parser_init( &m_parser, HTTP_REQUEST );
 	}
 };

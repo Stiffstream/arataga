@@ -151,6 +151,13 @@ make_first_chunk_for_next_handler(
 					"consumed_bytes ({}) is greater than total_size ({})",
 					consumed_bytes, total_bytes )
 		};
+	if( chunk.capacity() < total_bytes )
+		throw acl_handler_ex_t{
+			fmt::format(
+					"make_first_chunk_for_next_handler: "
+					"chunk's capacity ({}) too small (total_bytes: {})",
+					chunk.capacity(), total_bytes )
+		};
 
 	const auto remaining = total_bytes - consumed_bytes;
 	if( remaining && consumed_bytes )

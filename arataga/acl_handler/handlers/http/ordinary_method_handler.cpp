@@ -244,8 +244,10 @@ public:
 			}
 		,	m_target_end{
 				std::make_unique< http_handling_state_t >(
-						context().config().io_chunk_size(),
-						byte_sequence_t{} ),
+						make_first_chunk_for_next_handler(
+								first_chunk_t{ context().config().io_chunk_size() },
+								0u,
+								0u ) ),
 				m_out_connection,
 				"target_end"_static_str,
 				traffic_limiter_t::direction_t::from_target,
@@ -580,11 +582,14 @@ private:
 		if( !bytes_to_parse )
 			return;
 
+		// Hope it's not a UB.
+		const char * buffer_to_parse =
+				reinterpret_cast<const char *>(http_state.m_first_chunk.buffer())
+				+ http_state.m_next_execute_position;
 		const auto bytes_parsed = http_parser_execute(
 				&(http_state.m_parser),
 				&(m_user_end.m_http_parser_settings),
-				&(http_state.m_incoming_data.at(
-					http_state.m_next_execute_position)),
+				buffer_to_parse,
 				bytes_to_parse );
 		http_state.m_next_execute_position += bytes_parsed;
 
@@ -654,36 +659,21 @@ private:
 		{
 			// If there is some unparsed data, it should be passed to a new
 			// connection-handler.
-			byte_sequence_t remaining_data;
-			if( const auto & state = *(m_user_end.m_http_state);
-					state.m_incoming_data_size > state.m_next_execute_position )
-			{
-				remaining_data = byte_sequence_t{
-						reinterpret_cast<const std::byte *>(
-								&(state.m_incoming_data[ state.m_next_execute_position ]) ),
-						state.m_incoming_data_size - state.m_next_execute_position
-					};
-			}
+			auto first_chunk_data = make_first_chunk_for_next_handler(
+					std::move(m_user_end.m_http_state->m_first_chunk),
+					m_user_end.m_http_state->m_next_execute_position,
+					m_user_end.m_http_state->m_incoming_data_size );
 
 			replace_handler(
 					delete_protector,
 					can_throw,
-					[this, &remaining_data]( can_throw_t )
+					[this, fcd = std::move(first_chunk_data)]( can_throw_t ) mutable
 					{
 						return make_http_handler(
 								std::move(m_ctx),
 								m_id,
 								std::move(m_connection),
-//FIXME: should be replaced by a normal code!
-#if 0
-								// Give all the remaining data as initial data
-								// for the new handler.
-								remaining_data,
-#endif
-make_first_chunk_for_next_handler(
-first_chunk_t{ context().config().io_chunk_size() },
-0u,
-0u ),
+								std::move(fcd),
 								std::chrono::steady_clock::now() );
 					} );
 		}
@@ -1279,11 +1269,14 @@ first_chunk_t{ context().config().io_chunk_size() },
 		const auto bytes_to_parse = src_dir.m_http_state->m_incoming_data_size
 				- src_dir.m_http_state->m_next_execute_position;
 
+		// Hope it's not a UB.
+		const char * buffer_to_parse =
+				reinterpret_cast<const char *>(src_dir.m_http_state->m_first_chunk.buffer())
+				+ src_dir.m_http_state->m_next_execute_position;
 		const auto bytes_parsed = http_parser_execute(
 				&(src_dir.m_http_state->m_parser),
 				&(src_dir.m_http_parser_settings),
-				&(src_dir.m_http_state->m_incoming_data.at(
-					src_dir.m_http_state->m_next_execute_position)),
+				buffer_to_parse,
 				bytes_to_parse );
 		src_dir.m_http_state->m_next_execute_position += bytes_parsed;
 
@@ -1502,8 +1495,8 @@ first_chunk_t{ context().config().io_chunk_size() },
 		direction_state_t & src_dir )
 	{
 		auto buffer = asio::buffer(
-				&(src_dir.m_http_state->m_incoming_data[0]),
-				src_dir.m_http_state->m_incoming_data.size() );
+				src_dir.m_http_state->m_first_chunk.buffer(),
+				src_dir.m_http_state->m_first_chunk.capacity() );
 
 		src_dir.m_channel.async_read_some(
 				buffer,

@@ -115,13 +115,12 @@ public:
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket connection,
-		byte_sequence_t whole_first_pdu,
+		first_chunk_for_next_handler_t first_chunk_data,
 		std::chrono::steady_clock::time_point created_at )
 		:	basic_http_handler_t{ std::move(ctx), id, std::move(connection) }
 		,	m_request_state{
 				std::make_unique< http_handling_state_t >(
-						context().config().io_chunk_size(),
-						whole_first_pdu )
+						std::move(first_chunk_data) )
 			}
 		,	m_created_at{ created_at }
 	{
@@ -658,11 +657,15 @@ private:
 		const auto bytes_to_parse = m_request_state->m_incoming_data_size
 				- m_request_state->m_next_execute_position;
 
+		// Hope it's not a UB.
+		const char * buffer_to_parse =
+				reinterpret_cast<const char *>(m_request_state->m_first_chunk.buffer())
+				+ m_request_state->m_next_execute_position;
+
 		const auto bytes_parsed = http_parser_execute(
 				&(m_request_state->m_parser),
 				&m_http_parser_settings,
-				&(m_request_state->m_incoming_data.at(
-					m_request_state->m_next_execute_position)),
+				buffer_to_parse,
 				bytes_to_parse );
 		m_request_state->m_next_execute_position += bytes_parsed;
 
@@ -720,8 +723,8 @@ private:
 		m_request_state->m_incoming_data_size = 0u;
 		// Use async_read_some to handle EOF by ourselves.
 		auto buffer = asio::buffer(
-				&(m_request_state->m_incoming_data[0]),
-				m_request_state->m_incoming_data.size() );
+				m_request_state->m_first_chunk.buffer(),
+				m_request_state->m_first_chunk.capacity() );
 		m_connection.async_read_some(
 				buffer,
 				with<const asio::error_code &, std::size_t>().make_handler(
@@ -861,6 +864,7 @@ private:
 		return opt_error;
 	}
 
+//FIXME: the presence of an additional data should not be checked in v.0.5.0.
 	validity_check_result_t
 	ensure_valid_state_before_switching_handler( can_throw_t can_throw )
 	{
@@ -1038,15 +1042,14 @@ make_http_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket connection,
-	first_chunk_for_next_handler_t first_chunk,
+	first_chunk_for_next_handler_t first_chunk_data,
 	std::chrono::steady_clock::time_point created_at )
 {
 	return std::make_shared< handlers::http::initial_http_handler_t >(
 			std::move(ctx),
 			id,
 			std::move(connection),
-//FIXME: should be replaced by a normal code!
-			byte_sequence_t{},
+			std::move(first_chunk_data),
 			created_at );
 }
 
