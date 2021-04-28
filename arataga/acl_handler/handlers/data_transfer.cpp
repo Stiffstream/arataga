@@ -94,6 +94,15 @@ class data_transfer_handler_t final : public connection_handler_t
 			io_buffer_t( std::size_t io_chunk_size )
 				:	m_data_read( std::make_unique<std::byte[]>(io_chunk_size) )
 			{}
+
+			// The constructor for the case when data_read buffer is
+			// already allocated. And can have some initial data inside.
+			io_buffer_t(
+				std::unique_ptr< std::byte[] > data_read,
+				std::size_t data_size )
+				:	m_data_read{ std::move(data_read) }
+				,	m_data_size{ data_size }
+			{}
 		};
 
 		//! List of buffers for I/O operations.
@@ -123,6 +132,69 @@ class data_transfer_handler_t final : public connection_handler_t
 		//! Is there an active write operation?
 		bool m_active_write{ false };
 
+		//! Constructor for user-end connection.
+		/*!
+		 * There is first_chunk, so the first item in m_in_buffers should
+		 * be constructed from that first_chunk.
+		 *
+		 * There could also be some incoming data in the first_chunk.
+		 * In that case value of m_available_for_read_buffers should be
+		 * decremented, m_available_for_write_buffers should be incremented,
+		 * and m_read_index should be changed appropriately.
+		 *
+		 * @since v.0.5.0
+		 */
+		direction_state_t(
+			asio::ip::tcp::socket & channel,
+			arataga::utils::string_literal_t name,
+			first_chunk_for_next_handler_t first_chunk_data,
+			std::size_t io_chunk_size,
+			std::size_t io_chunk_count,
+			traffic_limiter_t::direction_t traffic_direction )
+			:	m_channel{ channel }
+			,	m_name{ name }
+			,	m_available_for_read_buffers{ io_chunk_count }
+			,	m_traffic_direction{ traffic_direction }
+		{
+			if( first_chunk_data.chunk().capacity() != io_chunk_size )
+				throw acl_handler_ex_t{
+					fmt::format( "data_transfer_handler_t::direction_state_t: "
+							"io_chunk_size ({}) != first_chunk.capacity ({})",
+							io_chunk_size,
+							first_chunk_data.chunk().capacity() )
+				};
+
+			// I/O buffers have to be created manually except the first one.
+			m_in_buffers.reserve( m_available_for_read_buffers );
+
+			// Item with index 0 has to be constructed from first_chunk.
+			m_in_buffers.emplace_back(
+					first_chunk_data.giveaway_chunk().giveaway_buffer(),
+					first_chunk_data.remaining_bytes() );
+
+			for( std::size_t i = 1u; i < m_available_for_read_buffers; ++i )
+			{
+				m_in_buffers.emplace_back( io_chunk_size );
+			}
+
+			// If there are some incoming data from the user-end then
+			// it should be reflected in values of m_available_for_read_buffers,
+			// m_available_for_write_buffers, m_read_index.
+			if( first_chunk_data.remaining_bytes() )
+			{
+				m_in_buffers[ 0u ].m_data_size = first_chunk_data.remaining_bytes();
+				m_available_for_read_buffers -= 1u;
+				m_available_for_write_buffers += 1u;
+
+				increment_read_index();
+			}
+		}
+
+		//! Constructor for target-end connection.
+		/*!
+		 * There is no already read data from that direction, all buffers
+		 * will be empty.
+		 */
 		direction_state_t(
 			asio::ip::tcp::socket & channel,
 			arataga::utils::string_literal_t name,
@@ -140,6 +212,18 @@ class data_transfer_handler_t final : public connection_handler_t
 			{
 				m_in_buffers.emplace_back( io_chunk_size );
 			}
+		}
+
+		void
+		increment_read_index() noexcept
+		{
+			m_read_index = (m_read_index + 1u) % m_in_buffers.size();
+		}
+
+		void
+		increment_write_index() noexcept
+		{
+			m_write_index = (m_write_index + 1u) % m_in_buffers.size();
 		}
 	};
 
@@ -183,6 +267,7 @@ public:
 		,	m_io_chunk_size{ first_chunk_data.chunk().capacity() }
 		,	m_user_end{
 				m_connection, "user-end"_static_str,
+				std::move(first_chunk_data),
 				m_io_chunk_size,
 				context().config().io_chunk_count(),
 				traffic_limiter_t::direction_t::from_user
@@ -194,28 +279,6 @@ public:
 				traffic_limiter_t::direction_t::from_target
 			}
 	{
-		//FIXME: this is a very non-efficient version.
-		//More efficient version should pass first_chunk_data object to
-		//the constructor of m_user_end.
-
-		// If first_chunk_data contains some data then we have to
-		// move that data into m_user_end direction object.
-		if( first_chunk_data.remaining_bytes() )
-		{
-			const auto * in_buffer = first_chunk_data.chunk().buffer();
-			std::copy(
-					in_buffer,
-					in_buffer + first_chunk_data.remaining_bytes(),
-					m_user_end.m_in_buffers[ 0u ].m_data_read.get() );
-
-			m_user_end.m_in_buffers[ 0u ].m_data_size =
-					first_chunk_data.remaining_bytes();
-			m_user_end.m_read_index = (m_user_end.m_read_index + 1u) %
-					m_user_end.m_in_buffers.size();
-			m_user_end.m_available_for_read_buffers -= 1u;
-
-			m_user_end.m_available_for_write_buffers += 1u;
-		}
 	}
 
 protected:
@@ -363,8 +426,7 @@ private:
 
 		// Detect the next buffer for reading into.
 		const auto selected_buffer = src_dir.m_read_index;
-		src_dir.m_read_index = (src_dir.m_read_index + 1u) %
-				src_dir.m_in_buffers.size();
+		src_dir.increment_read_index();
 
 		src_dir.m_channel.async_read_some(
 				asio::buffer(
@@ -422,8 +484,7 @@ private:
 
 		// Detect a buffer with outgoing data.
 		const auto selected_buffer = src_dir.m_write_index;
-		src_dir.m_write_index = (src_dir.m_write_index + 1u) %
-				src_dir.m_in_buffers.size();
+		src_dir.increment_write_index();
 
 		const auto & buffer = src_dir.m_in_buffers[ selected_buffer ];
 
