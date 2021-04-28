@@ -864,41 +864,12 @@ private:
 		return opt_error;
 	}
 
-//FIXME: the presence of an additional data should not be checked in v.0.5.0.
 	validity_check_result_t
 	ensure_valid_state_before_switching_handler( can_throw_t can_throw )
 	{
-		// If we're handling HTTP CONNECT then we have to check that
-		// incoming buffer is empty and there is nothing behind the
-		// request itself.
-		if( HTTP_CONNECT == m_request_info.m_method )
-		{
-			if( m_request_state->m_incoming_data_size
-				!= m_request_state->m_next_execute_position )
-			{
-				::arataga::logging::wrap_logging(
-						proxy_logging_mode,
-						spdlog::level::err,
-						[this, can_throw]( auto level )
-						{
-							log_message_for_connection(
-									can_throw,
-									level,
-									fmt::format(
-											"unexpected case: incoming buffer is not "
-											"empty after parsing HTTP message with "
-											"CONNECT request; buffer_size: {}, "
-											"parsed_data_size: {}",
-											m_request_state->m_incoming_data_size,
-											m_request_state->m_next_execute_position )
-								);
-						} );
-
-				return invalid_state_t{
-						response_bad_request_unexpected_parsing_error
-					};
-			}
-		}
+		// NOTE: since v.0.5.0 we don't check the presence of some
+		// additional data after the completion of parsing CONNECT request.
+		// If there are some data it will be processed by the next handler.
 
 		auto opt_error = try_modify_request_headers( can_throw );
 		if( opt_error )

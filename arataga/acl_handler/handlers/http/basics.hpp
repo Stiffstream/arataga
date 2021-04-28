@@ -63,6 +63,19 @@ struct http_handling_state_t
 	{
 		http_parser_init( &m_parser, HTTP_REQUEST );
 	}
+
+	/*!
+	 * @since v.0.5.0
+	 */
+	[[nodiscard]]
+	first_chunk_for_next_handler_t
+	giveaway_first_chunk_for_next_handler()
+	{
+		return make_first_chunk_for_next_handler(
+				std::move(m_first_chunk),
+				m_next_execute_position,
+				m_incoming_data_size );
+	}
 };
 
 /*!

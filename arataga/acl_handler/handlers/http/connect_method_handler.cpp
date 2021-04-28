@@ -24,6 +24,14 @@ namespace handlers::http
  */
 class connect_method_handler_t final : public handler_with_out_connection_t
 {
+	//! The first chunk of the incoming connection.
+	/*!
+	 * Has to be passed to data_transfer_handler.
+	 *
+	 * @since v.0.5.0
+	 */
+	first_chunk_for_next_handler_t m_first_chunk_data;
+
 	//! Description of the target host.
 	/*!
 	 * It's necessary for logging purposes.
@@ -51,6 +59,7 @@ public:
 		handler_context_holder_t ctx,
 		handler_context_t::connection_id_t id,
 		asio::ip::tcp::socket in_connection,
+		http_handling_state_unique_ptr_t http_state,
 		request_info_t request_info,
 		traffic_limiter_unique_ptr_t traffic_limiter,
 		asio::ip::tcp::socket out_connection )
@@ -59,6 +68,9 @@ public:
 				id,
 				std::move(in_connection),
 				std::move(out_connection)
+			}
+		,	m_first_chunk_data{
+				http_state->giveaway_first_chunk_for_next_handler()
 			}
 		,	m_connection_target{
 				fmt::format( "{}:{}",
@@ -107,11 +119,7 @@ protected:
 												std::move(m_ctx),
 												m_id,
 												std::move(m_connection),
-												//FIXME: should be changed to the normal code!
-												make_first_chunk_for_next_handler(
-														first_chunk_t{ context().config().io_chunk_size() },
-														0u,
-														0u ),
+												std::move(m_first_chunk_data),
 												std::move(m_out_connection),
 												std::move(m_traffic_limiter) );
 									} );
@@ -159,10 +167,7 @@ make_connect_method_handler(
 	handler_context_holder_t ctx,
 	handler_context_t::connection_id_t id,
 	asio::ip::tcp::socket in_connection,
-	// This information is passed to HTTP connection-handler factories.
-	// But this type of handler doesn't need it.
-	// So it will be thrown out.
-	http_handling_state_unique_ptr_t /*http_state*/,
+	http_handling_state_unique_ptr_t http_state,
 	request_info_t request_info,
 	traffic_limiter_unique_ptr_t traffic_limiter,
 	asio::ip::tcp::socket out_connection )
@@ -171,6 +176,7 @@ make_connect_method_handler(
 			std::move(ctx),
 			id,
 			std::move(in_connection),
+			std::move(http_state),
 			std::move(request_info),
 			std::move(traffic_limiter),
 			std::move(out_connection) );

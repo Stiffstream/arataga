@@ -207,7 +207,14 @@ public:
 					in_buffer,
 					in_buffer + first_chunk_data.remaining_bytes(),
 					m_user_end.m_in_buffers[ 0u ].m_data_read.get() );
+
+			m_user_end.m_in_buffers[ 0u ].m_data_size =
+					first_chunk_data.remaining_bytes();
+			m_user_end.m_read_index = (m_user_end.m_read_index + 1u) %
+					m_user_end.m_in_buffers.size();
 			m_user_end.m_available_for_read_buffers -= 1u;
+
+			m_user_end.m_available_for_write_buffers += 1u;
 		}
 	}
 
@@ -218,6 +225,16 @@ protected:
 		wrap_action_and_handle_exceptions(
 			delete_protector,
 			[this]( delete_protector_t, can_throw_t can_throw ) {
+				// If there are some data already read from m_user_end
+				// then this data has to be written.
+				if( m_user_end.m_available_for_write_buffers )
+				{
+					initiate_async_write_for_direction(
+							can_throw,
+							m_target_end,
+							m_user_end );
+				}
+
 				// Initiate the data read from both connection.
 				// The data that is read first will be written first.
 				initiate_read_user_end( can_throw );
