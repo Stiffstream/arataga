@@ -384,17 +384,6 @@ public:
 		m_size = new_size;
 	}
 
-#if 0
-	//FIXME: is this method really needed after the intruduction of
-	//first_chunk_t+chunk_fragment_t types?
-	[[nodiscard]]
-	byte_sequence_t
-	whole_data_as_sequence() const noexcept
-	{
-		return { &m_buffer[0], (&m_buffer[0]) + m_size };
-	}
-#endif
-
 	[[nodiscard]]
 	std::size_t
 	read_position() const noexcept

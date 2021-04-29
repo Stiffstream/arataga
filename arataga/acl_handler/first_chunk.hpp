@@ -20,9 +20,30 @@ namespace arataga::acl_handler
 //
 // first_chunk_t
 //
-//FIXME: document this!
+/*!
+ * @brief A type for holding the first IO-chunk for a new incoming connection.
+ *
+ * Version 0.5.0 uses different scheme of IO-buffers. Instead of several
+ * small temporary buffers in every connection-handler, the first IO-chunk
+ * is created when the protocol_detector handler is created. Then this
+ * first chunk is passed from one connection-handler to another holding
+ * all read and non-processed yet data.
+ *
+ * Type first_chunk_t is a holder for the first IO-chunk written in RAII
+ * maner.
+ *
+ * @note
+ * This is Movable, but not Copyable type.
+ * This type isn't DefaultConstructible.
+ *
+ * @since v.0.5.0
+ */
 class first_chunk_t
 {
+public:
+	using chunk_t = std::unique_ptr< std::byte[] >;
+
+private:
 	std::unique_ptr< std::byte[] > m_chunk;
 	std::size_t m_capacity;
 
@@ -81,7 +102,24 @@ public:
 //
 // first_chunk_for_next_handler_t
 //
-//FIXME: document this!
+/*!
+ * @brief Helper type for passing the first IO-chunk to the next
+ * connection-handler.
+ *
+ * Durring the transfer of the first IO-chunk from the current to the next
+ * connection-handler it's necessary to pass not only the first IO-chunk
+ * itself but also size of data in the first IO-chunk that is not processed
+ * yet.
+ *
+ * Type first_chunk_for_next_handler_t is a helper for passing those
+ * information as single object.
+ *
+ * @note
+ * This is Movable, but not Copyable type.
+ * This type isn't DefaultConstructible.
+ *
+ * @since v.0.5.0
+ */
 class first_chunk_for_next_handler_t
 {
 	first_chunk_t m_chunk;
@@ -132,16 +170,31 @@ public:
 //
 // make_first_chunk_for_next_handler
 //
-//FIXME: document this!
+//FIXME: the moving data to the left in the buffer maybe a bottleneck.
+//If that is the case then another scheme without moving the data
+//should be used.
 /*!
+ * @brief Helper function for creation of new instances of
+ * first_chunk_for_next_handler.
+ *
+ * @note
+ * The first @a consumed_bytes will be removed from the first_chunk (all
+ * unprocessed data in the chunk will be moved left in the buffer).
+ *
  * @attention
  * It's assumed that @a consumed_bytes is not greater than @a total_bytes.
  */
 [[nodiscard]]
 inline first_chunk_for_next_handler_t
 make_first_chunk_for_next_handler(
+	//! The first_chunk to be transferred.
 	first_chunk_t chunk,
+	//! Count of bytes already consumed from the first_chunk.
+	//! Those bytes will be removed from the first_chunk.
+	//! The size of remaining data in the first_chunk will be decreased.
 	std::size_t consumed_bytes,
+	//! Total size of the first_chunk before calling
+	//! make_first_chunk_for_next_handler.
 	std::size_t total_bytes )
 {
 	if( consumed_bytes > total_bytes )
