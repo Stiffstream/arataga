@@ -15,6 +15,7 @@
 /__*.?pp
 /__*.rb
 /__*.vim
+/__*.txt
 .*.sw?
 /*.log
 /local-build.rb
@@ -24,4 +25,4 @@
 /*.sublime-project
 /*.sublime-workspace
 /.vscode
-
+callgrind.out.*
