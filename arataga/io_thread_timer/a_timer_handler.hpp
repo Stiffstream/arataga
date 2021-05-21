@@ -16,7 +16,13 @@ namespace arataga::io_thread_timer
 //
 // a_timer_handler_t
 //
-//FIXME: document this!
+/*!
+ * @brief Agent for handling one_second_timer events for an io-thread.
+ *
+ * This agent implements provider_t interface. It holds a set of active
+ * consumers and calls consumer_t::on_timer() method for every active
+ * consumer when one_second_timer_t signal arrives.
+ */
 class a_timer_handler_t
 	:	public so_5::agent_t
 	,	public provider_t
