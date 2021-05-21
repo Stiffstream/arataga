@@ -10,6 +10,8 @@
 #include <arataga/authentificator/pub.hpp>
 #include <arataga/dns_resolver/pub.hpp>
 
+#include <arataga/io_thread_timer/introduce_coop.hpp>
+
 #include <arataga/acl_handler/pub.hpp>
 
 #include <arataga/admin_http_entry/helpers.hpp>
@@ -616,6 +618,15 @@ a_processor_t::create_dispatchers_if_necessary(
 								}
 							);
 
+		// New timer-provider should be created for the IO-thread.
+		std::tie( info.m_timer_provider_coop, info.m_timer_provider ) =
+				::arataga::io_thread_timer::
+						introduce_coop(
+								so_environment(),
+								so_coop(), // We as the parent coop.
+								info.m_disp.binder(),
+								m_app_ctx );
+
 		m_io_threads.emplace_back( std::move(info) );
 	}
 
@@ -708,20 +719,24 @@ a_processor_t::launch_new_acls(
 		// Create ACL ID seed for a new ACL.
 		const auto acl_id_seed = make_next_acl_req_id_seed( m_acl_id_seed );
 
+		auto & io_thread_info = m_io_threads[ io_thread_index ];
+
 		// Now the new ACL can be created.
 		m_running_acls.emplace_back(
 				acl_conf,
 				io_thread_index,
 				::arataga::acl_handler::introduce_acl_handler(
 						so_environment(),
-						so_coop(), // We as the parent coop.
-						m_io_threads[ io_thread_index ].m_disp.binder(),
+						// NOTE: timer_provider_coop is used as the parent!
+						io_thread_info.m_timer_provider_coop,
+						io_thread_info.m_disp.binder(),
 						m_app_ctx,
 						::arataga::acl_handler::params_t{
-								m_io_threads[ io_thread_index ].m_disp.io_context(),
+								io_thread_info.m_disp.io_context(),
 								acl_conf,
-								m_io_threads[ io_thread_index ].m_dns_mbox,
-								m_io_threads[ io_thread_index ].m_auth_mbox,
+								io_thread_info.m_dns_mbox,
+								io_thread_info.m_auth_mbox,
+								*(io_thread_info.m_timer_provider),
 								fmt::format( "{}-{}-{}-io_thr_{}-v{}",
 										acl_conf.m_protocol,
 										acl_conf.m_port,
@@ -735,13 +750,13 @@ a_processor_t::launch_new_acls(
 		);
 
 		// We should know that this IO-thread holds one more ACL.
-		m_io_threads[ io_thread_index ].m_running_acl_count += 1u;
+		io_thread_info.m_running_acl_count += 1u;
 
 		// Try to switch to another IO-thread.
 		// Do that only if the next IO-thread (or the first if the current
 		// is the rightmost) holds less ACL than the current IO-thread.
 		const auto next_index = (io_thread_index + 1u) % m_io_threads.size();
-		if( m_io_threads[ io_thread_index ].m_running_acl_count >
+		if( io_thread_info.m_running_acl_count >
 				m_io_threads[ next_index ].m_running_acl_count )
 			io_thread_index = next_index;
 	}

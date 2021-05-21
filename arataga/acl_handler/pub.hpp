@@ -7,6 +7,8 @@
 
 #include <arataga/utils/acl_req_id.hpp>
 
+#include <arataga/io_thread_timer/ifaces.hpp>
+
 #include <arataga/application_context.hpp>
 
 #include <arataga/config.hpp>
@@ -35,6 +37,9 @@ struct params_t
 
 	//! mbox of authentificator to be used.
 	so_5::mbox_t m_auth_mbox;
+
+	//! Timer-provider to be used by the agent.
+	arataga::io_thread_timer::provider_t & m_timer_provider;
 
 	//! Unique name to be used for logging.
 	std::string m_name;

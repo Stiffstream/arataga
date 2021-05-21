@@ -374,9 +374,6 @@ a_handler_t::so_define_agent()
 
 	st_entry_created
 		.on_enter( &a_handler_t::on_enter_st_entry_created )
-		.event(
-				m_app_ctx.m_global_timer_mbox,
-				&a_handler_t::on_one_second_timer )
 		.event( &a_handler_t::on_dns_result )
 		.event( &a_handler_t::on_auth_result )
 		;
@@ -441,6 +438,9 @@ a_handler_t::so_evt_finish()
 	// Cleanup all sockets.
 	m_acceptor.close();
 	m_connections.clear();
+
+	// Deactivate timer if activated.
+	m_params.m_timer_provider.deactivate_consumer( *this );
 }
 
 void
@@ -478,6 +478,10 @@ a_handler_t::remove_connection_handler(
 	connection_id_t id,
 	remove_reason_t reason ) noexcept
 {
+//FIXME: should ARATAGA_NOTHROW_BLOCK_BEGIN/END be used here?
+//It maybe necessary because try_switch_to_accepting_if_necessary_and_possible
+//can throw.
+//We can't continue if it throws, but we can log that event.
 	auto it = m_connections.find( id );
 	if( it != m_connections.end() )
 	{
@@ -504,6 +508,11 @@ a_handler_t::remove_connection_handler(
 
 		try_switch_to_accepting_if_necessary_and_possible();
 	}
+
+	// Maybe there is no more live handlers and timers have to be
+	// deactivated.
+	if( m_connections.empty() )
+		m_params.m_timer_provider.deactivate_consumer( *this );
 }
 
 void
@@ -731,6 +740,31 @@ a_handler_t::stats_inc_connection_count(
 }
 
 void
+a_handler_t::on_timer() noexcept
+{
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
+		ARATAGA_NOTHROW_BLOCK_STAGE(update_traffic_limit_quotes)
+
+		// Start a new turn. Traffic quotes have to be recalculated.
+		update_traffic_limit_quotes_on_new_turn();
+
+		ARATAGA_NOTHROW_BLOCK_STAGE(call_on_timer_for_connection_handlers)
+
+		// Additional care should be taken with iterators because
+		// the content of m_connections can be changed right inside
+		// on_timer call.
+		for( auto it = m_connections.begin(); it != m_connections.end(); )
+		{
+			// Hold a pointer until on_timer will be completed.
+			auto handler = it->second.handler();
+			++it; // Go to next item before the call to on_timer.
+
+			handler->on_timer();
+		}
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_ABORT)
+}
+
+void
 a_handler_t::on_shutdown( mhood_t< shutdown_t > )
 {
 	::arataga::logging::wrap_logging(
@@ -855,25 +889,6 @@ a_handler_t::on_try_create_entry_point(
 void
 a_handler_t::on_enter_st_entry_created() noexcept
 {
-}
-
-void
-a_handler_t::on_one_second_timer( mhood_t< one_second_timer_t > )
-{
-	// Start a new turn. Traffic quotes have to be recalculated.
-	update_traffic_limit_quotes_on_new_turn();
-
-	// Additional care should be taken with iterators because
-	// the content of m_connections can be changed right inside
-	// on_timer call.
-	for( auto it = m_connections.begin(); it != m_connections.end(); )
-	{
-		// Hold a pointer until on_timer will be completed.
-		auto handler = it->second.handler();
-		++it; // Go to next item before the call to on_timer.
-
-		handler->on_timer();
-	}
 }
 
 void
@@ -1119,6 +1134,15 @@ ARATAGA_NOTHROW_BLOCK_BEGIN()
 	//Will handler be closed correctly?
 
 	ARATAGA_NOTHROW_BLOCK_STAGE(store_new_handler_to_connections_map)
+
+	// If there were no connections then timer has to be activated
+	// after accepting new connection.
+	//
+	// NOTE: activate_consumer() is called before emplace().
+	// If activate_consumer() throws then we shouldn't remove
+	// connection_info from m_connections.
+	if( m_connections.empty() )
+		m_params.m_timer_provider.activate_consumer( *this );
 
 	// New connection has to be stored in the list of known connections.
 	m_connections.emplace( id,

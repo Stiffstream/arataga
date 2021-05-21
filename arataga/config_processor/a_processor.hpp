@@ -9,6 +9,8 @@
 #include <arataga/authentificator/pub.hpp>
 #include <arataga/dns_resolver/pub.hpp>
 
+#include <arataga/io_thread_timer/ifaces.hpp>
+
 #include <arataga/utils/acl_req_id.hpp>
 
 #include <arataga/config.hpp>
@@ -83,6 +85,11 @@ private:
 		so_5::coop_handle_t m_dns_coop;
 		//! mbox of dns_resolver-agent for that IO-thread.
 		so_5::mbox_t m_dns_mbox;
+
+		//! Coop with timer_handler for that IO-thread.
+		so_5::coop_handle_t m_timer_provider_coop;
+		//! Timer-provider for that IO-thread.
+		io_thread_timer::provider_t * m_timer_provider;
 
 		//! How many ACLs work on that IO-thread.
 		std::size_t m_running_acl_count{ 0u };

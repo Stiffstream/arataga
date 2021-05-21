@@ -19,7 +19,7 @@
 
 #include <arataga/authentificator/pub.hpp>
 
-#include <arataga/one_second_timer.hpp>
+#include <arataga/io_thread_timer/ifaces.hpp>
 
 #include <asio/ip/tcp.hpp>
 
@@ -146,6 +146,7 @@ using authentificated_user_map_t = std::map<
 class a_handler_t final
 	:	public so_5::agent_t
 	,	public handler_context_t
+	,	public arataga::io_thread_timer::consumer_t
 {
 public:
 	//! Initializing constructor.
@@ -201,6 +202,9 @@ public:
 	void
 	stats_inc_connection_count(
 		connection_type_t connection_type ) override;
+
+	void
+	on_timer() noexcept override;
 
 private:
 	//! Signal for next attempt to make an entry point.
@@ -355,9 +359,6 @@ private:
 
 	void
 	on_enter_st_entry_created() noexcept;
-
-	void
-	on_one_second_timer( mhood_t< one_second_timer_t > );
 
 	void
 	on_enter_st_accepting() noexcept;

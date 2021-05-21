@@ -31,6 +31,8 @@ MxxRu::Cpp::exe_target {
 	cpp_source 'dns_resolver/lookup_conductor/a_conductor.cpp'
 	cpp_source 'dns_resolver/pub.cpp'
 
+   cpp_source 'io_thread_timer/a_timer_handler.cpp'
+
 	cpp_source 'acl_handler/bandlim_manager.cpp'
 	cpp_source 'acl_handler/a_handler.cpp'
 
