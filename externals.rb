@@ -29,7 +29,7 @@ MxxRu::arch_externals :fmt do |e|
 end
 
 MxxRu::arch_externals :so5 do |e|
-  e.url 'https://github.com/Stiffstream/sobjectizer/archive/v.5.7.2.1.tar.gz'
+  e.url 'https://github.com/Stiffstream/sobjectizer/archive/v.5.7.2.5.tar.gz'
   e.map_dir 'dev/so_5' => './'
 end
 
