@@ -6,6 +6,7 @@
 #pragma once
 
 #include <arataga/utils/string_literal.hpp>
+#include <arataga/utils/overloaded.hpp>
 
 #include <oess_2/defs/h/types.hpp>
 #include <oess_2/io/h/stream.hpp>
@@ -19,6 +20,7 @@
 #include <iosfwd>
 #include <iostream>
 #include <string_view>
+#include <variant>
 
 namespace arataga::dns_resolver {
 
@@ -422,6 +424,18 @@ namespace dns_format_name_tools
 {
 
 //FIXME: this class should be replaced by std::variant.
+struct name_terminator_t {};
+
+struct name_length_t
+{
+	oess_2::uchar_t m_length;
+};
+
+struct reference_offset_t
+{
+	oess_2::ushort_t m_offset;
+};
+
 //! The result of extraction length byte.
 /*!
  * The result can be one of:
@@ -430,40 +444,13 @@ namespace dns_format_name_tools
  * - the offset for the reference;
  * - name terminator.
  */
-struct load_size_byte_result_t
-{
-	// What is extracted.
-	enum class what_t {
-		eof,
-		reference,
-		normal_value
-	};
+using load_size_byte_result_t = std::variant<
+		name_terminator_t,
+		name_length_t,
+		reference_offset_t
+	>;
 
-	const what_t m_what;
-	const oess_2::uchar_t m_size;
-	const oess_2::ushort_t m_offset;
-
-	[[nodiscard]]
-	static auto eof_extracted() noexcept
-	{
-		return load_size_byte_result_t{ what_t::eof, 0u, 0u };
-	}
-
-	[[nodiscard]]
-	static auto reference_extracted( oess_2::ushort_t offset ) noexcept
-	{
-		return load_size_byte_result_t{
-				what_t::reference, 0u, offset };
-	}
-
-	[[nodiscard]]
-	static auto value_extracted( oess_2::uchar_t size ) noexcept
-	{
-		return load_size_byte_result_t{
-				what_t::normal_value, size, 0 };
-	}
-};
-
+[[nodiscard]]
 inline load_size_byte_result_t
 load_size_byte( oess_2::io::istream_t & i )
 {
@@ -477,14 +464,17 @@ load_size_byte( oess_2::io::istream_t & i )
 		oess_2::uchar_t second_offset_byte;
 		i >> second_offset_byte;
 
-		return load_size_byte_result_t::reference_extracted(
-				((static_cast< oess_2::ushort_t >( size_byte ) & 0x3Fu) << 8) +
-				second_offset_byte );
+		return reference_offset_t{
+				static_cast<oess_2::ushort_t>(
+						((static_cast< oess_2::ushort_t >( size_byte ) & 0x3Fu) << 8)
+						+second_offset_byte
+				)
+		};
 	}
 	else if( size_byte == '\0' )
-		return load_size_byte_result_t::eof_extracted();
+		return name_terminator_t{};
 	else
-		return load_size_byte_result_t::value_extracted( size_byte );
+		return name_length_t{ size_byte };
 }
 
 inline void
@@ -554,28 +544,32 @@ read_from_memory_buffer_impl(
 			"read_from_memory_buffer_impl: reference recursion too deep"
 		};
 
-	while( true )
+	bool continue_loop = true;
+	do
 	{
-		const auto res = load_size_byte( stream );
-		switch( res.m_what )
-		{
-			case load_size_byte_result_t::what_t::reference:
-				read_reference_from_memory_buffer_impl(
-						references_recursion_deep,
-						all_buffer,
-						res.m_offset,
-						to );
-				return;
-			case load_size_byte_result_t::what_t::normal_value:
-				load_next_label( stream, res.m_size, to );
-				// The length should be checked.
-				dns_format_name_t::ensure_valid_length( to );
-				break;
-			case load_size_byte_result_t::what_t::eof:
-				to += '\0';
-				return;
-		}
-	}
+		continue_loop = std::visit(
+				arataga::utils::overloaded{
+					[&]( const reference_offset_t & res ) {
+						read_reference_from_memory_buffer_impl(
+								references_recursion_deep,
+								all_buffer,
+								res.m_offset,
+								to );
+						return false; // Stop the loop.
+					},
+					[&]( const name_length_t & res ) {
+						load_next_label( stream, res.m_length, to );
+						// The length should be checked.
+						dns_format_name_t::ensure_valid_length( to );
+						return true; // Loop should be continued.
+					},
+					[&]( const name_terminator_t & ) {
+						to += '\0';
+						return false; // Stop the loop.
+					}
+				},
+				load_size_byte( stream ) );
+	} while( continue_loop );
 }
 
 /*!
@@ -611,25 +605,32 @@ read_from_stream(
 	oess_2::io::istream_t & stream,
 	std::string & to )
 {
-	while( true )
+	bool continue_loop = true;
+	do
 	{
-		const auto res = load_size_byte( stream );
-		switch( res.m_what )
-		{
-			case load_size_byte_result_t::what_t::reference:
-				throw std::invalid_argument( "unable to read references from "
-						"ordinary stream, read_from_memory_buffer must be used "
-						"instead" );
-			case load_size_byte_result_t::what_t::normal_value:
-				load_next_label( stream, res.m_size, to );
-				// The length should be checked.
-				dns_format_name_t::ensure_valid_length( to );
-				break;
-			case load_size_byte_result_t::what_t::eof:
-				to += '\0';
-				return;
-		}
-	}
+		continue_loop = std::visit(
+				arataga::utils::overloaded{
+					[]( const reference_offset_t & ) -> bool {
+						throw std::invalid_argument(
+								"unable to read references from "
+								"ordinary stream, read_from_memory_buffer "
+								"must be used instead" );
+						return false;
+					},
+					[&]( const name_length_t & res ) -> bool {
+						load_next_label( stream, res.m_length, to );
+						// The length should be checked.
+						dns_format_name_t::ensure_valid_length( to );
+
+						return true;
+					},
+					[&to]( const name_terminator_t & ) -> bool {
+						to += '\0';
+						return false;
+					}
+				},
+				load_size_byte( stream ) );
+	} while( continue_loop );
 }
 
 inline oess_2::io::ostream_t &
