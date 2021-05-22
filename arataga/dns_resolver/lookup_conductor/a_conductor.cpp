@@ -76,17 +76,18 @@ local_cache_t::add_records(
 	std::string name,
 	const interactor::successful_lookup_t::address_container_t & addresses )
 {
-	//FIXME: it seems that this method is not exception safe.
-	//If assignement of m_addresses throws then an empty entry remains
-	//in m_data.
-	auto resolve_info = m_data.emplace(
-		std::move(name),
-		resolve_info_t{
-			// The current timepoint is used as the creation time.
-			std::chrono::steady_clock::now()
-		} );
-
-	resolve_info.first->second.m_addresses = addresses;
+	m_data.emplace(
+			std::move(name),
+			// NOTE: there can be an exception during the creation of
+			// a copy of `addresses`. That exception will prevent
+			// initialization of new instance of resolve_info_t just
+			// before the call to `emplace`. It means that in the case
+			// of an exception the content of m_data won't be changed.
+			resolve_info_t{
+				// The current timepoint is used as the creation time.
+				std::chrono::steady_clock::now(),
+				addresses
+			} );
 }
 
 void

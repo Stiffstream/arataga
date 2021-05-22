@@ -106,8 +106,10 @@ private:
 		std::chrono::steady_clock::time_point m_creation_time;
 
 		resolve_info_t(
-			std::chrono::steady_clock::time_point creation_time )
-			:	m_creation_time{ std::move(creation_time) }
+			std::chrono::steady_clock::time_point creation_time,
+			interactor::successful_lookup_t::address_container_t addresses )
+			:	m_addresses{ std::move(addresses) }
+			,	m_creation_time{ std::move(creation_time) }
 		{
 		}
 

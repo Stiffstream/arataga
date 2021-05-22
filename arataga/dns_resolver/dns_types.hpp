@@ -423,7 +423,6 @@ private :
 namespace dns_format_name_tools
 {
 
-//FIXME: this class should be replaced by std::variant.
 struct name_terminator_t {};
 
 struct name_length_t
@@ -589,9 +588,6 @@ read_from_memory_buffer(
 {
 	read_from_memory_buffer_impl( 0u, all_buffer, stream, to );
 }
-
-//FIXME: read_from_memory_buffer and read_from_stream is very similar.
-//Can this code duplication be removed?
 
 /*!
  * @brief Loading of DNS-name from a stream.

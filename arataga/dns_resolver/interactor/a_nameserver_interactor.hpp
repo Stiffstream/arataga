@@ -37,8 +37,6 @@ inline constexpr std::size_t max_dns_udp_package_size = 512u;
 //
 struct ongoing_req_data_t
 {
-	//FIXME: it should have type domain_name_t. std::string is used
-	// just for quick prototyping.
 	//! Name to be resolved.
 	/*!
 	 * It's needed for logging in the case of some strange responses
@@ -144,7 +142,15 @@ struct nameserver_info_t
 // a_nameserver_interactor_t
 //
 
-//FIXME: document this!
+/*!
+ * @brief Agent that performs interaction with DNS servers via UDP.
+ *
+ * Handles incoming lookup_request_t and translates them into
+ * outgoing UDP packages to a DNS server. Controls the lifetime of
+ * every request sent to a DNS server.
+ *
+ * Handles the config updates from config_processor.
+ */
 class a_nameserver_interactor_t final : public so_5::agent_t
 {
 public:

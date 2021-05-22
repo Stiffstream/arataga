@@ -60,8 +60,6 @@ using result_processor_t = std::function< void(lookup_result_t) >;
 //! Message with DNS-lookup request.
 struct lookup_request_t final : public so_5::message_t
 {
-	//FIXME: it should have type domain_name_t. std::string is used
-	// just for quick prototyping.
 	//! Name to be resolved.
 	std::string m_domain_name;
 
