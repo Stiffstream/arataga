@@ -298,8 +298,14 @@ void
 a_conductor_t::on_lookup_response(
 	const interactor::lookup_response_t & msg )
 {
-	//FIXME: should a possible exception be handled?
-	msg.m_result_processor( msg.m_result );
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
+		ARATAGA_NOTHROW_BLOCK_STAGE(calling_result_processor_for_lookup_response)
+
+		msg.m_result_processor( msg.m_result );
+
+		// Just ignore all possible exceptions because a acl_handler
+		// will cancel the current operation because of timeout.
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 }
 
 void
@@ -307,6 +313,10 @@ a_conductor_t::handle_lookup_result(
 	std::string domain_name,
 	interactor::lookup_result_t lookup_result )
 {
+	// NOTE: we don't care about exceptions here.
+	// All exception will go out and will be handled inside
+	// on_lookup_response() event handler.
+
 	auto log_func =
 		[this]( resolve_req_id_t req_id,
 			const forward::resolve_result_t & result )
@@ -332,7 +342,6 @@ a_conductor_t::handle_lookup_result(
 			// The stats for successful DNS lookups has to be updated.
 			m_dns_stats.m_dns_successful_lookups += 1u;
 
-			//FIXME: should possible exceptions be ignored?
 			::arataga::logging::wrap_logging(
 					direct_logging_mode,
 					spdlog::level::info,
@@ -368,7 +377,6 @@ a_conductor_t::handle_lookup_result(
 			// The stats for failed DNS lookups has to be updated.
 			m_dns_stats.m_dns_failed_lookups += 1u;
 
-			//FIXME: should possible exceptions be ignored?
 			::arataga::logging::wrap_logging(
 					direct_logging_mode,
 					spdlog::level::warn,
@@ -423,7 +431,7 @@ a_conductor_t::add_to_waiting_and_resolve(
 				req.m_name,
 				req.m_ip_version,
 				so_direct_mbox(),
-				// NOTE: there is no need to capture this via smart-pointer
+				// NOTE: there is no need to capture `this` via smart-pointer
 				// because this handler will be returned via message.
 				// That message will be ignored if the agent is already
 				// deregistered.

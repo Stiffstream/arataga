@@ -120,6 +120,8 @@ public:
 		const resolve_result_t & result,
 		LoggerFunc && logger )
 	{
+		// NOTE: don't care about exception. If so_5::send() or
+		// logger() throws the current operation will just be aborted.
 		auto find = m_waiting_requests.find( key );
 
 		if( find != m_waiting_requests.end() )
@@ -129,14 +131,12 @@ public:
 
 			for( const auto & req_info : requests )
 			{
-				//FIXME: what to do if this send throws?
 				so_5::send< resolve_reply_t >(
-					req_info.m_reply_to,
-					req_info.m_req_id,
-					req_info.m_completion_token,
-					result );
+						req_info.m_reply_to,
+						req_info.m_req_id,
+						req_info.m_completion_token,
+						result );
 
-				//FIXME: what to do if logger throws?
 				logger( std::move(req_info.m_req_id), result );
 			}
 		}
@@ -158,6 +158,9 @@ public:
 		const IpList & ips,
 		LoggerFunc && logger )
 	{
+		// NOTE: don't care about exception. If so_5::send() or
+		// logger() throws the current operation will just be aborted.
+
 		auto find = m_waiting_requests.find( key );
 
 		if( find != m_waiting_requests.end() )
@@ -170,17 +173,13 @@ public:
 				};
 			for( const auto & req_info : requests )
 			{
-				//FIXME: what to do if this send throws?
 				so_5::send< resolve_reply_t >(
-					req_info.m_reply_to,
-					req_info.m_req_id,
-					req_info.m_completion_token,
-					result );
+						req_info.m_reply_to,
+						req_info.m_req_id,
+						req_info.m_completion_token,
+						result );
 
-				//FIXME: what to do if logger throws?
-				logger(
-					std::move(req_info.m_req_id),
-					std::move(result) );
+				logger( std::move(req_info.m_req_id), std::move(result) );
 			}
 		}
 	}
