@@ -478,10 +478,6 @@ a_handler_t::remove_connection_handler(
 	connection_id_t id,
 	remove_reason_t reason ) noexcept
 {
-//FIXME: should ARATAGA_NOTHROW_BLOCK_BEGIN/END be used here?
-//It maybe necessary because try_switch_to_accepting_if_necessary_and_possible
-//can throw.
-//We can't continue if it throws, but we can log that event.
 	auto it = m_connections.find( id );
 	if( it != m_connections.end() )
 	{
@@ -1074,7 +1070,7 @@ void
 a_handler_t::accept_new_connection(
 	asio::ip::tcp::socket connection ) noexcept
 {
-ARATAGA_NOTHROW_BLOCK_BEGIN()
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
 
 	// A new ID for the new connection.
 	const auto id = ++m_connection_id_counter;
@@ -1125,13 +1121,15 @@ ARATAGA_NOTHROW_BLOCK_BEGIN()
 			id,
 			std::move(connection) );
 
+	// Create an instance of connection_info_t to hold the new handler.
+	// This instance is necessary for correct deletion of the new handler
+	// in the case of an exception.
+	connection_info_t new_connection_info{ std::move(handler) };
+
 	ARATAGA_NOTHROW_BLOCK_STAGE(call_new_handler_on_start)
 
 	// This handler should be started manually.
-	handler->on_start();
-
-	//FIXME: what if emplace will throw?
-	//Will handler be closed correctly?
+	new_connection_info.handler()->on_start();
 
 	ARATAGA_NOTHROW_BLOCK_STAGE(store_new_handler_to_connections_map)
 
@@ -1145,10 +1143,9 @@ ARATAGA_NOTHROW_BLOCK_BEGIN()
 		m_params.m_timer_provider.activate_consumer( *this );
 
 	// New connection has to be stored in the list of known connections.
-	m_connections.emplace( id,
-			connection_info_t{ std::move(handler) } );
+	m_connections.emplace( id, std::move(new_connection_info) );
 
-ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 }
 
 void
@@ -1231,16 +1228,25 @@ a_handler_t::make_long_id( connection_id_t id ) const noexcept
 void
 a_handler_t::try_switch_to_accepting_if_necessary_and_possible()
 {
+	// Normal work can't be continued if so_5::send() throws and
+	// enable_accepting_connections_t won't be sent.
+	// This case has to be logged and the application has to be terminated.
+	ARATAGA_NOTHROW_BLOCK_BEGIN()
+
 	// If we have stopped the acceptance of new connections but the
 	// current count of connection dropped below maxconn then
 	// we can resume the acception of new connection.
 	if( st_too_many_connections.is_active() &&
 			m_connections.size() < m_current_common_acl_params.m_maxconn )
 	{
+		ARATAGA_NOTHROW_BLOCK_STAGE(sending_enable_acception_connections_signal)
+
 		// We can't just change our state because this method is being
 		// called from outside of any event-handlers.
 		so_5::send< enable_accepting_connections_t >( *this );
 	}
+
+	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_ABORT)
 }
 
 void
