@@ -43,6 +43,10 @@ public:
 	deactivate_consumer( consumer_t & consumer ) noexcept override;
 
 private:
+	//NOTE: there is a more efficient way for holding a list of actual
+	//consumers: intrusive list. Every consumer_t can hold two pointers:
+	//m_prev and m_next. In that case modification of the list won't
+	//require a memory allocation/deallocation.
 	//! Type of the set of active consumers.
 	using consumers_set_t = std::set< consumer_t * >;
 
