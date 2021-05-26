@@ -27,6 +27,12 @@ namespace arataga::io_thread_timer
  */
 class consumer_t
 {
+	friend class provider_t;
+
+	bool m_activated{ false };
+	consumer_t * m_prev{};
+	consumer_t * m_next{};
+
 protected:
 	// NOTE: the destructor is not virtual and isn't public.
 	// This interface is not intended to be used for handling
@@ -34,6 +40,8 @@ protected:
 	~consumer_t() = default;
 
 public:
+	consumer_t() = default;
+
 	virtual void
 	on_timer() noexcept = 0;
 };
@@ -54,13 +62,51 @@ protected:
 	// object lifetime.
 	~provider_t() = default;
 
+	consumer_t * m_head{};
+
+	void
+	inform_every_consumer() const noexcept
+	{
+		consumer_t * current = m_head;
+		while( current )
+		{
+			auto * next = current->m_next;
+			current->on_timer();
+
+			current = next;
+		}
+	}
+
 public:
-	// NOTE: this method is not noexcept, it can throw.
-	virtual void
-	activate_consumer( consumer_t & consumer ) = 0;
+	void
+	activate_consumer( consumer_t & consumer ) noexcept
+	{
+		if( !consumer.m_activated )
+		{
+			consumer.m_activated = true;
+			consumer.m_next = m_head;
+			if( m_head )
+				m_head->m_prev = &consumer;
+			m_head = &consumer;
+		}
+	}
 
 	virtual void
-	deactivate_consumer( consumer_t & consumer ) noexcept = 0;
+	deactivate_consumer( consumer_t & consumer ) noexcept
+	{
+		if( consumer.m_activated )
+		{
+			if( consumer.m_next )
+				consumer.m_next->m_prev = consumer.m_prev;
+			if( consumer.m_prev )
+				consumer.m_prev->m_next = consumer.m_next;
+
+			if( m_head == &consumer )
+				m_head = consumer.m_next;
+
+			consumer.m_activated = false;
+		}
+	}
 };
 
 } /* namespace arataga::io_thread_timer */

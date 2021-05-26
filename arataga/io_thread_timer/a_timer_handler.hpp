@@ -36,25 +36,9 @@ public:
 	void
 	so_define_agent() override;
 
-	void
-	activate_consumer( consumer_t & consumer ) override;
-
-	void
-	deactivate_consumer( consumer_t & consumer ) noexcept override;
-
 private:
-	//NOTE: there is a more efficient way for holding a list of actual
-	//consumers: intrusive list. Every consumer_t can hold two pointers:
-	//m_prev and m_next. In that case modification of the list won't
-	//require a memory allocation/deallocation.
-	//! Type of the set of active consumers.
-	using consumers_set_t = std::set< consumer_t * >;
-
 	//! Context of the whole application.
 	const application_context_t m_app_ctx;
-
-	//! Active consumers.
-	consumers_set_t m_active_consumers;
 
 	void
 	on_one_second_timer( mhood_t<one_second_timer_t> );
