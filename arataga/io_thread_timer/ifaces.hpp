@@ -98,11 +98,15 @@ public:
 		{
 			if( consumer.m_next )
 				consumer.m_next->m_prev = consumer.m_prev;
+
 			if( consumer.m_prev )
 				consumer.m_prev->m_next = consumer.m_next;
 
 			if( m_head == &consumer )
 				m_head = consumer.m_next;
+
+			consumer.m_next = nullptr;
+			consumer.m_prev = nullptr;
 
 			consumer.m_activated = false;
 		}
