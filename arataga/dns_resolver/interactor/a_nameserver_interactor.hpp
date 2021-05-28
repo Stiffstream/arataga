@@ -276,7 +276,7 @@ private:
 	handle_dns_udp_package_sending_failure(
 		const ongoing_req_id_t & req_id,
 		ongoing_req_data_t & req_data,
-		std::string_view failure_description ) noexcept;
+		const char * failure_description ) noexcept;
 
 	void
 	handle_async_send_result(

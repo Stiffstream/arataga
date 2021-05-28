@@ -100,9 +100,6 @@ a_nameserver_interactor_t::evt_lookup_request(
 		return;
 	}
 
-	// We need to have a string_view to domain_name from cmd.
-	const std::string_view domain_name_view{ cmd->m_domain_name };
-
 	// Assume that it will be a unique ID for the request.
 	const auto req_id = ++(nsrv_to_use->m_req_id_counter);
 	const auto insertion_result = m_ongoing_requests.try_emplace(
@@ -123,13 +120,21 @@ a_nameserver_interactor_t::evt_lookup_request(
 		return;
 	}
 
-	NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
+	// NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT was user here earlier.
+	// But it seems that std::map::iterator::operator-> is not marked
+	// as noexcept. So the whole statement of calling
+	// form_and_send_dns_udp_package can't be noexcept (for example,
+	// when clang-11 with libc++ is used).
+	// We believe that iterator::operator-> can't throw here. But if it
+	// throws then we can't continue the work. So we placed the call
+	// of form_and_send_dns_udp_package() into noexcept-lambda.
+	[&]() noexcept {
 		form_and_send_dns_udp_package(
-				domain_name_view,
+				cmd->m_domain_name,
 				cmd->m_ip_version,
 				insertion_result.first->first,
-				insertion_result.first->second )
-	);
+				insertion_result.first->second );
+	}();
 }
 
 void
@@ -311,7 +316,7 @@ void
 a_nameserver_interactor_t::handle_dns_udp_package_sending_failure(
 	const ongoing_req_id_t & req_id,
 	ongoing_req_data_t & req_data,
-	std::string_view failure_description ) noexcept
+	const char * failure_description ) noexcept
 {
 	// Ignore all exceptions related to logging.
 	ARATAGA_NOTHROW_BLOCK_BEGIN()
