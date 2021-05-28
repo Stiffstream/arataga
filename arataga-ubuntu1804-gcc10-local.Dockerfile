@@ -34,6 +34,7 @@ COPY --from=arataga-build /root/arataga /root
 RUN mkdir /root/cfg
 
 RUN echo "log_level info\n\
+nserver 8.8.8.8, 8.8.4.4\n\
 timeout.protocol_detection 15s\n\
 timeout.http.headers_complete 10s\n\
 acl auto, port=5001, in_ip=0.0.0.0, out_ip=0.0.0.0" > /root/cfg/local-config.cfg
