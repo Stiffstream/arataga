@@ -264,7 +264,7 @@ private:
 	// NOTE: handles (ignores) all exceptions.
 	void
 	form_and_send_dns_udp_package(
-		const std::string_view domain_name,
+		const std::string_view & domain_name,
 		ip_version_t ip_version,
 		// This is a reference to data stored inside m_ongoing_requests.
 		const ongoing_req_id_t & req_id,

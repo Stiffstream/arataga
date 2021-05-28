@@ -100,6 +100,9 @@ a_nameserver_interactor_t::evt_lookup_request(
 		return;
 	}
 
+	// We need to have a string_view to domain_name from cmd.
+	const std::string_view domain_name_view{ cmd->m_domain_name };
+
 	// Assume that it will be a unique ID for the request.
 	const auto req_id = ++(nsrv_to_use->m_req_id_counter);
 	const auto insertion_result = m_ongoing_requests.try_emplace(
@@ -122,7 +125,7 @@ a_nameserver_interactor_t::evt_lookup_request(
 
 	NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
 		form_and_send_dns_udp_package(
-				cmd->m_domain_name,
+				domain_name_view,
 				cmd->m_ip_version,
 				insertion_result.first->first,
 				insertion_result.first->second )
@@ -227,7 +230,7 @@ a_nameserver_interactor_t::initiate_next_async_read()
 
 void
 a_nameserver_interactor_t::form_and_send_dns_udp_package(
-	const std::string_view domain_name,
+	const std::string_view & domain_name,
 	ip_version_t ip_version,
 	const ongoing_req_id_t & req_id,
 	ongoing_req_data_t & req_data ) noexcept
