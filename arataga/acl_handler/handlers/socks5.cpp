@@ -125,7 +125,7 @@ ensure_valid_size(
 						minimal_allowed_size )
 			};
 
-	return std::move(first_chunk);
+	return first_chunk;
 }
 
 class auth_method_detection_handler_t final : public connection_handler_t
