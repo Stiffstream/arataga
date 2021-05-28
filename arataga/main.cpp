@@ -7,7 +7,6 @@
 
 #include <arataga/nothrow_block/macros.hpp>
 
-#include <sys/prctl.h>
 #include <signal.h>
 #include <unistd.h>
 
