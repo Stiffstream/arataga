@@ -56,18 +56,26 @@ public:
  */
 class provider_t
 {
+	class dummy_consumer_t final : public consumer_t
+	{
+	public:
+		void
+		on_timer() noexcept override { /* Nothing to do. */ }
+	};
+
 protected:
 	// NOTE: the destructor is not virtual and isn't public.
 	// This interface is not intended to be used for handling
 	// object lifetime.
 	~provider_t() = default;
 
-	consumer_t * m_head{};
-
+	dummy_consumer_t m_head;
+	dummy_consumer_t m_tail;
+	
 	void
-	inform_every_consumer() const noexcept
+	inform_every_consumer() noexcept
 	{
-		consumer_t * current = m_head;
+		consumer_t * current = &m_head;
 		while( current )
 		{
 			auto * next = current->m_next;
@@ -78,32 +86,32 @@ protected:
 	}
 
 public:
+	provider_t() noexcept
+	{
+		m_head.m_next = &m_tail;
+		m_tail.m_prev = &m_head;
+	}
+
 	void
 	activate_consumer( consumer_t & consumer ) noexcept
 	{
 		if( !consumer.m_activated )
 		{
 			consumer.m_activated = true;
-			consumer.m_next = m_head;
-			if( m_head )
-				m_head->m_prev = &consumer;
-			m_head = &consumer;
+			auto * old_last = m_tail.m_prev;
+			old_last->m_next = m_tail.m_prev = &consumer;
+			consumer.m_prev = old_last;
+			consumer.m_next = &m_tail;
 		}
 	}
 
-	virtual void
+	void
 	deactivate_consumer( consumer_t & consumer ) noexcept
 	{
 		if( consumer.m_activated )
 		{
-			if( consumer.m_next )
-				consumer.m_next->m_prev = consumer.m_prev;
-
-			if( consumer.m_prev )
-				consumer.m_prev->m_next = consumer.m_next;
-
-			if( m_head == &consumer )
-				m_head = consumer.m_next;
+			consumer.m_next->m_prev = consumer.m_prev;
+			consumer.m_prev->m_next = consumer.m_next;
 
 			consumer.m_next = nullptr;
 			consumer.m_prev = nullptr;
