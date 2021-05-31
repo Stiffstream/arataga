@@ -314,10 +314,14 @@ protected:
 				// Don't expect that case but make a check for safety.
 				if( !m_user_end.m_is_alive && !m_target_end.m_is_alive )
 				{
-					return log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::unexpected_and_unsupported_case
+					};
+
+					return easy_log_for_connection(
 							can_throw,
-							remove_reason_t::unexpected_and_unsupported_case,
 							spdlog::level::warn,
 							"both connections are closed" );
 				}
@@ -329,10 +333,14 @@ protected:
 				if( m_last_read_at +
 						context().config().idle_connection_timeout() < now )
 				{
-					return log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::no_activity_for_too_long
+					};
+
+					return easy_log_for_connection(
 							can_throw,
-							remove_reason_t::no_activity_for_too_long,
 							spdlog::level::warn,
 							"no data read for long time" );
 				}
@@ -678,7 +686,11 @@ private:
 		std::visit( ::arataga::utils::overloaded{
 				[&]( const handler_should_be_removed_t & r ) {
 					// There is no sense to continue.
-					remove_handler( delete_protector, r.m_remove_reason );
+					connection_remover_t{
+							*this,
+							delete_protector,
+							r.m_remove_reason
+					};
 				},
 				[&]( const work_should_be_continued_t & r ) {
 					if( can_write_dest_dir_t::yes == r.m_can_write_dest_dir )
@@ -732,8 +744,13 @@ private:
 		// In the case of an error the work has to be cancelled.
 		if( ec )
 		{
-			log_and_remove_connection_on_io_error(
+			connection_remover_t remover{
+					*this,
 					delete_protector,
+					remove_reason_t::io_error
+			};
+
+			log_on_io_error(
 					can_throw, ec,
 					fmt::format( "writting to {}", dest_dir.m_name ) );
 		}
@@ -746,10 +763,14 @@ private:
 					src_dir.m_in_buffers[selected_buffer].m_data_size;
 			if( expected_data_size != bytes_transferred )
 			{
-				log_and_remove_connection(
+				connection_remover_t remover{
+						*this,
 						delete_protector,
+						remove_reason_t::io_error
+				};
+						
+				easy_log_for_connection(
 						can_throw,
-						remove_reason_t::io_error,
 						spdlog::level::critical,
 						fmt::format( "unexpected write result: {} data_size {} != "
 								"bytes_transferred {}",
@@ -782,10 +803,14 @@ private:
 					// the connection-handler has to be removed.
 					if( !has_outgoing_data )
 					{
-						log_and_remove_connection(
+						connection_remover_t remover{
+								*this,
 								delete_protector,
+								remove_reason_t::normal_completion
+						};
+
+						easy_log_for_connection(
 								can_throw,
-								remove_reason_t::normal_completion,
 								spdlog::level::trace,
 								fmt::format( "no more outgoing data for: {}, "
 										"opposite direction is closed: {}",

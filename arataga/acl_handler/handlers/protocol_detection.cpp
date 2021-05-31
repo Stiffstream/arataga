@@ -75,10 +75,14 @@ protected:
 					delete_protector_t delete_protector,
 					can_throw_t can_throw )
 				{
-					log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::current_operation_timed_out
+					};
+
+					easy_log_for_connection(
 							can_throw,
-							remove_reason_t::current_operation_timed_out,
 							spdlog::level::warn,
 							"protocol-detection timed out" );
 				} );
@@ -164,15 +168,19 @@ private:
 				( const unknown_protocol_t & info )
 				{
 					// We don't know the protocol, the connection has to be closed.
-					log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::unsupported_protocol
+					};
+
+					easy_log_for_connection(
 							can_throw,
-							remove_reason_t::unsupported_protocol,
 							spdlog::level::warn,
 							fmt::format( "unsupported protocol in the connection "
 									"(first byte: {:#02x})",
 									std::to_integer<unsigned short>(info.m_first_byte) )
-							);
+						);
 				} },
 				detection_result );
 	}

@@ -139,10 +139,14 @@ protected:
 				if( m_created_at +
 						context().config().idle_connection_timeout() < now )
 				{
-					return log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::no_activity_for_too_long
+					};
+
+					return easy_log_for_connection(
 							can_throw,
-							remove_reason_t::no_activity_for_too_long,
 							spdlog::level::warn,
 							"timeout writing positive response to CONNECT method" );
 				}

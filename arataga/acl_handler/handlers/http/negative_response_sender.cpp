@@ -63,7 +63,11 @@ protected:
 								delete_protector_t delete_protector,
 								can_throw_t /*can_throw*/ )
 							{
-								remove_handler( delete_protector, m_remove_reason );
+								connection_remover_t{
+										*this,
+										delete_protector,
+										m_remove_reason
+									};
 							} );
 				} );
 	}
@@ -78,6 +82,12 @@ protected:
 				delete_protector,
 				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 				{
+					connection_remover_t remover{
+							*this,
+							delete_protector,
+							remove_reason_t::current_operation_timed_out
+					};
+
 					::arataga::logging::wrap_logging(
 							proxy_logging_mode,
 							spdlog::level::warn,
@@ -88,10 +98,6 @@ protected:
 										level,
 										"http_negative_response timed out" );
 							} );
-
-					remove_handler(
-							delete_protector,
-							remove_reason_t::current_operation_timed_out );
 				} );
 		}
 	}

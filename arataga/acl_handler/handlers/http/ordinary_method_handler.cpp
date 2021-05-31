@@ -340,10 +340,14 @@ protected:
 				// Don't expect this but let's make a check for safety...
 				if( m_user_end.is_dead() && m_target_end.is_dead() )
 				{
-					return log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::unexpected_and_unsupported_case
+					};
+
+					return easy_log_for_connection(
 							can_throw,
-							remove_reason_t::unexpected_and_unsupported_case,
 							spdlog::level::warn,
 							"both connections are closed" );
 				}
@@ -357,10 +361,14 @@ protected:
 				if( m_last_read_at +
 						context().config().idle_connection_timeout() < now )
 				{
-					return log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::no_activity_for_too_long
+					};
+
+					return easy_log_for_connection(
 							can_throw,
-							remove_reason_t::no_activity_for_too_long,
 							spdlog::level::warn,
 							"no data read for long time" );
 				}
@@ -679,9 +687,11 @@ private:
 		}
 		else
 		{
-			remove_handler(
+			connection_remover_t{
+					*this,
 					delete_protector,
-					remove_reason_t::normal_completion );
+					remove_reason_t::normal_completion
+			};
 		}
 	}
 
@@ -694,9 +704,11 @@ private:
 		delete_protector_t delete_protector,
 		can_throw_t )
 	{
-		remove_handler(
+		connection_remover_t{
+				*this,
 				delete_protector,
-				remove_reason_t::http_response_before_completion_of_http_request );
+				remove_reason_t::http_response_before_completion_of_http_request
+		};
 	}
 
 	int
@@ -1332,7 +1344,7 @@ private:
 		// In all other cases just close the connections.
 		// We have read a garbage from the user_end or from the target_end
 		// (but after sending something to the user).
-		return remove_handler( delete_protector, remove_reason );
+		connection_remover_t{ *this, delete_protector, remove_reason };
 	}
 
 	void
@@ -1654,8 +1666,13 @@ private:
 		// Just stop the work in the case of an error.
 		if( ec )
 		{
-			log_and_remove_connection_on_io_error(
+			connection_remover_t remover{
+					*this,
 					delete_protector,
+					remove_reason_t::io_error
+			};
+
+			log_on_io_error(
 					can_throw, ec,
 					fmt::format( "writting to {}", dest_dir.m_name ) );
 		}

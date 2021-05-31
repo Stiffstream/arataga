@@ -209,10 +209,14 @@ protected:
 				delete_protector,
 				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 				{
-					log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::current_operation_timed_out
+					};
+
+					easy_log_for_connection(
 							can_throw,
-							remove_reason_t::current_operation_timed_out,
 							spdlog::level::warn,
 							"socks5: handshake phase timed out" );
 				} );
@@ -370,10 +374,14 @@ private:
 							can_throw, methods_sequence )]
 					( delete_protector_t delete_protector, can_throw_t can_throw )
 					{
-						log_and_remove_connection(
+						connection_remover_t remover{
+								*this,
 								delete_protector,
+								remove_reason_t::protocol_error
+						};
+
+						easy_log_for_connection(
 								can_throw,
-								remove_reason_t::protocol_error,
 								spdlog::level::err,
 								fmt::format( "socks5: no supported auth methods "
 										"(client methods: {})",
@@ -532,10 +540,14 @@ protected:
 				delete_protector,
 				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 				{
-					log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::current_operation_timed_out
+					};
+
+					easy_log_for_connection(
 							can_throw,
-							remove_reason_t::current_operation_timed_out,
 							spdlog::level::warn,
 							"socks5: handshake phase timed out" );
 				} );
@@ -590,15 +602,19 @@ private:
 		const auto version = m_auth_pdu.read_byte();
 		if( expected_version != version )
 		{
-			log_and_remove_connection(
+			connection_remover_t remover{
+					*this,
 					delete_protector,
+					remove_reason_t::protocol_error
+			};
+
+			easy_log_for_connection(
 					can_throw,
-					remove_reason_t::protocol_error,
 					spdlog::level::err,
 					fmt::format( "unsupported version of socks5 username/password "
 							"auth PDU: {}, expected version: {}",
 							version, expected_version )
-				);
+			);
 
 			return data_parsing_result_t::invalid_data;
 		}
@@ -766,10 +782,14 @@ protected:
 				delete_protector,
 				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 				{
-					log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::current_operation_timed_out
+					};
+
+					easy_log_for_connection(
 							can_throw,
-							remove_reason_t::current_operation_timed_out,
 							spdlog::level::warn,
 							"socks5: handshake phase timed out" );
 				} );
@@ -858,15 +878,19 @@ private:
 
 		if( expected_version != version )
 		{
-			log_and_remove_connection(
+			connection_remover_t remover{
+					*this,
 					delete_protector,
+					remove_reason_t::protocol_error
+			};
+
+			easy_log_for_connection(
 					can_throw,
-					remove_reason_t::protocol_error,
 					spdlog::level::err,
 					fmt::format( "unsupported version of socks5 username/password "
 							"auth PDU: {}, expected version: {}",
 							version, expected_version )
-				);
+			);
 
 			return data_parsing_result_t::invalid_data;
 		}
@@ -878,14 +902,18 @@ private:
 				m_auth_pdu.read_byte() );
 		if( uname_len != 0u )
 		{
-			log_and_remove_connection(
+			connection_remover_t remover{
+					*this,
 					delete_protector,
+					remove_reason_t::protocol_error
+			};
+
+			easy_log_for_connection(
 					can_throw,
-					remove_reason_t::protocol_error,
 					spdlog::level::err,
 					fmt::format( "expected 0 as username length, read {}",
 							uname_len )
-				);
+			);
 
 			return data_parsing_result_t::invalid_data;
 		}
@@ -897,14 +925,18 @@ private:
 				m_auth_pdu.read_byte() );
 		if( passwd_len != 0 )
 		{
-			log_and_remove_connection(
+			connection_remover_t remover{
+					*this,
 					delete_protector,
+					remove_reason_t::protocol_error
+			};
+
+			easy_log_for_connection(
 					can_throw,
-					remove_reason_t::protocol_error,
 					spdlog::level::err,
 					fmt::format( "expected 0 as password length, read {}",
 							passwd_len )
-				);
+			);
 
 			return data_parsing_result_t::invalid_data;
 		}
@@ -1061,21 +1093,19 @@ protected:
 				delete_protector,
 				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 				{
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::warn,
-							[this, can_throw]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										"socks5_command timed out" );
-							} );
-
-					log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::current_operation_timed_out
+					};
+
+					easy_log_for_connection(
 							can_throw,
-							remove_reason_t::current_operation_timed_out,
+							spdlog::level::warn,
+							"socks5_command timed out" );
+
+					easy_log_for_connection(
+							can_throw,
 							spdlog::level::warn,
 							"socks5: handshake phase timed out" );
 				} );
@@ -1133,15 +1163,19 @@ private:
 		const auto version = m_command_pdu.read_byte();
 		if( version_byte != version )
 		{
-			log_and_remove_connection(
+			connection_remover_t remover{
+					*this,
 					delete_protector,
+					remove_reason_t::protocol_error
+			};
+
+			easy_log_for_connection(
 					can_throw,
-					remove_reason_t::protocol_error,
 					spdlog::level::err,
 					fmt::format( "unsupported version of socks5 command PDU: "
 							"{}, expected version: {}",
 							version, version_byte )
-				);
+			);
 
 			return data_parsing_result_t::invalid_data;
 		}
@@ -1279,12 +1313,17 @@ private:
 				// Domain name can't be empty.
 				if( !name_len )
 				{
-					log_and_remove_connection(
+					connection_remover_t remover{
+							*this,
 							delete_protector,
+							remove_reason_t::protocol_error
+					};
+
+					easy_log_for_connection(
 							can_throw,
-							remove_reason_t::protocol_error,
 							spdlog::level::warn,
 							"domainname length is zero in SOCKS5 command PDU" );
+
 					return {
 							data_parsing_result_t::invalid_data,
 							byte_sequence_t{}
@@ -1322,7 +1361,7 @@ private:
 				[this, reason]
 				( delete_protector_t delete_protector, can_throw_t )
 				{
-					remove_handler( delete_protector, reason );
+					connection_remover_t{ *this, delete_protector, reason };
 				} );
 	}
 };
@@ -1794,7 +1833,7 @@ protected:
 				m_response,
 				[this, reason]( delete_protector_t delete_protector, can_throw_t )
 				{
-					remove_handler( delete_protector, reason );
+					connection_remover_t{ *this, delete_protector, reason };
 				} );
 	}
 

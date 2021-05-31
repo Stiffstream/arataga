@@ -599,6 +599,42 @@ public:
 	ctx() const noexcept { return m_context.get(); }
 };
 
+class connection_handler_t;
+
+//
+// connection_remover_t
+//
+// NOTE: the implementation of connection_remover_t will go
+// after the declaration of connection_handler_t.
+//FIXME: document this!
+class connection_remover_t
+{
+	connection_handler_t & m_handler;
+	const delete_protector_t m_delete_protector;
+	const remove_reason_t m_reason;
+	bool m_removed{ false };
+
+public:
+	connection_remover_t(
+		connection_handler_t & handler,
+		delete_protector_t delete_protector,
+		remove_reason_t remove_reason ) noexcept;
+	~connection_remover_t() noexcept;
+
+	// NOTE: this class isn't Copyable, nor Moveable.
+	connection_remover_t( const connection_remover_t & ) = delete;
+	connection_remover_t &
+	operator=( const connection_remover_t & ) = delete;
+
+	connection_remover_t( connection_remover_t && ) = delete;
+	connection_remover_t &
+	operator=( connection_remover_t && ) = delete;
+
+	//FIXME: does this method really needed?
+	void
+	commit() noexcept;
+};
+
 //
 // connection_handler_t
 //
@@ -612,6 +648,8 @@ public:
 class connection_handler_t
 	: public std::enable_shared_from_this< connection_handler_t >
 {
+	friend class connection_remover_t;
+
 public:
 	//! Handler status.
 	enum class status_t
@@ -623,6 +661,24 @@ public:
 		//! of I/O operations.
 		released
 	};
+
+private:
+	//! Remove the handler.
+	/*!
+	 * @note
+	 * Since v.0.5.2 this method is private. So, only connection_remover_t
+	 * can access it. This method is also noexcept now.
+	 */
+	void
+	remove_handler(
+		delete_protector_t delete_protector,
+		remove_reason_t remove_reason ) noexcept
+	{
+		NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
+			context().remove_connection_handler(
+					delete_protector, m_id, remove_reason )
+		);
+	}
 
 protected:
 	/*!
@@ -735,16 +791,6 @@ protected:
 		}();
 	}
 
-	//! Remove the handler.
-	void
-	remove_handler(
-		delete_protector_t delete_protector,
-		remove_reason_t remove_reason )
-	{
-		context().remove_connection_handler(
-				delete_protector, m_id, remove_reason );
-	}
-
 	// NOTE: this method should be called from inside logging::wrap_logging.
 	void
 	log_message_for_connection(
@@ -756,37 +802,8 @@ protected:
 	}
 
 	void
-	log_and_remove_connection_on_io_error(
-		delete_protector_t delete_protector,
+	easy_log_for_connection(
 		can_throw_t can_throw,
-		const asio::error_code & ec,
-		std::string_view operation_description )
-	{
-		// Should log the error except operation_aborted (this error is
-		// expected).
-		if( asio::error::operation_aborted != ec )
-		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::warn,
-					[&]( auto level )
-					{
-						log_message_for_connection(
-								can_throw,
-								level,
-								fmt::format( "IO-error on {}: {}",
-										operation_description, ec.message() ) );
-					} );
-		}
-
-		remove_handler( delete_protector, remove_reason_t::io_error );
-	}
-
-	void
-	log_and_remove_connection(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw,
-		remove_reason_t reason,
 		spdlog::level::level_enum level,
 		std::string_view description )
 	{
@@ -800,8 +817,24 @@ protected:
 							level,
 							description );
 				} );
+	}
 
-		remove_handler( delete_protector, reason );
+	void
+	log_on_io_error(
+		can_throw_t can_throw,
+		const asio::error_code & ec,
+		std::string_view operation_description )
+	{
+		// Should log the error except operation_aborted (this error is
+		// expected).
+		if( asio::error::operation_aborted != ec )
+		{
+			easy_log_for_connection(
+					can_throw,
+					spdlog::level::warn,
+					fmt::format( "IO-error on {}: {}",
+							operation_description, ec.message() ) );
+		}
 	}
 
 	template< typename Action >
@@ -822,16 +855,18 @@ protected:
 			ARATAGA_NOTHROW_BLOCK_BEGIN()
 				ARATAGA_NOTHROW_BLOCK_STAGE(log_and_remove_connection)
 
+				connection_remover_t remover{
+						*this,
+						delete_protector,
+						remove_reason_t::unhandled_exception
+				};
+
 				::arataga::utils::exception_handling_context_t ctx;
 
-				//FIXME: what if fmt::format throws?
-				log_and_remove_connection(
-						delete_protector,
+				easy_log_for_connection(
 						ctx.make_can_throw_marker(),
-						remove_reason_t::unhandled_exception,
 						spdlog::level::err,
-						fmt::format( "exception caught: {}", x.what() )
-					);
+						fmt::format( "exception caught: {}", x.what() ) );
 			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 		}
 		catch( ... )
@@ -841,12 +876,16 @@ protected:
 				ARATAGA_NOTHROW_BLOCK_STAGE(
 						log_and_remove_connection_on_unknow_exception)
 
+				connection_remover_t remover{
+						*this,
+						delete_protector,
+						remove_reason_t::unhandled_exception
+				};
+
 				::arataga::utils::exception_handling_context_t ctx;
 
-				log_and_remove_connection(
-						delete_protector,
+				easy_log_for_connection(
 						ctx.make_can_throw_marker(),
-						remove_reason_t::unhandled_exception,
 						spdlog::level::err,
 						"unknown exception caught" );
 			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE);
@@ -983,9 +1022,16 @@ protected:
 				std::size_t bytes_transferred ) mutable
 				{
 					if( ec )
-						log_and_remove_connection_on_io_error(
+					{
+						// Connection has to be removed.
+						connection_remover_t remover{
+								*this,
 								delete_protector,
-								can_throw, ec, op_name );
+								remove_reason_t::io_error
+						};
+
+						log_on_io_error( can_throw, ec, op_name );
+					}
 					else
 						completion_func(
 								delete_protector,
@@ -1071,6 +1117,34 @@ public:
 	virtual void
 	release() noexcept;
 };
+
+//
+// connection_remover_t implementation
+//
+inline
+connection_remover_t::connection_remover_t(
+	connection_handler_t & handler,
+	delete_protector_t delete_protector,
+	remove_reason_t remove_reason ) noexcept
+	:	m_handler{ handler }
+	,	m_delete_protector{ delete_protector }
+	,	m_reason{ remove_reason }
+{}
+
+inline
+connection_remover_t::~connection_remover_t() noexcept
+{
+	if( !m_removed )
+	{
+		m_handler.remove_handler( m_delete_protector, m_reason );
+	}
+}
+
+inline void
+connection_remover_t::commit() noexcept
+{
+	m_removed = true;
+}
 
 } /* namespace arataga::acl_handler */
 

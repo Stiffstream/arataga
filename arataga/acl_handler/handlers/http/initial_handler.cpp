@@ -202,10 +202,14 @@ private:
 		{
 			// There was no incoming data. No need to send a response.
 			// Just close the connection.
-			log_and_remove_connection(
+			connection_remover_t remover{
+					*this,
 					delete_protector,
+					remove_reason_t::http_no_incoming_request
+			};
+					
+			easy_log_for_connection(
 					can_throw,
-					remove_reason_t::http_no_incoming_request,
 					spdlog::level::info,
 					"no incoming HTTP request for a long time" );
 		}
@@ -970,17 +974,17 @@ private:
 				}
 			}
 
+			connection_remover_t remover{ *this, delete_protector, reason };
+
 			// If this is an I/O error then this fact should be logged
 			// before removal of the connection-handler.
 			if( remove_reason_t::io_error == reason )
-				log_and_remove_connection_on_io_error(
-						delete_protector,
+			{
+				log_on_io_error(
 						can_throw,
 						ec,
 						"reading incoming HTTP-request" );
-			else
-				// Just delete ourselves.
-				remove_handler( delete_protector, reason );
+			}
 		}
 		else
 		{
