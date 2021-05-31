@@ -606,13 +606,39 @@ class connection_handler_t;
 //
 // NOTE: the implementation of connection_remover_t will go
 // after the declaration of connection_handler_t.
-//FIXME: document this!
+/*!
+ * @brief Helper that removes a connection in the destructor.
+ *
+ * This class is intended to make the removal of a connection more robust in
+ * the case of exceptions. Sometimes it is necessary to do several actions just
+ * before removal of the connection (like logging, for example). Some of those
+ * actions can throw. But the connection has to be removed even in the case of
+ * an exception. Do guarantee that an instance of connection_remover_t has to
+ * be used. For example:
+ *
+ * @code
+ * if( some_error_condition )
+ * {
+ * 	connection_remover_t remover{
+ * 			*this, delete_protector, remover_reason_t::protocol_error
+ * 	};
+ *
+ * 	// Connection will be closed even if easy_log_for_connection throws.
+ * 	easy_log_for_connection(
+ * 			can_throw,
+ * 			spdlog::level::warn,
+ * 			format_string{ "unexpected message: {}" },
+ * 			message_type );
+ * }
+ * @endcode
+ *
+ * @since v.0.5.2
+ */
 class connection_remover_t
 {
 	connection_handler_t & m_handler;
 	const delete_protector_t m_delete_protector;
 	const remove_reason_t m_reason;
-	bool m_removed{ false };
 
 public:
 	connection_remover_t(
@@ -629,10 +655,6 @@ public:
 	connection_remover_t( connection_remover_t && ) = delete;
 	connection_remover_t &
 	operator=( connection_remover_t && ) = delete;
-
-	//FIXME: does this method really needed?
-	void
-	commit() noexcept;
 };
 
 //
@@ -801,11 +823,12 @@ protected:
 		context().log_message_for_connection( m_id, level, message ); 
 	}
 
+	// Simple logging for the case when log message is a string literal.
 	void
 	easy_log_for_connection(
 		can_throw_t can_throw,
 		spdlog::level::level_enum level,
-		std::string_view description )
+		arataga::utils::string_literal_t description )
 	{
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
@@ -816,6 +839,44 @@ protected:
 							can_throw,
 							level,
 							description );
+				} );
+	}
+
+	// Helper data structure to be used like strong typedef in case like that:
+	//
+	// easy_log_for_connection(
+	// 	can_throw,
+	// 	spdlog::level::warn,
+	// 	format_string{ "unexpected result: {}" },
+	// 	result );
+	//
+	struct format_string
+	{
+		// NOTE: expected to be not-null.
+		const char * m_format_str;
+	};
+
+	// Simple logging for the case when log message has to be constructed
+	// from format string and several arguments.
+	template< typename... Args >
+	void
+	easy_log_for_connection(
+		can_throw_t can_throw,
+		spdlog::level::level_enum level,
+		format_string format,
+		Args && ...format_args )
+	{
+		::arataga::logging::wrap_logging(
+				proxy_logging_mode,
+				level,
+				[&]( auto actual_level )
+				{
+					log_message_for_connection(
+							can_throw,
+							actual_level,
+							fmt::format(
+									format.m_format_str,
+									std::forward<Args>(format_args)... ) );
 				} );
 	}
 
@@ -832,8 +893,8 @@ protected:
 			easy_log_for_connection(
 					can_throw,
 					spdlog::level::warn,
-					fmt::format( "IO-error on {}: {}",
-							operation_description, ec.message() ) );
+					format_string{ "IO-error on {}: {}" },
+					operation_description, ec.message() );
 		}
 	}
 
@@ -866,7 +927,8 @@ protected:
 				easy_log_for_connection(
 						ctx.make_can_throw_marker(),
 						spdlog::level::err,
-						fmt::format( "exception caught: {}", x.what() ) );
+						format_string{ "exception caught: {}" },
+						x.what() );
 			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 		}
 		catch( ... )
@@ -884,10 +946,11 @@ protected:
 
 				::arataga::utils::exception_handling_context_t ctx;
 
+				using namespace arataga::utils::string_literals;
 				easy_log_for_connection(
 						ctx.make_can_throw_marker(),
 						spdlog::level::err,
-						"unknown exception caught" );
+						"unknown exception caught"_static_str );
 			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE);
 		}
 	}
@@ -1134,16 +1197,7 @@ connection_remover_t::connection_remover_t(
 inline
 connection_remover_t::~connection_remover_t() noexcept
 {
-	if( !m_removed )
-	{
-		m_handler.remove_handler( m_delete_protector, m_reason );
-	}
-}
-
-inline void
-connection_remover_t::commit() noexcept
-{
-	m_removed = true;
+	m_handler.remove_handler( m_delete_protector, m_reason );
 }
 
 } /* namespace arataga::acl_handler */

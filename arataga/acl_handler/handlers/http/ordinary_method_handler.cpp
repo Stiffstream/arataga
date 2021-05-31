@@ -346,10 +346,11 @@ protected:
 							remove_reason_t::unexpected_and_unsupported_case
 					};
 
+					using namespace arataga::utils::string_literals;
 					return easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"both connections are closed" );
+							"both connections are closed"_static_str );
 				}
 			}
 
@@ -367,10 +368,11 @@ protected:
 							remove_reason_t::no_activity_for_too_long
 					};
 
+					using namespace arataga::utils::string_literals;
 					return easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"no data read for long time" );
+							"no data read for long time"_static_str );
 				}
 			}
 

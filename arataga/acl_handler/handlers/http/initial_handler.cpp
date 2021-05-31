@@ -208,10 +208,11 @@ private:
 					remove_reason_t::http_no_incoming_request
 			};
 					
+			using namespace arataga::utils::string_literals;
 			easy_log_for_connection(
 					can_throw,
 					spdlog::level::info,
-					"no incoming HTTP request for a long time" );
+					"no incoming HTTP request for a long time"_static_str );
 		}
 	}
 

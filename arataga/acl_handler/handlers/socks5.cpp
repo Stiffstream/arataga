@@ -215,10 +215,11 @@ protected:
 							remove_reason_t::current_operation_timed_out
 					};
 
+					using namespace arataga::utils::string_literals;
 					easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"socks5: handshake phase timed out" );
+							"socks5: handshake phase timed out"_static_str );
 				} );
 		}
 	}
@@ -383,9 +384,11 @@ private:
 						easy_log_for_connection(
 								can_throw,
 								spdlog::level::err,
-								fmt::format( "socks5: no supported auth methods "
-										"(client methods: {})",
-										method_ids ) );
+								format_string{
+										"socks5: no supported auth methods "
+										"(client methods: {})"
+								},
+								method_ids );
 					} );
 		}
 	}
@@ -546,10 +549,11 @@ protected:
 							remove_reason_t::current_operation_timed_out
 					};
 
+					using namespace arataga::utils::string_literals;
 					easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"socks5: handshake phase timed out" );
+							"socks5: handshake phase timed out"_static_str );
 				} );
 		}
 	}
@@ -611,9 +615,11 @@ private:
 			easy_log_for_connection(
 					can_throw,
 					spdlog::level::err,
-					fmt::format( "unsupported version of socks5 username/password "
-							"auth PDU: {}, expected version: {}",
-							version, expected_version )
+					format_string{
+							"unsupported version of socks5 username/password "
+							"auth PDU: {}, expected version: {}"
+					},
+					version, expected_version
 			);
 
 			return data_parsing_result_t::invalid_data;
@@ -788,10 +794,11 @@ protected:
 							remove_reason_t::current_operation_timed_out
 					};
 
+					using namespace arataga::utils::string_literals;
 					easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"socks5: handshake phase timed out" );
+							"socks5: handshake phase timed out"_static_str );
 				} );
 		}
 	}
@@ -887,9 +894,11 @@ private:
 			easy_log_for_connection(
 					can_throw,
 					spdlog::level::err,
-					fmt::format( "unsupported version of socks5 username/password "
-							"auth PDU: {}, expected version: {}",
-							version, expected_version )
+					format_string{
+							"unsupported version of socks5 username/password "
+							"auth PDU: {}, expected version: {}"
+					},
+					version, expected_version
 			);
 
 			return data_parsing_result_t::invalid_data;
@@ -911,8 +920,8 @@ private:
 			easy_log_for_connection(
 					can_throw,
 					spdlog::level::err,
-					fmt::format( "expected 0 as username length, read {}",
-							uname_len )
+					format_string{ "expected 0 as username length, read {}" },
+					uname_len
 			);
 
 			return data_parsing_result_t::invalid_data;
@@ -934,8 +943,8 @@ private:
 			easy_log_for_connection(
 					can_throw,
 					spdlog::level::err,
-					fmt::format( "expected 0 as password length, read {}",
-							passwd_len )
+					format_string{ "expected 0 as password length, read {}" },
+					passwd_len
 			);
 
 			return data_parsing_result_t::invalid_data;
@@ -1099,15 +1108,16 @@ protected:
 							remove_reason_t::current_operation_timed_out
 					};
 
+					using namespace arataga::utils::string_literals;
 					easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"socks5_command timed out" );
+							"socks5_command timed out"_static_str );
 
 					easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"socks5: handshake phase timed out" );
+							"socks5: handshake phase timed out"_static_str );
 				} );
 		}
 	}
@@ -1172,9 +1182,11 @@ private:
 			easy_log_for_connection(
 					can_throw,
 					spdlog::level::err,
-					fmt::format( "unsupported version of socks5 command PDU: "
-							"{}, expected version: {}",
-							version, version_byte )
+					format_string{
+							"unsupported version of socks5 command PDU: "
+							"{}, expected version: {}"
+					},
+					version, version_byte
 			);
 
 			return data_parsing_result_t::invalid_data;
@@ -1319,10 +1331,12 @@ private:
 							remove_reason_t::protocol_error
 					};
 
+					using namespace arataga::utils::string_literals;
 					easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"domainname length is zero in SOCKS5 command PDU" );
+							"domainname length is zero in SOCKS5 "
+									"command PDU"_static_str );
 
 					return {
 							data_parsing_result_t::invalid_data,

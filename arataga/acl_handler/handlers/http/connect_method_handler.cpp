@@ -145,10 +145,12 @@ protected:
 							remove_reason_t::no_activity_for_too_long
 					};
 
+					using namespace arataga::utils::string_literals;
 					return easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"timeout writing positive response to CONNECT method" );
+							"timeout writing positive response to "
+									"CONNECT method"_static_str );
 				}
 			} );
 	}

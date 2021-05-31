@@ -81,10 +81,11 @@ protected:
 							remove_reason_t::current_operation_timed_out
 					};
 
+					using namespace arataga::utils::string_literals;
 					easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"protocol-detection timed out" );
+							"protocol-detection timed out"_static_str );
 				} );
 		}
 	}
@@ -177,10 +178,12 @@ private:
 					easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							fmt::format( "unsupported protocol in the connection "
-									"(first byte: {:#02x})",
-									std::to_integer<unsigned short>(info.m_first_byte) )
-						);
+							format_string{
+									"unsupported protocol in the connection "
+									"(first byte: {:#02x})"
+							},
+							std::to_integer<unsigned short>(info.m_first_byte)
+					);
 				} },
 				detection_result );
 	}

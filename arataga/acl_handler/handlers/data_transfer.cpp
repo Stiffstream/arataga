@@ -320,10 +320,11 @@ protected:
 							remove_reason_t::unexpected_and_unsupported_case
 					};
 
+					using namespace arataga::utils::string_literals;
 					return easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"both connections are closed" );
+							"both connections are closed"_static_str );
 				}
 
 				// Some connection is still alive. So we have to check
@@ -339,10 +340,11 @@ protected:
 							remove_reason_t::no_activity_for_too_long
 					};
 
+					using namespace arataga::utils::string_literals;
 					return easy_log_for_connection(
 							can_throw,
 							spdlog::level::warn,
-							"no data read for long time" );
+							"no data read for long time"_static_str );
 				}
 
 				// If some bandwidth limit was exceeded then we have to
@@ -772,11 +774,13 @@ private:
 				easy_log_for_connection(
 						can_throw,
 						spdlog::level::critical,
-						fmt::format( "unexpected write result: {} data_size {} != "
-								"bytes_transferred {}",
-								dest_dir.m_name,
-								expected_data_size,
-								bytes_transferred ) );
+						format_string{
+								"unexpected write result: {} data_size {} != "
+								"bytes_transferred {}"
+						},
+						dest_dir.m_name,
+						expected_data_size,
+						bytes_transferred );
 			}
 			else
 			{
@@ -812,10 +816,12 @@ private:
 						easy_log_for_connection(
 								can_throw,
 								spdlog::level::trace,
-								fmt::format( "no more outgoing data for: {}, "
-										"opposite direction is closed: {}",
-										dest_dir.m_name,
-										src_dir.m_name ) );
+								format_string{
+										"no more outgoing data for: {}, "
+										"opposite direction is closed: {}"
+								},
+								dest_dir.m_name,
+								src_dir.m_name );
 					}
 				}
 
