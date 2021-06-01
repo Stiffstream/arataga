@@ -2060,7 +2060,6 @@ private:
 		}
 		catch( const std::exception & x ) 
 		{
-			//FIXME: what if fmt::format throws?
 			send_negative_command_reply_then_close_connection(
 					can_throw,
 					remove_reason_t::unhandled_exception,
@@ -2312,7 +2311,6 @@ private:
 		}
 		catch( const std::exception & x ) 
 		{
-			//FIXME: what if fmt::format throws?
 			send_negative_command_reply_then_close_connection(
 					can_throw,
 					remove_reason_t::unhandled_exception,

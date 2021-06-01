@@ -774,7 +774,7 @@ protected:
 			// Make a copy of handler_context_holder because as
 			// the result of new_handler_factory invocation the m_ctx
 			// can become empty.
-			handler_context_holder_t ctx_holder = m_ctx;
+			handler_context_holder_t ctx_holder{ m_ctx };
 			try
 			{
 				connection_handler_shptr_t new_handler = new_handler_factory(

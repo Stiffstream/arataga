@@ -178,7 +178,6 @@ private:
 		}
 		catch( const std::exception & x ) 
 		{
-			//FIXME: what is fmt::format throws?
 			log_problem_then_send_negative_response(
 					delete_protector,
 					can_throw,
