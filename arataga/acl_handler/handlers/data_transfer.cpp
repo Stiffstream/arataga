@@ -626,9 +626,7 @@ private:
 		}
 
 		// If we are here then some I/O error happened. Log it.
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::debug,
+		::arataga::logging::proxy_mode::debug(
 				[this, can_throw, &src_dir, &ec]( auto level )
 				{
 					log_message_for_connection(
@@ -657,9 +655,7 @@ private:
 	{
 		// Kept here for debugging purposes.
 #if 0
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::proxy_mode::trace(
 				[&]( auto level ) {
 					log_message_for_connection(
 							can_throw,
@@ -724,9 +720,7 @@ private:
 	{
 		// Kept here for debugging purposes.
 #if 0
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::proxy_mode::trace(
 				[&]( auto level ) {
 					log_message_for_connection(
 							can_throw,

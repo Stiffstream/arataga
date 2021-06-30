@@ -88,9 +88,7 @@ protected:
 				delete_protector,
 				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 				{
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::warn,
+					::arataga::logging::proxy_mode::warn(
 							[this, can_throw]( auto level )
 							{
 								log_message_for_connection(
@@ -153,9 +151,7 @@ private:
 					// There is no info about the target.
 					// We have to log that fact, send the negative response
 					// and close the connection.
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::warn,
+					::arataga::logging::proxy_mode::warn(
 							[this, can_throw, &info]( auto level )
 							{
 								log_message_for_connection(

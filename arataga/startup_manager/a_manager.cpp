@@ -156,9 +156,7 @@ a_manager_t::so_define_agent()
 void
 a_manager_t::so_evt_start()
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log( level, "startup_manager: startup procedure started" );
@@ -231,9 +229,7 @@ a_manager_t::make_application_context(
 void
 a_manager_t::on_enter_wait_user_list_processor()
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -264,9 +260,7 @@ void
 a_manager_t::on_user_list_processor_started(
 	mhood_t< arataga::user_list_processor::started_t > )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[]( auto & logger, auto level )
 			{
 				logger.log(
@@ -281,9 +275,7 @@ a_manager_t::on_user_list_processor_started(
 a_manager_t::on_user_list_processor_startup_timeout(
 	mhood_t< user_list_processor_startup_timeout > )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::critical,
+	::arataga::logging::direct_mode::critical(
 			[]( auto & logger, auto level )
 			{
 				logger.log(
@@ -298,9 +290,7 @@ a_manager_t::on_user_list_processor_startup_timeout(
 void
 a_manager_t::on_enter_wait_config_processor()
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[]( auto & logger, auto level )
 			{
 				logger.log(
@@ -332,9 +322,7 @@ void
 a_manager_t::on_config_processor_started(
 	mhood_t< arataga::config_processor::started_t > )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[]( auto & logger, auto level )
 			{
 				logger.log(
@@ -349,9 +337,7 @@ a_manager_t::on_config_processor_started(
 a_manager_t::on_config_processor_startup_timeout(
 	mhood_t< config_processor_startup_timeout > )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::critical,
+	::arataga::logging::direct_mode::critical(
 			[]( auto & logger, auto level )
 			{
 				logger.log(
@@ -373,9 +359,7 @@ void
 a_manager_t::on_make_admin_http_entry(
 	mhood_t< make_admin_http_entry > )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::critical(
 			[]( auto & logger, auto level )
 			{
 				logger.log(

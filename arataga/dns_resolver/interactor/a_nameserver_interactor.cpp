@@ -54,9 +54,7 @@ a_nameserver_interactor_t::so_evt_start()
 		&a_nameserver_interactor_t::evt_updated_dns_params );
 
 	// Now we can try to open socket for outgoing packages.
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -67,9 +65,7 @@ a_nameserver_interactor_t::so_evt_start()
 	m_socket.open( asio::ip::udp::v4() );
 	initiate_next_async_read();
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -141,9 +137,7 @@ void
 a_nameserver_interactor_t::evt_updated_dns_params(
 	mhood_t< arataga::config_processor::updated_dns_params_t > msg )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -174,9 +168,7 @@ a_nameserver_interactor_t::evt_one_second_timer(
 			ARATAGA_NOTHROW_BLOCK_BEGIN()
 				ARATAGA_NOTHROW_BLOCK_STAGE(log_timeout)
 
-				::arataga::logging::wrap_logging(
-						direct_logging_mode,
-						spdlog::level::debug,
+				::arataga::logging::direct_mode::debug(
 						[&]( auto & logger, auto level )
 						{
 							logger.log(
@@ -276,9 +268,7 @@ a_nameserver_interactor_t::form_and_send_dns_udp_package(
 		const auto bin_size = bin_stream.size();
 
 		// Now we can send a request to name server.
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::direct_mode::trace(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -322,9 +312,7 @@ a_nameserver_interactor_t::handle_dns_udp_package_sending_failure(
 	ARATAGA_NOTHROW_BLOCK_BEGIN()
 		ARATAGA_NOTHROW_BLOCK_STAGE(log_failure_reason)
 
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::direct_mode::err(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -370,9 +358,7 @@ a_nameserver_interactor_t::handle_async_receive_result(
 		ARATAGA_NOTHROW_BLOCK_BEGIN()
 			ARATAGA_NOTHROW_BLOCK_STAGE(log_async_receive_from_failure)
 
-			::arataga::logging::wrap_logging(
-					direct_logging_mode,
-					spdlog::level::warn,
+			::arataga::logging::direct_mode::warn(
 					[&]( auto & logger, auto level )
 					{
 						logger.log(
@@ -424,9 +410,7 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 	ARATAGA_NOTHROW_BLOCK_BEGIN()
 		ARATAGA_NOTHROW_BLOCK_STAGE(log_positive_response)
 
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::direct_mode::trace(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -485,9 +469,7 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 			ARATAGA_NOTHROW_BLOCK_STAGE(no_ips_logging)
 
 			// No IPs. We can only send negative response.
-			::arataga::logging::wrap_logging(
-					direct_logging_mode,
-					spdlog::level::warn,
+			::arataga::logging::direct_mode::warn(
 					[&]( auto & logger, auto level )
 					{
 						logger.log(
@@ -527,9 +509,7 @@ a_nameserver_interactor_t::try_handle_negative_nameserver_response(
 	ARATAGA_NOTHROW_BLOCK_BEGIN()
 		ARATAGA_NOTHROW_BLOCK_STAGE(log_negative_response)
 
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::debug,
+		::arataga::logging::direct_mode::debug(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -583,9 +563,7 @@ a_nameserver_interactor_t::handle_async_send_result(
 	ARATAGA_NOTHROW_BLOCK_BEGIN()
 		ARATAGA_NOTHROW_BLOCK_STAGE(log_async_send_failure)
 
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::direct_mode::err(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(

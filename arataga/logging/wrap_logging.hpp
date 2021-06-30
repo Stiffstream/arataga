@@ -209,5 +209,111 @@ inline constexpr logging::direct_logging_marker_t direct_logging_mode;
 
 inline constexpr logging::proxy_logging_marker_t proxy_logging_mode;
 
+namespace logging::direct_mode
+{
+
+template< typename Logging_Action >
+void
+trace( Logging_Action && action )
+{
+	wrap_logging( direct_logging_mode, spdlog::level::trace,
+			std::forward<Logging_Action>(action) );
+}
+
+template< typename Logging_Action >
+void
+debug( Logging_Action && action )
+{
+	wrap_logging( direct_logging_mode, spdlog::level::debug,
+			std::forward<Logging_Action>(action) );
+}
+
+template< typename Logging_Action >
+void
+info( Logging_Action && action )
+{
+	wrap_logging( direct_logging_mode, spdlog::level::info,
+			std::forward<Logging_Action>(action) );
+}
+
+template< typename Logging_Action >
+void
+warn( Logging_Action && action )
+{
+	wrap_logging( direct_logging_mode, spdlog::level::warn,
+			std::forward<Logging_Action>(action) );
+}
+
+template< typename Logging_Action >
+void
+err( Logging_Action && action )
+{
+	wrap_logging( direct_logging_mode, spdlog::level::err,
+			std::forward<Logging_Action>(action) );
+}
+
+template< typename Logging_Action >
+void
+critical( Logging_Action && action )
+{
+	wrap_logging( direct_logging_mode, spdlog::level::critical,
+			std::forward<Logging_Action>(action) );
+}
+
+} /* namespace logging::direct_mode */
+
+namespace logging::proxy_mode
+{
+
+template< typename Logging_Action >
+void
+trace( Logging_Action && action )
+{
+	wrap_logging( proxy_logging_mode, spdlog::level::trace,
+			std::forward<Logging_Action>(action) );
+}
+
+template< typename Logging_Action >
+void
+debug( Logging_Action && action )
+{
+	wrap_logging( proxy_logging_mode, spdlog::level::debug,
+			std::forward<Logging_Action>(action) );
+}
+
+template< typename Logging_Action >
+void
+info( Logging_Action && action )
+{
+	wrap_logging( proxy_logging_mode, spdlog::level::info,
+			std::forward<Logging_Action>(action) );
+}
+
+template< typename Logging_Action >
+void
+warn( Logging_Action && action )
+{
+	wrap_logging( proxy_logging_mode, spdlog::level::warn,
+			std::forward<Logging_Action>(action) );
+}
+
+template< typename Logging_Action >
+void
+err( Logging_Action && action )
+{
+	wrap_logging( proxy_logging_mode, spdlog::level::err,
+			std::forward<Logging_Action>(action) );
+}
+
+template< typename Logging_Action >
+void
+critical( Logging_Action && action )
+{
+	wrap_logging( proxy_logging_mode, spdlog::level::critical,
+			std::forward<Logging_Action>(action) );
+}
+
+} /* namespace logging::direct_mode */
+
 } /* namespace arataga */
 

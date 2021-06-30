@@ -311,9 +311,7 @@ private:
 		const auto methods_sequence = m_first_pdu.read_bytes_as_sequence(
 				methods_to_handle );
 
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::proxy_mode::trace(
 				[this, can_throw, methods_sequence]( auto level )
 				{
 					log_message_for_connection( can_throw, level,
@@ -332,9 +330,7 @@ private:
 
 		if( m_accepted_method )
 		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::trace,
+			::arataga::logging::proxy_mode::trace(
 					[this, can_throw]( auto level )
 					{
 						log_message_for_connection(
@@ -1629,9 +1625,7 @@ protected:
 		can_throw_t can_throw,
 		asio::ip::address_v4 ipv4 )
 	{
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::proxy_mode::trace(
 				[this, can_throw, &ipv4]( auto level )
 				{
 					log_message_for_connection( can_throw, level,
@@ -1659,9 +1653,7 @@ protected:
 		can_throw_t can_throw,
 		asio::ip::address_v6 ipv6 )
 	{
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::proxy_mode::trace(
 				[this, can_throw, &ipv6]( auto level )
 				{
 					log_message_for_connection( can_throw, level,
@@ -1696,9 +1688,7 @@ protected:
 		can_throw_t can_throw,
 		const std::string & hostname )
 	{
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::proxy_mode::trace(
 				[this, can_throw, &hostname]( auto level )
 				{
 					log_message_for_connection( can_throw, level,
@@ -2032,9 +2022,7 @@ private:
 				return;
 			}
 
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::trace,
+			::arataga::logging::proxy_mode::trace(
 					[this, can_throw, &target_endpoint]( auto level )
 					{
 						log_message_for_connection(
@@ -2096,9 +2084,7 @@ private:
 		}
 		else
 		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::debug,
+			::arataga::logging::proxy_mode::debug(
 					[this, can_throw]( auto level )
 					{
 						log_message_for_connection(
@@ -2328,9 +2314,7 @@ private:
 	initiate_async_accept(
 		can_throw_t can_throw )
 	{
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::debug,
+		::arataga::logging::proxy_mode::debug(
 				[this, can_throw]( auto level ) {
 					log_message_for_connection(
 							can_throw,
@@ -2378,9 +2362,7 @@ private:
 		{
 			const auto & in_connection_endpoint = connection.remote_endpoint();
 
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::trace,
+			::arataga::logging::proxy_mode::trace(
 					[this, can_throw, &in_connection_endpoint]( auto level )
 					{
 						log_message_for_connection(

@@ -143,9 +143,7 @@ a_conductor_t::so_define_agent()
 void
 a_conductor_t::so_evt_start()
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -164,9 +162,7 @@ a_conductor_t::so_evt_start()
 void
 a_conductor_t::so_evt_finish()
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -178,9 +174,7 @@ a_conductor_t::so_evt_finish()
 void
 a_conductor_t::on_resolve( const resolve_request_t & msg )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -203,9 +197,7 @@ a_conductor_t::on_resolve( const resolve_request_t & msg )
 
 	if( resolve )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::debug,
+		::arataga::logging::direct_mode::debug(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -230,9 +222,7 @@ a_conductor_t::on_resolve( const resolve_request_t & msg )
 			msg.m_completion_token,
 			forward::resolve_result_t{ std::move(result) } );
 
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::direct_mode::trace(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -261,9 +251,7 @@ a_conductor_t::on_clear_cache( so_5::mhood_t<clear_cache_t> )
 	const auto n_removed = m_cache.remove_outdated_records(
 			resolve_info_time_to_live );
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -281,9 +269,7 @@ void
 a_conductor_t::on_updated_dns_params(
 	const updated_dns_params_t & msg )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -321,9 +307,7 @@ a_conductor_t::handle_lookup_result(
 		[this]( resolve_req_id_t req_id,
 			const forward::resolve_result_t & result )
 		{
-			::arataga::logging::wrap_logging(
-					direct_logging_mode,
-					spdlog::level::trace,
+			::arataga::logging::direct_mode::trace(
 					[&]( auto & logger, auto level )
 					{
 						logger.log(
@@ -342,9 +326,7 @@ a_conductor_t::handle_lookup_result(
 			// The stats for successful DNS lookups has to be updated.
 			m_dns_stats.m_dns_successful_lookups += 1u;
 
-			::arataga::logging::wrap_logging(
-					direct_logging_mode,
-					spdlog::level::info,
+			::arataga::logging::direct_mode::info(
 					[&]( auto & logger, auto level )
 					{
 						std::string ips;
@@ -377,9 +359,7 @@ a_conductor_t::handle_lookup_result(
 			// The stats for failed DNS lookups has to be updated.
 			m_dns_stats.m_dns_failed_lookups += 1u;
 
-			::arataga::logging::wrap_logging(
-					direct_logging_mode,
-					spdlog::level::warn,
+			::arataga::logging::direct_mode::warn(
 					[&]( auto & logger, auto level )
 					{
 						logger.log(
@@ -408,9 +388,7 @@ void
 a_conductor_t::add_to_waiting_and_resolve(
 	const resolve_request_t & req )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -443,9 +421,7 @@ a_conductor_t::add_to_waiting_and_resolve(
 							std::move(lookup_result) );
 				} );
 
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::debug,
+		::arataga::logging::direct_mode::debug(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -493,9 +469,7 @@ a_conductor_t::try_handle_direct_ip_case(
 		// Everything is good. We can send the reply right now.
 		ARATAGA_NOTHROW_BLOCK_BEGIN()
 			ARATAGA_NOTHROW_BLOCK_STAGE(log_direct_ip_sending)
-			::arataga::logging::wrap_logging(
-					direct_logging_mode,
-					spdlog::level::trace,
+			::arataga::logging::direct_mode::trace(
 					[&]( auto & logger, auto level )
 					{
 						logger.log(
@@ -522,9 +496,7 @@ a_conductor_t::try_handle_direct_ip_case(
 		ARATAGA_NOTHROW_BLOCK_BEGIN()
 			ARATAGA_NOTHROW_BLOCK_STAGE(
 					log_negative_reply_for_direct_ip_version_mismatch)
-			::arataga::logging::wrap_logging(
-					direct_logging_mode,
-					spdlog::level::warn,
+			::arataga::logging::direct_mode::warn(
 					[&]( auto & logger, auto level )
 					{
 						logger.log(

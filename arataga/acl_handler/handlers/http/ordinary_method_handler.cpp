@@ -303,9 +303,7 @@ protected:
 			delete_protector,
 			[this]( delete_protector_t, can_throw_t can_throw )
 			{
-				::arataga::logging::wrap_logging(
-						proxy_logging_mode,
-						spdlog::level::info,
+				::arataga::logging::proxy_mode::info(
 						[this, can_throw]( auto level )
 						{
 							log_message_for_connection(
@@ -716,9 +714,7 @@ private:
 	int
 	user_end__on_message_begin( can_throw_t can_throw )
 	{
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -736,9 +732,7 @@ private:
 		const char *,
 		std::size_t )
 	{
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -756,9 +750,7 @@ private:
 		const char *,
 		std::size_t )
 	{
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -794,9 +786,7 @@ private:
 	int
 	user_end__on_headers_complete( can_throw_t can_throw )
 	{
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -873,9 +863,7 @@ private:
 		const char *,
 		std::size_t )
 	{
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -909,9 +897,7 @@ private:
 			m_response_processing_state.m_status_line_stage =
 					status_line_processing_stage_t::status_code_written;
 
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::info,
+			::arataga::logging::proxy_mode::info(
 					[this, can_throw, &reason_phrase]( auto level )
 					{
 						log_message_for_connection(
@@ -945,9 +931,7 @@ private:
 				context().config().http_message_limits().m_max_status_line_length;
 				lim < m_response_processing_state.m_status_line.size() )
 		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::err,
+			::arataga::logging::proxy_mode::err(
 					[this, can_throw, &lim]( auto level )
 					{
 						log_message_for_connection(
@@ -990,9 +974,7 @@ private:
 				context().config().http_message_limits().m_max_field_name_length;
 				lim < m_response_processing_state.m_last_header_name.size() )
 		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::err,
+			::arataga::logging::proxy_mode::err(
 					[this, can_throw, &lim]( auto level )
 					{
 						log_message_for_connection(
@@ -1032,9 +1014,7 @@ private:
 				context().config().http_message_limits().m_max_field_value_length;
 				lim < m_response_processing_state.m_last_header_value.size() )
 		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::err,
+			::arataga::logging::proxy_mode::err(
 					[this, can_throw, &lim]( auto level )
 					{
 						log_message_for_connection(
@@ -1226,9 +1206,7 @@ private:
 					context().config().http_message_limits().m_max_total_headers_size;
 					lim < m_response_processing_state.m_total_headers_size )
 			{
-				::arataga::logging::wrap_logging(
-						proxy_logging_mode,
-						spdlog::level::err,
+				::arataga::logging::proxy_mode::err(
 						[this, can_throw, &lim]( auto level )
 						{
 							log_message_for_connection(
@@ -1572,9 +1550,7 @@ private:
 			{
 				// It's an I/O error.
 
-				::arataga::logging::wrap_logging(
-						proxy_logging_mode,
-						spdlog::level::debug,
+				::arataga::logging::proxy_mode::debug(
 						[this, can_throw, &src_dir, &ec]( auto level )
 						{
 							log_message_for_connection(
@@ -1618,9 +1594,7 @@ private:
 	{
 // Kept here for debugging purposes.
 #if 0
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::proxy_mode::trace(
 				[this, can_throw, &src_dir, ec, bytes_transferred]( auto level )
 				{
 					log_message_for_connection(

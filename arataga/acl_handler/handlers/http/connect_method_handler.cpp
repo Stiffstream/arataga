@@ -90,9 +90,7 @@ protected:
 		wrap_action_and_handle_exceptions(
 			delete_protector,
 			[this]( delete_protector_t, can_throw_t can_throw ) {
-				::arataga::logging::wrap_logging(
-						proxy_logging_mode,
-						spdlog::level::info,
+				::arataga::logging::proxy_mode::info(
 						[this, can_throw]( auto level )
 						{
 							log_message_for_connection(

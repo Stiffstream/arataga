@@ -149,9 +149,7 @@ private:
 						ec.message() ) );
 			}
 
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::trace,
+			::arataga::logging::proxy_mode::trace(
 					[this, can_throw]( auto level )
 					{
 						log_message_for_connection(
@@ -242,9 +240,7 @@ private:
 		}
 		else
 		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::debug,
+			::arataga::logging::proxy_mode::debug(
 					[this, can_throw]( auto level )
 					{
 						log_message_for_connection(

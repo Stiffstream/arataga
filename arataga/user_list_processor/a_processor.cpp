@@ -100,9 +100,7 @@ void
 a_processor_t::try_handle_new_user_list_from_post_request(
 	std::string_view content )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -121,9 +119,7 @@ a_processor_t::try_handle_new_user_list_from_post_request(
 	// New user-list should be distributed.
 	distribute_updated_user_list( std::move(auth_data) );
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[]( auto & logger, auto level )
 			{
 				logger.log(
@@ -137,9 +133,7 @@ a_processor_t::try_load_local_user_list_content()
 {
 	std::optional< ::arataga::user_list_auth::auth_data_t > result;
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -160,9 +154,7 @@ a_processor_t::try_load_local_user_list_content()
 			// Load the content...
 			auto content = ::arataga::utils::load_file_into_memory(
 					m_local_user_list_file_name );
-			::arataga::logging::wrap_logging(
-					direct_logging_mode,
-					spdlog::level::trace,
+			::arataga::logging::direct_mode::trace(
 					[&content]( auto & logger, auto level )
 					{
 						logger.log(
@@ -179,9 +171,7 @@ a_processor_t::try_load_local_user_list_content()
 	}
 	catch( const std::exception & x )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::direct_mode::err(
 				[&x]( auto & logger, auto level )
 				{
 					logger.log(
@@ -203,9 +193,7 @@ a_processor_t::distribute_updated_user_list(
 
 	try
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::debug,
+		::arataga::logging::direct_mode::debug(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -219,9 +207,7 @@ a_processor_t::distribute_updated_user_list(
 	}
 	catch( const std::exception & x )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::critical,
+		::arataga::logging::direct_mode::critical(
 				[&x]( auto & logger, auto level )
 				{
 					logger.log(
@@ -235,9 +221,7 @@ a_processor_t::distribute_updated_user_list(
 	}
 	catch( ... )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::critical,
+		::arataga::logging::direct_mode::critical(
 				[]( auto & logger, auto level )
 				{
 					logger.log(
@@ -252,9 +236,7 @@ a_processor_t::distribute_updated_user_list(
 
 	if( needs_terminate )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::critical,
+		::arataga::logging::direct_mode::critical(
 				[]( auto & logger, auto level )
 				{
 					logger.log(
@@ -273,9 +255,7 @@ a_processor_t::store_new_user_list_to_file(
 {
 	try
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::direct_mode::trace(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -303,9 +283,7 @@ a_processor_t::store_new_user_list_to_file(
 	}
 	catch( const std::exception & x )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::direct_mode::err(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(

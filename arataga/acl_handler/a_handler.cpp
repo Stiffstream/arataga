@@ -347,9 +347,7 @@ a_handler_t::a_handler_t(
 
 a_handler_t::~a_handler_t()
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -386,9 +384,7 @@ a_handler_t::so_define_agent()
 	st_too_many_connections
 		.on_enter( [this]() {
 				// Too many connections accepted. This fact has to be logged.
-				::arataga::logging::wrap_logging(
-						direct_logging_mode,
-						spdlog::level::warn,
+				::arataga::logging::direct_mode::warn(
 						[&]( auto & logger, auto level )
 						{
 							logger.log(
@@ -407,9 +403,7 @@ a_handler_t::so_define_agent()
 void
 a_handler_t::so_evt_start()
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -425,9 +419,7 @@ a_handler_t::so_evt_start()
 void
 a_handler_t::so_evt_finish()
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -453,9 +445,7 @@ a_handler_t::replace_connection_handler(
 
 	auto old_handler = info.replace( std::move(handler) );
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -487,9 +477,7 @@ a_handler_t::remove_connection_handler(
 
 		// Do not catch exceptions because if an exception is thrown
 		// then we have to chances to recover.
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::debug,
+		::arataga::logging::direct_mode::debug(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -581,9 +569,7 @@ a_handler_t::async_resolve_hostname(
 	// That ID will be unqiue for the ACL.
 	const auto id = make_long_id( connection_id );
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -678,9 +664,7 @@ a_handler_t::async_authentificate(
 
 	const auto id = make_long_id( connection_id );
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -763,9 +747,7 @@ a_handler_t::on_timer() noexcept
 void
 a_handler_t::on_shutdown( mhood_t< shutdown_t > )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -791,9 +773,7 @@ a_handler_t::on_try_create_entry_point(
 			m_params.m_acl_config.m_port
 	};
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -812,9 +792,7 @@ a_handler_t::on_try_create_entry_point(
 	const auto finish_on_failure = [this]( auto && ...log_params ) -> void {
 		// All problems related to impossibility of create/tune the acceptor
 		// should be logged as critical.
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::critical,
+		::arataga::logging::direct_mode::critical(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -890,9 +868,7 @@ a_handler_t::on_enter_st_entry_created() noexcept
 void
 a_handler_t::on_enter_st_accepting() noexcept
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -911,9 +887,7 @@ a_handler_t::on_enter_st_accepting() noexcept
 void
 a_handler_t::on_accept_next_when_accepting( mhood_t< accept_next_t > )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -934,9 +908,7 @@ a_handler_t::on_accept_next_when_accepting( mhood_t< accept_next_t > )
 					// Ignore operation_aborted because it's expected
 					// during the shutdown operation.
 					if( asio::error::operation_aborted != ec )
-						::arataga::logging::wrap_logging(
-								direct_logging_mode,
-								spdlog::level::err,
+						::arataga::logging::direct_mode::err(
 								[&]( auto & logger, auto level )
 								{
 									logger.log(
@@ -970,9 +942,7 @@ void
 a_handler_t::on_dns_result(
 	mhood_t< ::arataga::dns_resolver::resolve_reply_t > cmd )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -998,9 +968,7 @@ void
 a_handler_t::on_auth_result(
 	mhood_t< ::arataga::authentificator::auth_reply_t > cmd )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -1077,9 +1045,7 @@ a_handler_t::accept_new_connection(
 
 	ARATAGA_NOTHROW_BLOCK_STAGE(log_info_about_new_connection)
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -1096,9 +1062,7 @@ a_handler_t::accept_new_connection(
 	connection.non_blocking( true, ec );
 	if( ec )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::direct_mode::err(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(

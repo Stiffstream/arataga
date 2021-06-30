@@ -791,9 +791,7 @@ protected:
 				ARATAGA_NOTHROW_BLOCK_BEGIN()
 					ARATAGA_NOTHROW_BLOCK_STAGE(log_exception)
 
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::err,
+					::arataga::logging::proxy_mode::err(
 							[this, &ctx_holder, &x]( auto level )
 							{
 								ctx_holder.ctx().log_message_for_connection(

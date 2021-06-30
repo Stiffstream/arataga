@@ -257,9 +257,7 @@ a_processor_t::on_debug_auth(
 			*(cmd->m_replier),
 			http_entry::status_config_processor_failure,
 			[&]() {
-				::arataga::logging::wrap_logging(
-						direct_logging_mode,
-						spdlog::level::debug,
+				::arataga::logging::direct_mode::debug(
 						[&]( auto & logger, auto level )
 						{
 							logger.log(
@@ -302,9 +300,7 @@ a_processor_t::on_debug_dns_resolve(
 			*(cmd->m_replier),
 			http_entry::status_config_processor_failure,
 			[&]() {
-				::arataga::logging::wrap_logging(
-						direct_logging_mode,
-						spdlog::level::debug,
+				::arataga::logging::direct_mode::debug(
 						[&]( auto & logger, auto level )
 						{
 							logger.log(
@@ -333,9 +329,7 @@ a_processor_t::on_resolve_reply(
 void
 a_processor_t::try_load_local_config_first_time()
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -356,9 +350,7 @@ a_processor_t::try_load_local_config_first_time()
 			// Load the content into the RAM...
 			auto content = ::arataga::utils::load_file_into_memory(
 					m_local_config_file_name );
-			::arataga::logging::wrap_logging(
-					direct_logging_mode,
-					spdlog::level::trace,
+			::arataga::logging::direct_mode::trace(
 					[&content]( auto & logger, auto level )
 					{
 						logger.log(
@@ -377,9 +369,7 @@ a_processor_t::try_load_local_config_first_time()
 	}
 	catch( const std::exception & x )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::warn,
+		::arataga::logging::direct_mode::warn(
 				[&x]( auto & logger, auto level )
 				{
 					logger.log(
@@ -395,9 +385,7 @@ void
 a_processor_t::try_handle_new_config_from_post_request(
 	std::string_view content )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&content]( auto & logger, auto level )
 			{
 				logger.log(
@@ -415,9 +403,7 @@ a_processor_t::try_handle_new_config_from_post_request(
 
 	store_new_config_to_file( content );
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -448,9 +434,7 @@ a_processor_t::accept_new_config( config_t config ) noexcept
 	try
 	{
 		// Logging parameters may have been changed.
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::direct_mode::trace(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -470,9 +454,7 @@ a_processor_t::accept_new_config( config_t config ) noexcept
 	}
 	catch( const std::exception & x )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::critical,
+		::arataga::logging::direct_mode::critical(
 				[&x]( auto & logger, auto level )
 				{
 					logger.log(
@@ -486,9 +468,7 @@ a_processor_t::accept_new_config( config_t config ) noexcept
 	}
 	catch( ... )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::critical,
+		::arataga::logging::direct_mode::critical(
 				[]( auto & logger, auto level )
 				{
 					logger.log(
@@ -502,9 +482,7 @@ a_processor_t::accept_new_config( config_t config ) noexcept
 
 	if( needs_terminate )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::critical,
+		::arataga::logging::direct_mode::critical(
 				[]( auto & logger, auto level )
 				{
 					logger.log(
@@ -630,9 +608,7 @@ a_processor_t::create_dispatchers_if_necessary(
 		m_io_threads.emplace_back( std::move(info) );
 	}
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::trace,
+	::arataga::logging::direct_mode::trace(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -671,9 +647,7 @@ a_processor_t::stop_and_remove_outdated_acls(
 	// Handle outdated ACL.
 	for( auto & racl : outdated_acls )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::debug,
+		::arataga::logging::direct_mode::debug(
 				[&racl]( auto & logger, auto level )
 				{
 					logger.log(
@@ -705,9 +679,7 @@ a_processor_t::launch_new_acls(
 
 	for( const auto & acl_conf : new_acl )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::debug,
+		::arataga::logging::direct_mode::debug(
 				[&acl_conf]( auto & logger, auto level )
 				{
 					logger.log(
@@ -790,9 +762,7 @@ a_processor_t::store_new_config_to_file(
 {
 	try
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::trace,
+		::arataga::logging::direct_mode::trace(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(
@@ -819,9 +789,7 @@ a_processor_t::store_new_config_to_file(
 	}
 	catch( const std::exception & x )
 	{
-		::arataga::logging::wrap_logging(
-				direct_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::direct_mode::err(
 				[&]( auto & logger, auto level )
 				{
 					logger.log(

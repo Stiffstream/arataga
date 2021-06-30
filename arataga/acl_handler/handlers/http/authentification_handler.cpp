@@ -133,9 +133,7 @@ protected:
 				if( auto * err = std::get_if<username_password_extraction_failure_t>(
 						&username_password_extraction_result); err )
 				{
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::err,
+					::arataga::logging::proxy_mode::err(
 							[this, can_throw, err]( auto level )
 							{
 								log_message_for_connection(
@@ -161,9 +159,7 @@ protected:
 				if( auto * err = std::get_if<target_host_and_port_extraction_failure_t>(
 						&target_host_and_port_extraction_result); err )
 				{
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::err,
+					::arataga::logging::proxy_mode::err(
 							[this, can_throw, err]( auto level )
 							{
 								log_message_for_connection(
@@ -190,9 +186,7 @@ protected:
 				if( auto * err = std::get_if<update_request_target_failure_t>(
 						&update_request_target_result); err )
 				{
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::err,
+					::arataga::logging::proxy_mode::err(
 							[this, can_throw, err]( auto level )
 							{
 								log_message_for_connection(
@@ -231,9 +225,7 @@ protected:
 				delete_protector,
 				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
 				{
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::warn,
+					::arataga::logging::proxy_mode::warn(
 							[this, can_throw]( auto level )
 							{
 								log_message_for_connection(
@@ -626,9 +618,7 @@ private:
 				},
 				[&]( const authentification::failure_t & info )
 				{
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::warn,
+					::arataga::logging::proxy_mode::warn(
 							[this, can_throw, &info]( auto level )
 							{
 								log_message_for_connection(

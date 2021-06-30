@@ -181,9 +181,7 @@ private:
 		{
 			// Client started the request.
 			// In that case we should send a response.
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::warn,
+			::arataga::logging::proxy_mode::warn(
 					[this, can_throw]( auto level )
 					{
 						log_message_for_connection(
@@ -232,9 +230,7 @@ private:
 					context().config().http_message_limits().m_max_total_headers_size;
 					lim < m_total_headers_size )
 			{
-				::arataga::logging::wrap_logging(
-						proxy_logging_mode,
-						spdlog::level::err,
+				::arataga::logging::proxy_mode::err(
 						[this, can_throw, &lim]( auto level )
 						{
 							log_message_for_connection(
@@ -309,9 +305,7 @@ private:
 				context().config().http_message_limits().m_max_request_target_length;
 				lim < m_request_info.m_request_target.size() )
 		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::err,
+			::arataga::logging::proxy_mode::err(
 					[this, can_throw, &lim]( auto level )
 					{
 						log_message_for_connection(
@@ -334,9 +328,7 @@ private:
 	on_status( can_throw_t can_throw, const char *, std::size_t )
 	{
 		// Don't expect a status on incoming request.
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -363,9 +355,7 @@ private:
 				context().config().http_message_limits().m_max_field_name_length;
 				lim < m_current_http_field_name.size() )
 		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::err,
+			::arataga::logging::proxy_mode::err(
 					[this, can_throw, &lim]( auto level )
 					{
 						log_message_for_connection(
@@ -395,9 +385,7 @@ private:
 				context().config().http_message_limits().m_max_field_value_length;
 				lim < m_current_http_field_value.size() )
 		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::err,
+			::arataga::logging::proxy_mode::err(
 					[this, can_throw, &lim]( auto level )
 					{
 						log_message_for_connection(
@@ -455,9 +443,7 @@ private:
 		can_throw_t can_throw, const char *, std::size_t )
 	{
 		// We shouldn't extract body on this stage of request processing.
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -475,9 +461,7 @@ private:
 		can_throw_t can_throw, const char *, std::size_t )
 	{
 		// A body for bodyless method, this is an error.
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -497,9 +481,7 @@ private:
 		can_throw_t can_throw )
 	{
 		// Don't expect the end of the HTTP-request for method with a body.
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -526,9 +508,7 @@ private:
 		can_throw_t can_throw )
 	{
 		// Don't expect chunks on that stage.
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -546,9 +526,7 @@ private:
 		can_throw_t can_throw )
 	{
 		// Don't expect a chunk for HTTP-method without a body.
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -568,9 +546,7 @@ private:
 		can_throw_t can_throw )
 	{
 		// Do not deal with chunks on that stage.
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -588,9 +564,7 @@ private:
 		can_throw_t can_throw )
 	{
 		// Don't expect chunks on that stage.
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::err,
+		::arataga::logging::proxy_mode::err(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -677,9 +651,7 @@ private:
 		if( HPE_OK != m_request_state->m_parser.http_errno &&
 				HPE_PAUSED != m_request_state->m_parser.http_errno )
 		{
-			::arataga::logging::wrap_logging(
-					proxy_logging_mode,
-					spdlog::level::err,
+			::arataga::logging::proxy_mode::err(
 					[this, can_throw]( auto level )
 					{
 						log_message_for_connection(
@@ -769,9 +741,7 @@ private:
 					else
 					{
 						// There is an error of parsing a header field.
-						::arataga::logging::wrap_logging(
-								proxy_logging_mode,
-								spdlog::level::err,
+						::arataga::logging::proxy_mode::err(
 								[this, can_throw, &field_name, &field_value, &r](
 									auto level )
 								{
@@ -888,9 +858,7 @@ private:
 		delete_protector_t delete_protector,
 		can_throw_t can_throw )
 	{
-		::arataga::logging::wrap_logging(
-				proxy_logging_mode,
-				spdlog::level::info,
+		::arataga::logging::proxy_mode::info(
 				[this, can_throw]( auto level )
 				{
 					log_message_for_connection(
@@ -959,9 +927,7 @@ private:
 				// the connection.
 				if( m_total_bytes_parsed )
 				{
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::warn,
+					::arataga::logging::proxy_mode::warn(
 							[this, can_throw]( auto level )
 							{
 								log_message_for_connection(

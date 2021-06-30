@@ -52,9 +52,7 @@ catch( const std::exception & x ) \
 	try \
 	{ \
 		if( !arataga_nothrow_block_stage__ ) arataga_nothrow_block_stage__ = "unspecified"; \
-		::arataga::logging::wrap_logging( \
-				::arataga::direct_logging_mode, \
-				::spdlog::level::err, \
+		::arataga::logging::direct_mode::err( \
 				[arataga_nothrow_block_stage__, &x, &line__, &file__, &function__] \
 				( auto & logger, auto level ) { \
 					logger.log( level, "{}:{} [{}] unexpected exception at stage '{}' => {}", \
@@ -71,9 +69,7 @@ catch( ... ) \
 	try \
 	{ \
 		if( !arataga_nothrow_block_stage__ ) arataga_nothrow_block_stage__ = "unspecified"; \
-		::arataga::logging::wrap_logging( \
-				::arataga::direct_logging_mode, \
-				::spdlog::level::err, \
+		::arataga::logging::direct_mode::err( \
 				[arataga_nothrow_block_stage__, &line__, &file__, &function__] \
 				( auto & logger, auto level ) { \
 					logger.log( level, "{}:{} [{}] unexpected exception at stage '{}', description not available", \
@@ -93,9 +89,7 @@ catch( const std::exception & x ) \
 	try \
 	{ \
 		if( !arataga_nothrow_block_stage__ ) arataga_nothrow_block_stage__ = "unspecified"; \
-		::arataga::logging::wrap_logging( \
-				::arataga::direct_logging_mode, \
-				::spdlog::level::critical, \
+		::arataga::logging::direct_mode::critical( \
 				[arataga_nothrow_block_stage__, &x, &line__, &file__, &function__] \
 				( auto & logger, auto level ) { \
 					logger.log( level, "{}:{} [{}] unexpected exception at stage '{}' => {}", \
@@ -113,9 +107,7 @@ catch( ... ) \
 	try \
 	{ \
 		if( !arataga_nothrow_block_stage__ ) arataga_nothrow_block_stage__ = "unspecified"; \
-		::arataga::logging::wrap_logging( \
-				::arataga::direct_logging_mode, \
-				::spdlog::level::critical, \
+		::arataga::logging::direct_mode::critical( \
 				[arataga_nothrow_block_stage__, &line__, &file__, &function__] \
 				( auto & logger, auto level ) { \
 					logger.log( level, "{}:{} [{}] unexpected exception at stage '{}', description not available", \

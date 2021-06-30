@@ -767,9 +767,7 @@ make_sobjectizer_params(
 			ARATAGA_NOTHROW_BLOCK_BEGIN()
 				ARATAGA_NOTHROW_BLOCK_STAGE(log_error_msg)
 
-				::arataga::logging::wrap_logging(
-						::arataga::direct_logging_mode,
-						spdlog::level::err,
+				::arataga::logging::direct_mode::err(
 						[&]( auto & logger, auto level )
 						{
 							logger.log(
@@ -796,9 +794,7 @@ make_sobjectizer_params(
 			ARATAGA_NOTHROW_BLOCK_BEGIN()
 				ARATAGA_NOTHROW_BLOCK_STAGE(log_exception)
 
-				::arataga::logging::wrap_logging(
-						::arataga::direct_logging_mode,
-						spdlog::level::err,
+				::arataga::logging::direct_mode::err(
 						[&]( auto & logger, auto level )
 						{
 							logger.log(

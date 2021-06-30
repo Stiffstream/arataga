@@ -44,9 +44,7 @@ a_authentificator_t::so_define_agent()
 void
 a_authentificator_t::so_evt_start()
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::info,
+	::arataga::logging::direct_mode::info(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -216,9 +214,7 @@ a_authentificator_t::complete_failed_auth(
 	const auth_request_t & req,
 	failure_reason_t reason )
 {
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(
@@ -257,9 +253,7 @@ a_authentificator_t::complete_successful_auth(
 			user_data,
 			req.m_target_host );
 
-	::arataga::logging::wrap_logging(
-			direct_logging_mode,
-			spdlog::level::debug,
+	::arataga::logging::direct_mode::debug(
 			[&]( auto & logger, auto level )
 			{
 				logger.log(

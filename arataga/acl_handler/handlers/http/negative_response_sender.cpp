@@ -88,9 +88,7 @@ protected:
 							remove_reason_t::current_operation_timed_out
 					};
 
-					::arataga::logging::wrap_logging(
-							proxy_logging_mode,
-							spdlog::level::warn,
+					::arataga::logging::proxy_mode::warn(
 							[this, can_throw]( auto level )
 							{
 								log_message_for_connection(
