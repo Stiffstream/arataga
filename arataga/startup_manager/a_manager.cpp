@@ -359,7 +359,7 @@ void
 a_manager_t::on_make_admin_http_entry(
 	mhood_t< make_admin_http_entry > )
 {
-	::arataga::logging::direct_mode::critical(
+	::arataga::logging::direct_mode::debug(
 			[]( auto & logger, auto level )
 			{
 				logger.log(
