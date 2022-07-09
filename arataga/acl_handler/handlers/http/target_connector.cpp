@@ -145,7 +145,7 @@ private:
 			{
 				return finish_on_failure( fmt::format(
 						"unable to bind outgoing socket to address {}: {}",
-						context().config().out_addr(),
+						fmt::streamed(context().config().out_addr()),
 						ec.message() ) );
 			}
 
@@ -156,8 +156,9 @@ private:
 								can_throw,
 								level,
 								fmt::format( "trying to connect {} from {}",
-										m_target_endpoint,
-										m_out_connection.local_endpoint() ) );
+										fmt::streamed(m_target_endpoint),
+										fmt::streamed(
+												m_out_connection.local_endpoint()) ) );
 					} );
 
 			// Now we can initiate the connection.
@@ -183,8 +184,8 @@ private:
 					spdlog::level::err,
 					fmt::format( "an exception during the creation of "
 							"outgoing connection from {} to {}: {}",
-							context().config().out_addr(),
-							m_target_endpoint,
+							fmt::streamed(context().config().out_addr()),
+							fmt::streamed(m_target_endpoint),
 							x.what() ),
 					response_internal_server_error );
 		}
@@ -233,7 +234,7 @@ private:
 						remove_reason_t::io_error,
 						spdlog::level::warn,
 						fmt::format( "can't connect to target host {}: {}",
-								m_target_endpoint,
+								fmt::streamed(m_target_endpoint),
 								ec.message() ),
 						response_bad_gateway_connect_failure );
 			}
@@ -248,8 +249,9 @@ private:
 								level,
 								fmt::format(
 										"outgoing connection to {} from {} established",
-										m_target_endpoint,
-										m_out_connection.local_endpoint() ) );
+										fmt::streamed(m_target_endpoint),
+										fmt::streamed(
+												m_out_connection.local_endpoint()) ) );
 					} );
 
 			// New connection-handler depends on HTTP-method from the request.

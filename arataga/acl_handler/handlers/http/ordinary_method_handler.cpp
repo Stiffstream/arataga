@@ -538,14 +538,14 @@ private:
 		// The start-line is going first.
 		// We use HTTP/1.1 always.
 		fmt::format_to(
-				out_data,
+				std::back_inserter(out_data),
 				"{} {} HTTP/1.1\r\n",
 				http_method_str(request_info.m_method),
 				request_info.m_request_target );
 
 		// The Host header field is going next.
 		fmt::format_to(
-				out_data,
+				std::back_inserter(out_data),
 				"Host: {}\r\n",
 				m_brief_request_info.m_host_field_value );
 
@@ -553,7 +553,7 @@ private:
 		fill_headers_for_outgoing_request( can_throw, request_info, out_data );
 
 		// This the end of the header.
-		fmt::format_to( out_data, "\r\n" );
+		fmt::format_to( std::back_inserter(out_data), "\r\n" );
 
 		m_user_end.m_pieces_read.push_back( std::move(out_data) );
 
@@ -573,7 +573,7 @@ private:
 			[&]( const auto & field )
 			{
 				fmt::format_to(
-						out_data,
+						std::back_inserter(out_data),
 						"{}: {}\r\n", field.name(), field.value() );
 			} );
 	}
@@ -1107,7 +1107,7 @@ private:
 		const auto & headers = m_response_processing_state.m_headers;
 		headers.for_each_field( [&out_data]( const auto & field ) {
 				fmt::format_to(
-						out_data,
+						std::back_inserter(out_data),
 						"{}: {}\r\n",
 						field.name(),
 						field.value() );
@@ -1137,7 +1137,7 @@ private:
 		concat_response_headers_to( can_throw, out_data );
 
 		// The separator between headers and the body.
-		fmt::format_to( out_data, "\r\n" );
+		fmt::format_to( std::back_inserter(out_data), "\r\n" );
 
 		// Send that all as one piece.
 		m_target_end.m_pieces_read.push_back( std::move( out_data ) );
@@ -1242,7 +1242,9 @@ private:
 		if( status_line_processing_stage_t::completed !=
 				m_response_processing_state.m_status_line_stage )
 		{
-			fmt::format_to( out_data, "{}\r\n", 
+			fmt::format_to(
+					std::back_inserter(out_data),
+					"{}\r\n", 
 					m_response_processing_state.m_status_line );
 
 			m_response_processing_state.m_status_line.clear();

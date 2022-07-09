@@ -36,7 +36,8 @@ load_file_into_memory(
 		file.open( file_name, std::ios_base::in | std::ios_base::binary );
 		if( !file )
 			ensure_successful_syscall( -1,
-					fmt::format( "trying to open file '{}'", file_name ).c_str() );
+					fmt::format( "trying to open file '{}'",
+							fmt::streamed(file_name) ).c_str() );
 
 		file.exceptions( std::ifstream::badbit | std::ifstream::failbit );
 

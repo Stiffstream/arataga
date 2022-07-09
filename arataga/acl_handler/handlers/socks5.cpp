@@ -1630,7 +1630,7 @@ protected:
 				{
 					log_message_for_connection( can_throw, level,
 							fmt::format( "try_start_with_direct_address_v4: {}",
-									ipv4 ) );
+									fmt::streamed(ipv4) ) );
 				} );
 
 		// The actual target-endpoint depends on the version of ACL's
@@ -1658,7 +1658,7 @@ protected:
 				{
 					log_message_for_connection( can_throw, level,
 							fmt::format( "try_start_with_direct_address_v6: {}",
-									ipv6 ) );
+									fmt::streamed(ipv6) ) );
 				} );
 
 		// If ACL has IPv4 external IP then we can't handle IPv6 address.
@@ -1670,7 +1670,7 @@ protected:
 					spdlog::level::warn,
 					fmt::format( "target with IPv6 address can't be served by "
 							"ACL with IPv4 out address, target_addr: {}",
-							ipv6 ),
+							fmt::streamed(ipv6) ),
 					command_reply_atype_not_supported );
 		}
 		else
@@ -2015,7 +2015,7 @@ private:
 						spdlog::level::critical,
 						fmt::format( "unable to bind outgoing socket to address "
 								"{}: {}",
-								context().config().out_addr(),
+								fmt::streamed(context().config().out_addr()),
 								ec.message() ),
 						command_reply_general_server_failure );
 
@@ -2029,8 +2029,9 @@ private:
 								can_throw,
 								level,
 								fmt::format( "trying to connect {} from {}",
-										target_endpoint,
-										m_out_connection.local_endpoint() ) );
+										fmt::streamed(target_endpoint),
+										fmt::streamed(
+												m_out_connection.local_endpoint()) ) );
 					} );
 
 			// Now we can initiate the connect.
@@ -2054,8 +2055,8 @@ private:
 					spdlog::level::err,
 					fmt::format( "an exception during the creation of "
 							"outgoing connection from {} to {}: {}",
-							context().config().out_addr(),
-							m_target_endpoint.value(),
+							fmt::streamed(context().config().out_addr()),
+							fmt::streamed(m_target_endpoint.value()),
 							x.what() ),
 					command_reply_general_server_failure );
 		}
@@ -2077,7 +2078,7 @@ private:
 						remove_reason_t::io_error,
 						spdlog::level::warn,
 						fmt::format( "can't connect to target host {}: {}",
-								m_target_endpoint.value(),
+								fmt::streamed(m_target_endpoint.value()),
 								ec.message() ),
 						command_reply_connection_not_allowed );
 			}
@@ -2092,8 +2093,9 @@ private:
 								level,
 								fmt::format(
 										"outgoing connection to {} from {} established",
-										m_target_endpoint.value(),
-										m_out_connection.local_endpoint() ) );
+										fmt::streamed(m_target_endpoint.value()),
+										fmt::streamed(
+												m_out_connection.local_endpoint()) ) );
 					} );
 
 			make_and_send_positive_response_then_switch_handler( can_throw );
@@ -2276,7 +2278,7 @@ private:
 				return finish_on_failure(
 						fmt::format( "unable to bind outgoing socket to address "
 								"{}: {}",
-								new_entry_endpoint.address(),
+								fmt::streamed(new_entry_endpoint.address()),
 								ec.message() ) );
 			}
 
@@ -2303,8 +2305,8 @@ private:
 					spdlog::level::err,
 					fmt::format( "an exception during the creation of "
 							"outgoing connection from {} to {}: {}",
-							context().config().out_addr(),
-							m_target_endpoint.value(),
+							fmt::streamed(context().config().out_addr()),
+							fmt::streamed(m_target_endpoint.value()),
 							x.what() ),
 					command_reply_general_server_failure );
 		}
@@ -2320,7 +2322,7 @@ private:
 							can_throw,
 							level,
 							fmt::format( "accepting incomming connection on {}",
-									m_acceptor.local_endpoint() ) );
+									fmt::streamed(m_acceptor.local_endpoint()) ) );
 				} );
 
 		m_acceptor.async_accept(
@@ -2353,7 +2355,7 @@ private:
 						remove_reason_t::io_error,
 						spdlog::level::warn,
 						fmt::format( "can't accept a new connection on {}: {}",
-								m_acceptor.local_endpoint(),
+								fmt::streamed(m_acceptor.local_endpoint()),
 								ec.message() ),
 						command_reply_general_server_failure );
 			}
@@ -2370,8 +2372,8 @@ private:
 								level,
 								fmt::format(
 										"incoming connection from {} accepted on {}",
-										in_connection_endpoint,
-										m_acceptor.local_endpoint() ) );
+										fmt::streamed(in_connection_endpoint),
+										fmt::streamed(m_acceptor.local_endpoint()) ) );
 					} );
 
 			// The new connection is expected from the address specified

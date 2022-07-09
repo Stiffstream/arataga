@@ -10,6 +10,8 @@
 #include <string>
 #include <string_view>
 
+#include <fmt/ostream.h>
+
 namespace arataga::utils
 {
 
@@ -86,4 +88,8 @@ subview_of( const char * src ) noexcept
 }
 
 } /* namespace arataga::utils */
+
+// NOTE: this is required since fmtlib-9.0.
+template< std::size_t Capacity >
+struct fmt::formatter< arataga::utils::subview_t<Capacity> > : fmt::ostream_formatter {};
 

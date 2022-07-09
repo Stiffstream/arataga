@@ -842,10 +842,10 @@ std::ostream &
 operator<<( std::ostream & to, const acl_config_t & acl )
 {
 	fmt::print( to, "{}, port={}, in_ip={}, out_ip={}",
-			acl.m_protocol,
+			fmt::streamed(acl.m_protocol),
 			acl.m_port,
-			acl.m_in_addr,
-			acl.m_out_addr );
+			fmt::streamed(acl.m_in_addr),
+			fmt::streamed(acl.m_out_addr) );
 
 	return to;
 }
