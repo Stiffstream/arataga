@@ -109,9 +109,9 @@ a_authentificator_t::on_auth_request(
 							"target_port={}",
 						m_params.m_name,
 						cmd->m_req_id,
-						cmd->m_proxy_in_addr,
+						fmt::streamed(cmd->m_proxy_in_addr),
 						cmd->m_proxy_port,
-						cmd->m_user_ip,
+						fmt::streamed(cmd->m_user_ip),
 						opt_username_dumper_t{cmd->m_username},
 						opt_password_dumper_t{cmd->m_password},
 						cmd->m_target_host,
@@ -226,7 +226,7 @@ a_authentificator_t::complete_failed_auth(
 						req.m_req_id,
 						to_string_view( reason ),
 						m_failed_auth_reply_timeout,
-						req.m_user_ip,
+						fmt::streamed(req.m_user_ip),
 						opt_username_dumper_t{req.m_username},
 						opt_password_dumper_t{req.m_password} );
 			} );

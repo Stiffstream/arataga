@@ -314,8 +314,8 @@ a_conductor_t::handle_lookup_result(
 								level,
 								"{}: resolve reply sent: id={}, result={}",
 								m_name,
-								req_id,
-								result );
+								fmt::streamed(req_id),
+								fmt::streamed(result) );
 					} );
 		};
 
@@ -476,8 +476,8 @@ a_conductor_t::try_handle_direct_ip_case(
 								level,
 								"{}: resolve reply for direct IP: id={}, result={}",
 								m_name,
-								msg.m_req_id,
-								ip_to_reply.value() );
+								fmt::streamed(msg.m_req_id),
+								fmt::streamed(ip_to_reply.value()) );
 					} );
 
 			ARATAGA_NOTHROW_BLOCK_STAGE(positive_response_sending)
@@ -504,8 +504,8 @@ a_conductor_t::try_handle_direct_ip_case(
 								"{}: resolve reply for direct IP of different "
 										"version: id={}, ip={}, conductor_ip_version={}",
 								m_name,
-								msg.m_req_id,
-								addr,
+								fmt::streamed(msg.m_req_id),
+								fmt::streamed(addr),
 								to_string( m_ip_version ) );
 					} );
 

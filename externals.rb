@@ -45,7 +45,8 @@ MxxRu::arch_externals :noexcept_ctcheck do |e|
 end
 
 MxxRu::arch_externals :restinio do |e|
-  e.url 'https://github.com/Stiffstream/restinio/archive/v.0.6.13.tar.gz'
+#  e.url 'https://github.com/Stiffstream/restinio/archive/v.0.6.13.tar.gz'
+  e.url 'https://github.com/Stiffstream/restinio/archive/7d59bafbc74da6a042e7cfb4a4d78bc63ace827e.tar.gz'
 
   e.map_dir 'dev/restinio' => './'
 end

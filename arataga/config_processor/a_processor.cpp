@@ -25,6 +25,7 @@
 
 #include <fmt/ostream.h>
 #include <fmt/format.h>
+#include <fmt/std.h>
 
 #include <algorithm>
 #include <fstream>
@@ -94,7 +95,7 @@ sort_acl_list_and_ensure_uniqueness(
 						"config_processor: not unique (port, in_ip) pair "
 						"found: ({}, {})",
 						same_it->m_port,
-						same_it->m_in_addr )
+						fmt::streamed(same_it->m_in_addr) )
 			};
 }
 
@@ -232,7 +233,7 @@ a_processor_t::on_get_acl_list(
 							std::back_inserter(reply),
 							"thread #{:>3}, ACL: {}\r\n",
 							racl.m_io_thread_index,
-							racl.m_config );
+							fmt::streamed(racl.m_config) );
 				}
 
 				// If we are here then everything is OK.
@@ -266,9 +267,9 @@ a_processor_t::on_debug_auth(
 									"proxy_in_addr={}, proxy_port={}, user_ip={}"
 									"username={} (password={}), target_host={}, "
 									"target_port={}",
-									cmd->m_request.m_proxy_in_addr,
+									fmt::streamed(cmd->m_request.m_proxy_in_addr),
 									cmd->m_request.m_proxy_port,
-									cmd->m_request.m_user_ip,
+									fmt::streamed(cmd->m_request.m_user_ip),
 									opt_username_dumper_t{cmd->m_request.m_username},
 									opt_password_dumper_t{cmd->m_request.m_password},
 									cmd->m_request.m_target_host,
@@ -307,7 +308,7 @@ a_processor_t::on_debug_dns_resolve(
 									level,
 									"config_processor: debug_dns_resolve received, "
 									"proxy_in_addr={}, proxy_port={}, target_host={}",
-									cmd->m_request.m_proxy_in_addr,
+									fmt::streamed(cmd->m_request.m_proxy_in_addr),
 									cmd->m_request.m_proxy_port,
 									cmd->m_request.m_target_host );
 						} );
@@ -653,7 +654,7 @@ a_processor_t::stop_and_remove_outdated_acls(
 					logger.log(
 							level,
 							"config_processor: removing outdated ACL: {}",
-							racl.m_config );
+							fmt::streamed(racl.m_config) );
 				} );
 
 		so_5::send< ::arataga::acl_handler::shutdown_t >( racl.m_mbox );
@@ -685,7 +686,7 @@ a_processor_t::launch_new_acls(
 					logger.log(
 							level,
 							"config_processor: launching new ACL: {}",
-							acl_conf );
+							fmt::streamed(acl_conf) );
 				} );
 
 		// Create ACL ID seed for a new ACL.
@@ -710,9 +711,9 @@ a_processor_t::launch_new_acls(
 								io_thread_info.m_auth_mbox,
 								*(io_thread_info.m_timer_provider),
 								fmt::format( "{}-{}-{}-io_thr_{}-v{}",
-										acl_conf.m_protocol,
+										fmt::streamed(acl_conf.m_protocol),
 										acl_conf.m_port,
-										acl_conf.m_in_addr,
+										fmt::streamed(acl_conf.m_in_addr),
 										io_thread_index,
 										m_config_update_counter ),
 								acl_id_seed,
@@ -832,13 +833,13 @@ a_processor_t::initiate_debug_auth_processing(
 			reply = fmt::format( "Successful authenitication.\r\n"
 					"user_id: {}\r\n"
 					"bandlims: {}\r\n",
-					v.m_user_id,
-					v.m_user_bandlims );
+					fmt::streamed(v.m_user_id),
+					fmt::streamed(v.m_user_bandlims) );
 
 			if( v.m_domain_limits )
 				reply += fmt::format( "domain limit ({}): {}\r\n",
-						v.m_domain_limits->m_domain,
-						v.m_domain_limits->m_bandlims );
+						fmt::streamed(v.m_domain_limits->m_domain),
+						fmt::streamed(v.m_domain_limits->m_bandlims) );
 
 			m_replier->reply( http_entry::status_ok, std::move(reply) );
 		}
@@ -937,7 +938,7 @@ a_processor_t::initiate_debug_dns_resolve_processing(
 
 			reply = fmt::format( "Successful dns resolve.\r\n"
 					"resource address: {}\r\n",
-					v.m_address);
+					fmt::streamed(v.m_address) );
 
 			m_replier->reply( http_entry::status_ok, std::move(reply) );
 		}

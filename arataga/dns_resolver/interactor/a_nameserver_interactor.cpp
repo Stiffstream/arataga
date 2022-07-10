@@ -176,7 +176,7 @@ a_nameserver_interactor_t::evt_one_second_timer(
 									"{}: request timed out, "
 											"id={}",
 									m_params.m_name,
-									it->first );
+									fmt::streamed(it->first) );
 						} );
 			ARATAGA_NOTHROW_BLOCK_END(JUST_IGNORE)
 
@@ -275,7 +275,7 @@ a_nameserver_interactor_t::form_and_send_dns_udp_package(
 							level,
 							"{}: sending DNS UDP package, id={}, bytes={}",
 							m_params.m_name,
-							req_id,
+							fmt::streamed(req_id),
 							bin_size );
 				} );
 
@@ -320,7 +320,7 @@ a_nameserver_interactor_t::handle_dns_udp_package_sending_failure(
 							"{}: unable to send outgoing DNS UDP package: "
 									"id={}, error={}",
 							m_params.m_name,
-							req_id,
+							fmt::streamed(req_id),
 							failure_description );
 				} );
 	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
@@ -365,7 +365,7 @@ a_nameserver_interactor_t::handle_async_receive_result(
 								level,
 								"{}: async_receive_from failed: {}",
 								m_params.m_name,
-								ec );
+								fmt::streamed(ec) );
 					} );
 		ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 	}
@@ -418,7 +418,7 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 							"{}: positive name server response, address={}, "
 									"id={}, answer_count={}",
 							m_params.m_name,
-							m_incoming_pkg_endpoint.address(),
+							fmt::streamed(m_incoming_pkg_endpoint.address()),
 							header.m_id,
 							header.m_ancount );
 				} );
@@ -476,7 +476,7 @@ a_nameserver_interactor_t::try_handle_positive_nameserver_response(
 								level,
 								"{}: no IPs in positive name server response, id={}, domain_name={}",
 								m_params.m_name,
-								req_id,
+								fmt::streamed(req_id),
 								it->second.m_domain_name );
 					} );
 
@@ -517,7 +517,7 @@ a_nameserver_interactor_t::try_handle_negative_nameserver_response(
 							"{}: negative name server response, address={}, "
 									"id={}, error={}",
 							m_params.m_name,
-							m_incoming_pkg_endpoint.address(),
+							fmt::streamed(m_incoming_pkg_endpoint.address()),
 							header.m_id,
 							rcode_values::to_string( header.rcode() ) );
 				} );
@@ -570,8 +570,8 @@ a_nameserver_interactor_t::handle_async_send_result(
 							level,
 							"{}: DNS UDP package send failure, id={}, error={}",
 							m_params.m_name,
-							req_id,
-							ec );
+							fmt::streamed(req_id),
+							fmt::streamed(ec) );
 				} );
 	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 

@@ -9,6 +9,8 @@
 #include <optional>
 #include <string>
 
+#include <fmt/ostream.h>
+
 namespace arataga::opt_username_dumper
 {
 
@@ -78,5 +80,15 @@ operator<<( std::ostream & to, const opt_password_dumper_t & d )
 	return to;
 }
 
-} /* namespace opt_username_dumper */
+} /* namespace arataga::opt_username_dumper */
+
+template<> struct fmt::formatter<
+		arataga::opt_username_dumper::opt_username_dumper_t >
+	:	public fmt::ostream_formatter
+{};
+
+template<> struct fmt::formatter<
+		arataga::opt_username_dumper::opt_password_dumper_t >
+	:	public fmt::ostream_formatter
+{};
 

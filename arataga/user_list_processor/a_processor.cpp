@@ -16,6 +16,8 @@
 
 #include <arataga/exception.hpp>
 
+#include <fmt/std.h>
+
 namespace arataga::user_list_processor
 {
 
@@ -262,7 +264,7 @@ a_processor_t::store_new_user_list_to_file(
 							level,
 							"user_list_processor: updating local "
 							"user-list file {}",
-							m_local_user_list_file_name );
+							fmt::streamed(m_local_user_list_file_name) );
 				} );
 
 		std::ofstream file( m_local_user_list_file_name,
@@ -271,7 +273,8 @@ a_processor_t::store_new_user_list_to_file(
 		if( !file )
 			::arataga::utils::ensure_successful_syscall( -1,
 					fmt::format( "unable to open local user-list file {} for "
-							"writting", m_local_user_list_file_name ) );
+							"writting",
+							fmt::streamed(m_local_user_list_file_name) ) );
 
 		file.exceptions( std::ifstream::badbit | std::ifstream::failbit );
 

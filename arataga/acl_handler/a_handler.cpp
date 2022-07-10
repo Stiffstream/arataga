@@ -485,7 +485,7 @@ a_handler_t::remove_connection_handler(
 							"{}: connection {} removed ({}), connections: {}/{}",
 							m_params.m_name,
 							make_long_id(id),
-							reason,
+							fmt::streamed(reason),
 							m_connections.size(),
 							m_current_common_acl_params.m_maxconn );
 				} );
@@ -780,7 +780,7 @@ a_handler_t::on_try_create_entry_point(
 						level,
 						"{}: trying to open an entry on endpoint {}...",
 						m_params.m_name,
-						endpoint );
+						fmt::streamed(endpoint) );
 			} );
 
 	// Use a temporary instance of `acceptor` type.
@@ -839,7 +839,7 @@ a_handler_t::on_try_create_entry_point(
 		return finish_on_failure(
 				"{}: unable to bind acceptor to endpoint {}: {}",
 				m_params.m_name,
-				endpoint,
+				fmt::streamed(endpoint),
 				ec.message() );
 	}
 
@@ -950,7 +950,7 @@ a_handler_t::on_dns_result(
 						"{}: reply from DNS resolve for req_id {}: {}",
 						m_params.m_name,
 						cmd->m_req_id,
-						cmd->m_result );
+						fmt::streamed(cmd->m_result) );
 			} );
 
 	// Should find a connection that issued this request.
@@ -976,7 +976,7 @@ a_handler_t::on_auth_result(
 						"{}: reply from authentificator for req_id {}: {}",
 						m_params.m_name,
 						cmd->m_req_id,
-						cmd->m_result );
+						fmt::streamed(cmd->m_result) );
 			} );
 
 	// Should find a connection that issued this request.
@@ -1053,7 +1053,7 @@ a_handler_t::accept_new_connection(
 						"{}: new connection {} accepted from {}",
 						m_params.m_name,
 						make_long_id(id),
-						connection.remote_endpoint() );
+						fmt::streamed(connection.remote_endpoint()) );
 			} );
 
 	ARATAGA_NOTHROW_BLOCK_STAGE(switch_new_socket_to_non_blocking_mode)

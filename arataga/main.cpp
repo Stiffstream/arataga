@@ -232,7 +232,7 @@ operator<<( std::ostream & o, const cmd_line_args_t & args )
 	if( args.m_setuid )
 		fmt::print( o, "(setuid {}) ", *(args.m_setuid) );
 
-	fmt::print( o, "(log_params {}) ", args.m_log_params );
+	fmt::print( o, "(log_params {}) ", fmt::streamed(args.m_log_params) );
 
 	fmt::print( o, "(admin_http_ip {}) ", args.m_admin_http_ip.to_string() );
 	fmt::print( o, "(admin_http_port {}) ", args.m_admin_http_port );

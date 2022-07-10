@@ -10,6 +10,8 @@
 #include <iostream>
 #include <tuple>
 
+#include <fmt/ostream.h>
+
 namespace arataga::utils
 {
 
@@ -103,4 +105,12 @@ operator<<( std::ostream & to, const acl_req_id_t & what )
 }
 
 } /* namespace arataga::utils */
+
+template<> struct fmt::formatter< arataga::utils::acl_req_id_seed_t >
+	:	public fmt::ostream_formatter
+{};
+
+template<> struct fmt::formatter< arataga::utils::acl_req_id_t >
+	:	public fmt::ostream_formatter
+{};
 
