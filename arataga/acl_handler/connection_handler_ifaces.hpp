@@ -969,8 +969,8 @@ protected:
 	 * beginning of completion-handler. The work should be done only
 	 * if the connection_handler is still active (the status is
 	 * status_t::active).
-	 * 
-	 * Because there ara many different completion-handlers it's
+	 *
+	 * Because there are many different completion-handlers it's
 	 * boring task to write that check in every of handlers. Another
 	 * approach is used here: a programmer writes completion-handler
 	 * in the form of a lambda. This lambda then wrapped into another
