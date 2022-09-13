@@ -187,14 +187,14 @@ public:
 
 protected:
 	void
-	on_start_impl( can_throw_t can_throw ) override
+	on_start_impl() override
 	{
 		// Try to select an authentification method.
-		handle_data_already_read_or_read_more( can_throw );
+		handle_data_already_read_or_read_more();
 	}
 
 	void
-	on_timer_impl( can_throw_t can_throw ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
@@ -206,7 +206,6 @@ protected:
 
 			using namespace arataga::utils::string_literals;
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::warn,
 					"socks5: handshake phase timed out"_static_str );
 		}
@@ -222,26 +221,25 @@ public:
 
 private:
 	void
-	handle_data_already_read_or_read_more( can_throw_t can_throw )
+	handle_data_already_read_or_read_more()
 	{
-		if( const auto read_result = try_handle_data_read( can_throw );
+		if( const auto read_result = try_handle_data_read();
 				data_parsing_result_t::need_more == read_result )
 		{
 			// Has to read more data.
 			read_some(
-					can_throw,
 					m_connection,
 					m_first_pdu,
-					[this]( can_throw_t can_throw )
+					[this]()
 					{
-						handle_data_already_read_or_read_more( can_throw );
+						handle_data_already_read_or_read_more();
 					} );
 		}
 	}
 
 	[[nodiscard]]
 	data_parsing_result_t
-	try_handle_data_read( can_throw_t can_throw )
+	try_handle_data_read()
 	{
 		// NOTE: this check is used for safety reasons.
 		if( !m_first_pdu.remaining() )
@@ -265,7 +263,7 @@ private:
 			// at the moment.
 			if( methods <= m_first_pdu.remaining() )
 			{
-				handle_auth_methods( can_throw, methods );
+				handle_auth_methods( methods );
 				
 				// All required data read even if handle_auth_methods()
 				// initiated the disconnection of the client.
@@ -283,7 +281,6 @@ private:
 	// authentification methods.
 	void
 	handle_auth_methods(
-		can_throw_t can_throw,
 		std::size_t methods_to_handle )
 	{
 		// Get the list of auth methods as byte sequence to process it
@@ -292,11 +289,12 @@ private:
 				methods_to_handle );
 
 		::arataga::logging::proxy_mode::trace(
-				[this, can_throw, methods_sequence]( auto level )
+				[this, methods_sequence]( auto level )
 				{
-					log_message_for_connection( can_throw, level,
+					log_message_for_connection(
+							level,
 							fmt::format( "socks5: auth methods from client: {}",
-									collect_method_ids( can_throw, methods_sequence )
+									collect_method_ids( methods_sequence )
 							)
 					);
 				} );
@@ -311,10 +309,9 @@ private:
 		if( m_accepted_method )
 		{
 			::arataga::logging::proxy_mode::trace(
-					[this, can_throw]( auto level )
+					[this]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format( "socks5: auth method to be used: {:#x}",
 										*m_accepted_method ) );
@@ -324,16 +321,12 @@ private:
 			m_response.write_byte( *m_accepted_method );
 
 			write_whole(
-					can_throw,
 					m_connection,
 					m_response,
-					[this]( can_throw_t can_throw )
+					[this]()
 					{
 						replace_handler(
-								can_throw,
-								[this]( can_throw_t can_throw ) {
-									return make_appropriate_handler( can_throw );
-								} );
+								[this]() { return make_appropriate_handler(); } );
 					} );
 		}
 		else
@@ -342,12 +335,9 @@ private:
 			m_response.write_byte( no_acceptable_methods );
 
 			write_whole(
-					can_throw,
 					m_connection,
 					m_response,
-					[this, method_ids = collect_method_ids(
-							can_throw, methods_sequence )]
-					( can_throw_t can_throw )
+					[this, method_ids = collect_method_ids( methods_sequence )]()
 					{
 						connection_remover_t remover{
 								*this,
@@ -355,7 +345,6 @@ private:
 						};
 
 						easy_log_for_connection(
-								can_throw,
 								spdlog::level::err,
 								format_string{
 										"socks5: no supported auth methods "
@@ -369,7 +358,6 @@ private:
 	[[nodiscard]]
 	static std::string
 	collect_method_ids(
-		can_throw_t,
 		byte_sequence_t methods_sequence )
 	{
 		std::string result;
@@ -403,7 +391,7 @@ private:
 
 	[[nodiscard]]
 	connection_handler_shptr_t
-	make_appropriate_handler( can_throw_t )
+	make_appropriate_handler()
 	{
 		// NOTE: it seems that some clients send auth PDU and
 		// username/password PDU as a single package without
@@ -493,15 +481,15 @@ public:
 
 protected:
 	void
-	on_start_impl( can_throw_t can_throw ) override
+	on_start_impl() override
 	{
 		// Since v.0.3.2 we assume that some bytes from auth PDU
 		// can already be in m_auth_pdu buffer.
-		handle_data_already_read_or_read_more( can_throw );
+		handle_data_already_read_or_read_more();
 	}
 
 	void
-	on_timer_impl( can_throw_t can_throw ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
@@ -513,7 +501,6 @@ protected:
 
 			using namespace arataga::utils::string_literals;
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::warn,
 					"socks5: handshake phase timed out"_static_str );
 		}
@@ -529,26 +516,25 @@ public:
 
 private:
 	void
-	handle_data_already_read_or_read_more( can_throw_t can_throw )
+	handle_data_already_read_or_read_more()
 	{
-		if( const auto read_result = try_handle_data_read( can_throw );
+		if( const auto read_result = try_handle_data_read();
 				data_parsing_result_t::need_more == read_result )
 		{
 			// Has to read the next portion of data.
 			read_some(
-					can_throw,
 					m_connection,
 					m_auth_pdu,
-					[this]( can_throw_t can_throw )
+					[this]()
 					{
-						handle_data_already_read_or_read_more( can_throw );
+						handle_data_already_read_or_read_more();
 					} );
 		}
 	}
 
 	[[nodiscard]]
 	data_parsing_result_t
-	try_handle_data_read( can_throw_t can_throw )
+	try_handle_data_read()
 	{
 		// Since v.0.3.2 this method can be called when m_auth_pdu is empty.
 		if( 0u == m_auth_pdu.total_size() )
@@ -566,7 +552,6 @@ private:
 			};
 
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::err,
 					format_string{
 							"unsupported version of socks5 username/password "
@@ -608,7 +593,6 @@ private:
 
 		// Can go to the next step.
 		send_positive_response_then_replace_handler(
-				can_throw,
 				std::move(username),
 				std::move(password) );
 
@@ -617,22 +601,18 @@ private:
 
 	void
 	send_positive_response_then_replace_handler(
-		can_throw_t can_throw,
 		std::string username,
 		std::string password )
 	{
 		m_response.write_byte( expected_version );
 		m_response.write_byte( access_granted );
 		write_whole(
-				can_throw,
 				m_connection,
 				m_response,
-				[this, uname = std::move(username), passwd = std::move(password)]
-				( can_throw_t can_throw )
+				[this, uname = std::move(username), passwd = std::move(password)]()
 				{
 					replace_handler(
-							can_throw,
-							[&]( can_throw_t )
+							[&]()
 							{
 								return make_command_stage_handler(
 										m_ctx,
@@ -709,20 +689,19 @@ public:
 
 protected:
 	void
-	on_start_impl( can_throw_t can_throw ) override
+	on_start_impl() override
 	{
 		read_some(
-				can_throw,
 				m_connection,
 				m_auth_pdu,
-				[this]( can_throw_t can_throw )
+				[this]()
 				{
-					handle_data_already_read_or_read_more( can_throw );
+					handle_data_already_read_or_read_more();
 				} );
 	}
 
 	void
-	on_timer_impl( can_throw_t can_throw ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
@@ -734,7 +713,6 @@ protected:
 
 			using namespace arataga::utils::string_literals;
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::warn,
 					"socks5: handshake phase timed out"_static_str );
 		}
@@ -750,26 +728,25 @@ public:
 
 private:
 	void
-	handle_data_already_read_or_read_more( can_throw_t can_throw )
+	handle_data_already_read_or_read_more()
 	{
-		if( const auto read_result = try_handle_data_read( can_throw );
+		if( const auto read_result = try_handle_data_read();
 				data_parsing_result_t::need_more == read_result )
 		{
 			// Has to read the next portion of data.
 			read_some(
-					can_throw,
 					m_connection,
 					m_auth_pdu,
-					[this]( can_throw_t can_throw )
+					[this]()
 					{
-						handle_data_already_read_or_read_more( can_throw );
+						handle_data_already_read_or_read_more();
 					} );
 		}
 	}
 
 	[[nodiscard]]
 	data_parsing_result_t
-	try_handle_data_read( can_throw_t can_throw )
+	try_handle_data_read()
 	{
 		// NOTE: this check is used for safety reasons.
 		if( !m_auth_pdu.remaining() )
@@ -791,8 +768,7 @@ private:
 		if( version_byte == version )
 		{
 			replace_handler(
-					can_throw,
-					[this]( can_throw_t )
+					[this]()
 					{
 						return make_command_stage_handler(
 								m_ctx,
@@ -820,7 +796,6 @@ private:
 			};
 
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::err,
 					format_string{
 							"unsupported version of socks5 username/password "
@@ -845,7 +820,6 @@ private:
 			};
 
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::err,
 					format_string{ "expected 0 as username length, read {}" },
 					uname_len
@@ -867,7 +841,6 @@ private:
 			};
 
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::err,
 					format_string{ "expected 0 as password length, read {}" },
 					passwd_len
@@ -881,26 +854,24 @@ private:
 		read_trx.commit();
 
 		// Can go to the next step.
-		send_positive_response_then_replace_handler( can_throw );
+		send_positive_response_then_replace_handler();
 
 		return data_parsing_result_t::success;
 	}
 
 	void
-	send_positive_response_then_replace_handler( can_throw_t can_throw )
+	send_positive_response_then_replace_handler()
 	{
 		m_response.write_byte( expected_version );
 		m_response.write_byte( access_granted );
 
 		write_whole(
-				can_throw,
 				m_connection,
 				m_response,
-				[this]( can_throw_t can_throw )
+				[this]()
 				{
 					replace_handler(
-							can_throw,
-							[this]( can_throw_t ) 
+							[this]()
 							{
 								return make_command_stage_handler(
 									m_ctx,
@@ -997,20 +968,19 @@ public:
 
 protected:
 	void
-	on_start_impl( can_throw_t can_throw ) override
+	on_start_impl() override
 	{
 		read_some(
-			can_throw,
 			m_connection,
 			m_command_pdu,
-			[this]( can_throw_t can_throw )
+			[this]()
 			{
-				handle_data_already_read_or_read_more( can_throw );
+				handle_data_already_read_or_read_more();
 			} );
 	}
 
 	void
-	on_timer_impl( can_throw_t can_throw ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
@@ -1022,12 +992,10 @@ protected:
 
 			using namespace arataga::utils::string_literals;
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::warn,
 					"socks5_command timed out"_static_str );
 
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::warn,
 					"socks5: handshake phase timed out"_static_str );
 		}
@@ -1043,27 +1011,25 @@ public:
 
 private:
 	void
-	handle_data_already_read_or_read_more( can_throw_t can_throw )
+	handle_data_already_read_or_read_more()
 	{
-		if( const auto read_result = try_handle_data_read( can_throw );
+		if( const auto read_result = try_handle_data_read();
 				data_parsing_result_t::need_more == read_result )
 		{
 			// Has to read the next portion of data.
 			read_some(
-					can_throw,
 					m_connection,
 					m_command_pdu,
-					[this]( can_throw_t can_throw )
+					[this]()
 					{
-						handle_data_already_read_or_read_more( can_throw );
+						handle_data_already_read_or_read_more();
 					} );
 		}
 	}
 
 	[[nodiscard]]
 	data_parsing_result_t
-	try_handle_data_read(
-		can_throw_t can_throw )
+	try_handle_data_read()
 	{
 		// NOTE: this check is used for safety reasons.
 		if( !m_command_pdu.remaining() )
@@ -1083,7 +1049,6 @@ private:
 			};
 
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::err,
 					format_string{
 							"unsupported version of socks5 command PDU: "
@@ -1107,8 +1072,7 @@ private:
 		// The content of DST.ADDR depends on atype value.
 		data_parsing_result_t success_flag;
 		byte_sequence_t dst_addr_bytes;
-		std::tie(success_flag, dst_addr_bytes) = try_extract_dst_addr(
-				can_throw, atype );
+		std::tie(success_flag, dst_addr_bytes) = try_extract_dst_addr( atype );
 		if( success_flag != data_parsing_result_t::success )
 			return success_flag;
 
@@ -1132,8 +1096,7 @@ private:
 			// This command has to be handled by another handler.
 			// That handler will send the reply.
 			replace_handler(
-					can_throw,
-					[&]( can_throw_t )
+					[&]()
 					{
 						return make_connect_command_handler(
 							m_ctx,
@@ -1153,8 +1116,7 @@ private:
 			// This command has to be handled by another handler.
 			// That handler will send the reply.
 			replace_handler(
-					can_throw,
-					[&]( can_throw_t )
+					[&]()
 					{
 						return make_bind_command_handler(
 							m_ctx,
@@ -1176,7 +1138,7 @@ private:
 			make_negative_command_reply( m_negative_reply_pdu,
 					command_reply_command_not_supported );
 			send_negative_reply_then_close_connection(
-					can_throw, remove_reason_t::protocol_error );
+					remove_reason_t::protocol_error );
 		}
 
 		return data_parsing_result_t::success;
@@ -1194,9 +1156,7 @@ private:
 	 */
 	[[nodiscard]]
 	std::tuple< data_parsing_result_t, byte_sequence_t >
-	try_extract_dst_addr(
-		can_throw_t can_throw,
-		std::byte atype )
+	try_extract_dst_addr( std::byte atype )
 	{
 		if( atype_ipv4 == atype )
 		{
@@ -1232,7 +1192,6 @@ private:
 
 					using namespace arataga::utils::string_literals;
 					easy_log_for_connection(
-							can_throw,
 							spdlog::level::warn,
 							"domainname length is zero in SOCKS5 "
 									"command PDU"_static_str );
@@ -1256,7 +1215,7 @@ private:
 					command_reply_atype_not_supported );
 
 			send_negative_reply_then_close_connection(
-					can_throw, remove_reason_t::protocol_error );
+					remove_reason_t::protocol_error );
 		}
 
 		return { data_parsing_result_t::need_more, byte_sequence_t{} };
@@ -1264,14 +1223,12 @@ private:
 
 	void
 	send_negative_reply_then_close_connection(
-		can_throw_t can_throw,
 		remove_reason_t reason )
 	{
 		write_whole(
-				can_throw,
 				m_connection,
 				m_negative_reply_pdu,
-				[this, reason]( can_throw_t )
+				[this, reason]()
 				{
 					connection_remover_t{ *this, reason };
 				} );
@@ -1353,8 +1310,7 @@ protected:
 	//! Type of method pointer that controls the duration of
 	//! the current operation.
 	using timeout_handler_t = void (*)(
-			connect_and_bind_handler_base_t &,
-			can_throw_t);
+			connect_and_bind_handler_base_t &);
 
 	//! The pointer to the method that controls the duration of
 	//! the current operation.
@@ -1427,17 +1383,17 @@ public:
 
 protected:
 	void
-	on_start_impl( can_throw_t can_throw ) override
+	on_start_impl() override
 	{
 		// Starting action depends on the type of dst_addr.
 		std::visit( ::arataga::utils::overloaded{
-			[this, can_throw]( const asio::ip::address_v4 & ipv4 ) {
-				try_start_with_direct_address( can_throw, ipv4 );
+			[this]( const asio::ip::address_v4 & ipv4 ) {
+				try_start_with_direct_address( ipv4 );
 			},
-			[this, can_throw]( const asio::ip::address_v6 & ipv6 ) {
-				try_start_with_direct_address( can_throw, ipv6 );
+			[this]( const asio::ip::address_v6 & ipv6 ) {
+				try_start_with_direct_address( ipv6 );
 			},
-			[this, can_throw]( const std::string & hostname ) {
+			[this]( const std::string & hostname ) {
 				// The domain name of the target host is known.
 				// Store it now to be used later for authentification.
 				m_target_host = hostname;
@@ -1446,15 +1402,15 @@ protected:
 				// So we authenitificate the user first and only then
 				// initiate DNS lookup (in the case of successful
 				// authentification).
-				initiate_authentification( can_throw );
+				initiate_authentification();
 			} },
 			m_dst_addr );
 	}
 
 	void
-	on_timer_impl( can_throw_t can_throw ) override
+	on_timer_impl() override
 	{
-		(*m_last_op_timeout_handler)( *this, can_throw );
+		(*m_last_op_timeout_handler)( *this );
 	}
 
 	//! Start a main operation after the successful authentification
@@ -1463,18 +1419,16 @@ protected:
 	 * Should be implemented in a derived class.
 	 */
 	virtual void
-	initiate_next_step( can_throw_t ) = 0;
+	initiate_next_step() = 0;
 
 	static void
 	dns_resolving_timeout_handler(
-		connect_and_bind_handler_base_t & self,
-		can_throw_t can_throw )
+		connect_and_bind_handler_base_t & self )
 	{
 		if( std::chrono::steady_clock::now() >= self.m_last_op_started_at +
 				self.context().config().dns_resolving_timeout() )
 		{
 			self.send_negative_command_reply_then_close_connection(
-					can_throw,
 					remove_reason_t::current_operation_timed_out,
 					spdlog::level::warn,
 					"socks5: DNS-lookup timed out",
@@ -1484,14 +1438,12 @@ protected:
 
 	static void
 	authentification_timeout_handler(
-		connect_and_bind_handler_base_t & self,
-		can_throw_t can_throw )
+		connect_and_bind_handler_base_t & self )
 	{
 		if( std::chrono::steady_clock::now() >= self.m_last_op_started_at +
 				self.context().config().authentification_timeout() )
 		{
 			self.send_negative_command_reply_then_close_connection(
-					can_throw,
 					remove_reason_t::current_operation_timed_out,
 					spdlog::level::warn,
 					"socks5: authentification timed out",
@@ -1509,13 +1461,13 @@ protected:
 
 	void
 	try_start_with_direct_address(
-		can_throw_t can_throw,
 		asio::ip::address_v4 ipv4 )
 	{
 		::arataga::logging::proxy_mode::trace(
-				[this, can_throw, &ipv4]( auto level )
+				[this, &ipv4]( auto level )
 				{
-					log_message_for_connection( can_throw, level,
+					log_message_for_connection(
+							level,
 							fmt::format( "try_start_with_direct_address_v4: {}",
 									fmt::streamed(ipv4) ) );
 				} );
@@ -1532,18 +1484,18 @@ protected:
 
 		m_target_host = ipv4.to_string();
 
-		initiate_authentification( can_throw );
+		initiate_authentification();
 	}
 
 	void
 	try_start_with_direct_address(
-		can_throw_t can_throw,
 		asio::ip::address_v6 ipv6 )
 	{
 		::arataga::logging::proxy_mode::trace(
-				[this, can_throw, &ipv6]( auto level )
+				[this, &ipv6]( auto level )
 				{
-					log_message_for_connection( can_throw, level,
+					log_message_for_connection(
+							level,
 							fmt::format( "try_start_with_direct_address_v6: {}",
 									fmt::streamed(ipv6) ) );
 				} );
@@ -1552,7 +1504,6 @@ protected:
 		if( context().config().out_addr().is_v4() )
 		{
 			send_negative_command_reply_then_close_connection(
-					can_throw,
 					remove_reason_t::ip_version_mismatch,
 					spdlog::level::warn,
 					fmt::format( "target with IPv6 address can't be served by "
@@ -1566,19 +1517,18 @@ protected:
 
 			m_target_host = ipv6.to_string();
 
-			initiate_authentification( can_throw );
+			initiate_authentification();
 		}
 	}
 
 	void
 	initiate_hostname_resolving(
-		can_throw_t can_throw,
 		const std::string & hostname )
 	{
 		::arataga::logging::proxy_mode::trace(
-				[this, can_throw, &hostname]( auto level )
+				[this, &hostname]( auto level )
 				{
-					log_message_for_connection( can_throw, level,
+					log_message_for_connection( level,
 							fmt::format( "initiate_hostname_resolving: {}",
 									hostname ) );
 				} );
@@ -1590,18 +1540,15 @@ protected:
 				m_id,
 				hostname,
 				with<const dns_resolving::hostname_result_t &>().make_handler(
-					[this](
-						can_throw_t can_throw,
-						const dns_resolving::hostname_result_t & result )
+					[this]( const dns_resolving::hostname_result_t & result )
 					{
-						on_hostname_result( can_throw, result );
+						on_hostname_result( result );
 					} )
 			);
 	}
 
 	void
-	initiate_authentification(
-		can_throw_t /*can_throw*/ )
+	initiate_authentification()
 	{
 		set_operation_started_markers(
 				&connect_and_bind_handler_base_t::authentification_timeout_handler );
@@ -1618,22 +1565,19 @@ protected:
 					m_dst_port
 				},
 				with<authentification::result_t>().make_handler(
-					[this](
-						can_throw_t can_throw,
-						authentification::result_t result )
+					[this]( authentification::result_t result )
 					{
-						on_authentification_result( can_throw, result );
+						on_authentification_result( result );
 					} )
 			);
 	}
 
 	void
 	on_hostname_result(
-		can_throw_t can_throw,
 		const dns_resolving::hostname_result_t & result )
 	{
 		std::visit( ::arataga::utils::overloaded{
-				[this, can_throw]
+				[this]
 				( const dns_resolving::hostname_found_t & info )
 				{
 					// Now we know the destination address.
@@ -1641,16 +1585,15 @@ protected:
 							info.m_ip, m_dst_port
 						};
 
-					initiate_next_step( can_throw );
+					initiate_next_step();
 				},
-				[this, can_throw]
+				[this]
 				( const dns_resolving::hostname_not_found_t & info )
 				{
 					// Domain name is not resolved.
 					// We can only log that fack, send the negative reply
 					// and close the connection.
 					send_negative_command_reply_then_close_connection(
-							can_throw,
 							remove_reason_t::unresolved_target,
 							spdlog::level::warn,
 							fmt::format( "DNS resolving failure: {}",
@@ -1663,11 +1606,10 @@ protected:
 
 	void
 	on_authentification_result(
-		can_throw_t can_throw,
 		authentification::result_t & result )
 	{
 		std::visit( ::arataga::utils::overloaded{
-				[this, can_throw]( authentification::success_t & info ) {
+				[this]( authentification::success_t & info ) {
 					m_traffic_limiter = std::move(info.m_traffic_limiter);
 
 					// If hostname was specified then we have to do DNS lookup.
@@ -1675,16 +1617,15 @@ protected:
 					// connect.
 					if( auto * hostname = std::get_if< std::string >(
 							&m_dst_addr ) )
-						initiate_hostname_resolving( can_throw, *hostname );
+						initiate_hostname_resolving( *hostname );
 					else
-						initiate_next_step( can_throw );
+						initiate_next_step();
 				},
-				[this, can_throw]( const authentification::failure_t & info ) {
+				[this]( const authentification::failure_t & info ) {
 					// The user has no permission to access the target host.
 					// We can only log that fact, send the negative reply
 					// and close the connection.
 					send_negative_command_reply_then_close_connection(
-							can_throw,
 							remove_reason_t::access_denied,
 							spdlog::level::warn,
 							fmt::format( "user is not authentificated, reason: {}",
@@ -1701,7 +1642,6 @@ protected:
 	// can't be continued.
 	void
 	send_negative_command_reply_then_close_connection(
-		can_throw_t can_throw,
 		remove_reason_t reason,
 		spdlog::level::level_enum log_level,
 		std::string_view log_message,
@@ -1710,18 +1650,17 @@ protected:
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				log_level,
-				[this, can_throw, log_message]( auto level )
+				[this, log_message]( auto level )
 				{
-					log_message_for_connection( can_throw, level, log_message );
+					log_message_for_connection( level, log_message );
 				} );
 
 		make_negative_command_reply( m_response, reply_code );
 
 		write_whole(
-				can_throw,
 				m_connection,
 				m_response,
-				[this, reason]( can_throw_t )
+				[this, reason]()
 				{
 					connection_remover_t{ *this, reason };
 				} );
@@ -1817,8 +1756,7 @@ public:
 private:
 	static void
 	connect_target_timeout_handler(
-		connect_and_bind_handler_base_t & self,
-		can_throw_t can_throw )
+		connect_and_bind_handler_base_t & self )
 	{
 		// We can't simply access the content via a reference to the base class,
 		// so just use the fact that self is pointed to
@@ -1832,7 +1770,6 @@ private:
 				this_class.context().config().connect_target_timeout() )
 		{
 			this_class.send_negative_command_reply_then_close_connection(
-					can_throw,
 					remove_reason_t::current_operation_timed_out,
 					spdlog::level::warn,
 					"socks5: connect target-host timed out",
@@ -1841,7 +1778,7 @@ private:
 	}
 
 	void
-	initiate_next_step( can_throw_t can_throw ) override
+	initiate_next_step() override
 	{
 		set_operation_started_markers(
 				&connect_command_handler_t::connect_target_timeout_handler );
@@ -1859,7 +1796,6 @@ private:
 			if( ec )
 			{
 				send_negative_command_reply_then_close_connection(
-						can_throw,
 						remove_reason_t::io_error,
 						spdlog::level::err,
 						fmt::format( "unable open outgoing socket: {}",
@@ -1874,7 +1810,6 @@ private:
 			if( ec )
 			{
 				send_negative_command_reply_then_close_connection(
-						can_throw,
 						remove_reason_t::io_error,
 						spdlog::level::err,
 						fmt::format( "unable switch outgoing socket to "
@@ -1895,7 +1830,6 @@ private:
 			if( ec )
 			{
 				send_negative_command_reply_then_close_connection(
-						can_throw,
 						remove_reason_t::io_error,
 						spdlog::level::critical,
 						fmt::format( "unable to bind outgoing socket to address "
@@ -1908,10 +1842,9 @@ private:
 			}
 
 			::arataga::logging::proxy_mode::trace(
-					[this, can_throw, &target_endpoint]( auto level )
+					[this, &target_endpoint]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format( "trying to connect {} from {}",
 										fmt::streamed(target_endpoint),
@@ -1923,18 +1856,15 @@ private:
 			m_out_connection.async_connect(
 					target_endpoint,
 					with<const asio::error_code &>().make_handler(
-						[this](
-							can_throw_t can_throw,
-							const asio::error_code & ec )
+						[this]( const asio::error_code & ec )
 						{
-							on_async_connect_result( can_throw, ec );
+							on_async_connect_result( ec );
 						} )
 				);
 		}
 		catch( const std::exception & x ) 
 		{
 			send_negative_command_reply_then_close_connection(
-					can_throw,
 					remove_reason_t::unhandled_exception,
 					spdlog::level::err,
 					fmt::format( "an exception during the creation of "
@@ -1948,7 +1878,6 @@ private:
 
 	void
 	on_async_connect_result(
-		can_throw_t can_throw,
 		const asio::error_code & ec )
 	{
 		if( ec )
@@ -1958,7 +1887,6 @@ private:
 			if( asio::error::operation_aborted != ec )
 			{
 				send_negative_command_reply_then_close_connection(
-						can_throw,
 						remove_reason_t::io_error,
 						spdlog::level::warn,
 						fmt::format( "can't connect to target host {}: {}",
@@ -1970,10 +1898,9 @@ private:
 		else
 		{
 			::arataga::logging::proxy_mode::debug(
-					[this, can_throw]( auto level )
+					[this]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format(
 										"outgoing connection to {} from {} established",
@@ -1982,13 +1909,12 @@ private:
 												m_out_connection.local_endpoint()) ) );
 					} );
 
-			make_and_send_positive_response_then_switch_handler( can_throw );
+			make_and_send_positive_response_then_switch_handler();
 		}
 	}
 
 	void
-	make_and_send_positive_response_then_switch_handler(
-		can_throw_t can_throw )
+	make_and_send_positive_response_then_switch_handler()
 	{
 		// Prepare the reply.
 		make_positive_response_content(
@@ -1996,15 +1922,13 @@ private:
 
 		// Now send the reply and wait for the completion...
 		write_whole(
-				can_throw,
 				m_connection,
 				m_response,
-				[this]( can_throw_t can_throw )
+				[this]()
 				{
 					// ...the response is sent, we can replace the handler.
 					replace_handler(
-							can_throw,
-							[this]( can_throw_t )
+							[this]()
 							{
 								return make_data_transfer_handler(
 										m_ctx,
@@ -2076,8 +2000,7 @@ public:
 private:
 	static void
 	accept_incoming_timeout_handler(
-		connect_and_bind_handler_base_t & self,
-		can_throw_t can_throw )
+		connect_and_bind_handler_base_t & self )
 	{
 		// We can't simply access the content via a reference to the base class,
 		// so just use the fact that self is pointed to
@@ -2091,7 +2014,6 @@ private:
 				this_class.context().config().socks_bind_timeout() )
 		{
 			this_class.send_negative_command_reply_then_close_connection(
-					can_throw,
 					remove_reason_t::current_operation_timed_out,
 					spdlog::level::warn,
 					"socks5: accepting an incoming connection timed out",
@@ -2100,16 +2022,15 @@ private:
 	}
 
 	void
-	initiate_next_step( can_throw_t can_throw ) override
+	initiate_next_step() override
 	{
 		set_operation_started_markers(
 				&bind_command_handler_t::accept_incoming_timeout_handler );
 
 		// A helper function to reduce the amount of error-handling code.
 		const auto finish_on_failure =
-			[this, can_throw]( std::string message ) -> void {
+			[this]( std::string message ) -> void {
 				send_negative_command_reply_then_close_connection(
-						can_throw,
 						remove_reason_t::io_error,
 						spdlog::level::err,
 						message,
@@ -2176,13 +2097,11 @@ private:
 			// The user should know that we are ready.
 			// New connection can be accepted after sending the reply
 			// to the user.
-			make_and_send_first_positive_response_then_initiate_accept(
-					can_throw );
+			make_and_send_first_positive_response_then_initiate_accept();
 		}
 		catch( const std::exception & x ) 
 		{
 			send_negative_command_reply_then_close_connection(
-					can_throw,
 					remove_reason_t::unhandled_exception,
 					spdlog::level::err,
 					fmt::format( "an exception during the creation of "
@@ -2195,13 +2114,11 @@ private:
 	}
 
 	void
-	initiate_async_accept(
-		can_throw_t can_throw )
+	initiate_async_accept()
 	{
 		::arataga::logging::proxy_mode::debug(
-				[this, can_throw]( auto level ) {
+				[this]( auto level ) {
 					log_message_for_connection(
-							can_throw,
 							level,
 							fmt::format( "accepting incomming connection on {}",
 									fmt::streamed(m_acceptor.local_endpoint()) ) );
@@ -2211,18 +2128,16 @@ private:
 				with<const asio::error_code &, asio::ip::tcp::socket>()
 				.make_handler(
 					[this](
-						can_throw_t can_throw,
 						const asio::error_code & ec,
 						asio::ip::tcp::socket connection )
 					{
-						on_async_accept_result( can_throw, ec, std::move(connection) );
+						on_async_accept_result( ec, std::move(connection) );
 					} )
 			);
 	}
 
 	void
 	on_async_accept_result(
-		can_throw_t can_throw,
 		const asio::error_code & ec,
 		asio::ip::tcp::socket connection )
 	{
@@ -2233,7 +2148,6 @@ private:
 			if( asio::error::operation_aborted != ec )
 			{
 				send_negative_command_reply_then_close_connection(
-						can_throw,
 						remove_reason_t::io_error,
 						spdlog::level::warn,
 						fmt::format( "can't accept a new connection on {}: {}",
@@ -2247,10 +2161,9 @@ private:
 			const auto & in_connection_endpoint = connection.remote_endpoint();
 
 			::arataga::logging::proxy_mode::trace(
-					[this, can_throw, &in_connection_endpoint]( auto level )
+					[this, &in_connection_endpoint]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format(
 										"incoming connection from {} accepted on {}",
@@ -2267,14 +2180,13 @@ private:
 				connection.close();
 
 				// New accept should be initiated.
-				initiate_async_accept( can_throw );
+				initiate_async_accept();
 			}
 			else
 			{
 				// Normal connection accepted. Send the second reply
 				// and wait a possibility to replace connection-handler.
 				make_send_second_positive_response_then_switch_handler(
-						can_throw,
 						in_connection_endpoint,
 						std::move(connection) );
 			}
@@ -2282,27 +2194,24 @@ private:
 	}
 
 	void
-	make_and_send_first_positive_response_then_initiate_accept(
-		can_throw_t can_throw )
+	make_and_send_first_positive_response_then_initiate_accept()
 	{
 		make_positive_response_content(
 				m_response,
 				m_acceptor.local_endpoint() );
 
 		write_whole(
-				can_throw,
 				m_connection,
 				m_response,
-				[this]( can_throw_t can_throw )
+				[this]()
 				{
 					// The reply is sent, now we can accept incoming connections.
-					initiate_async_accept( can_throw );
+					initiate_async_accept();
 				} );
 	}
 
 	void
 	make_send_second_positive_response_then_switch_handler(
-		can_throw_t can_throw,
 		asio::ip::tcp::endpoint in_connection_endpoint,
 		asio::ip::tcp::socket connection )
 	{
@@ -2313,16 +2222,13 @@ private:
 				in_connection_endpoint );
 
 		write_whole(
-				can_throw,
 				m_connection,
 				m_response,
-				[this, in_conn = std::move(connection)](
-					can_throw_t can_throw ) mutable
+				[this, in_conn = std::move(connection)]() mutable
 				{
 					// The reply has been sent, now we can replace the handler.
 					replace_handler(
-							can_throw,
-							[this, &in_conn]( can_throw_t )
+							[this, &in_conn]()
 							{
 								return make_data_transfer_handler(
 										m_ctx,

@@ -85,28 +85,26 @@ public:
 
 protected:
 	void
-	on_start_impl( can_throw_t can_throw ) override
+	on_start_impl() override
 	{
 		::arataga::logging::proxy_mode::info(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"serving-request=CONNECT " + m_connection_target );
 				} );
 
 		// Have to send positive response to the user.
-		write_whole( can_throw,
+		write_whole(
 				m_connection,
 				m_positive_response,
-				[this]( can_throw_t can_throw )
+				[this]()
 				{
 					// The response is sent. Now we can switch
 					// to data-transfer-handler.
 					replace_handler(
-							can_throw,
-							[this]( can_throw_t )
+							[this]()
 							{
 								return make_data_transfer_handler(
 										std::move(m_ctx),
@@ -120,7 +118,7 @@ protected:
 	}
 
 	void
-	on_timer_impl( can_throw_t can_throw ) override
+	on_timer_impl() override
 	{
 		// Will use idle_connection_timeout as the timeout duration.
 		const auto now = std::chrono::steady_clock::now();
@@ -134,7 +132,6 @@ protected:
 
 			using namespace arataga::utils::string_literals;
 			return easy_log_for_connection(
-					can_throw,
 					spdlog::level::warn,
 					"timeout writing positive response to "
 							"CONNECT method"_static_str );

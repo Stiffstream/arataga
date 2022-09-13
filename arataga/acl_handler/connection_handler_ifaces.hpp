@@ -7,7 +7,6 @@
 
 #include <arataga/acl_handler/sequence_number.hpp>
 
-#include <arataga/utils/can_throw.hpp>
 #include <arataga/utils/string_literal.hpp>
 
 #include <arataga/config.hpp>
@@ -557,7 +556,6 @@ class connection_handler_t;
  *
  * 	// Connection will be closed even if easy_log_for_connection throws.
  * 	easy_log_for_connection(
- * 			can_throw,
  * 			spdlog::level::warn,
  * 			format_string{ "unexpected message: {}" },
  * 			message_type );
@@ -631,18 +629,6 @@ private:
 	}
 
 protected:
-	/*!
-	 * @brief A special indicator that tells that exceptions can go out.
-	 *
-	 * This indicator tells a method/lambda that it's invoked inside
-	 * try/catch block and throwing of an exception is permited.
-	 *
-	 * An instance is created inside wrap_action_and_handle_exceptions()
-	 * and passed as a parameter to lambda-argument of
-	 * wrap_action_and_handle_exceptions().
-	 */
-	using can_throw_t = ::arataga::utils::can_throw_t;
-
 	//! Context for connection handler.
 	handler_context_holder_t m_ctx;
 
@@ -663,10 +649,10 @@ protected:
 	 * @{
 	 */
 	virtual void
-	on_start_impl( can_throw_t can_throw ) = 0;
+	on_start_impl() = 0;
 
 	virtual void
-	on_timer_impl( can_throw_t can_throw ) = 0;
+	on_timer_impl() = 0;
 	/*!
 	 * @}
 	 */
@@ -681,7 +667,6 @@ protected:
 	template< typename New_Handler_Factory >
 	void
 	replace_handler(
-		can_throw_t can_throw,
 		New_Handler_Factory && new_handler_factory )
 	{
 		// If there will be an exception we'll have no choice except
@@ -704,8 +689,7 @@ protected:
 			handler_context_holder_t ctx_holder{ m_ctx };
 			try
 			{
-				connection_handler_shptr_t new_handler = new_handler_factory(
-						can_throw );
+				connection_handler_shptr_t new_handler = new_handler_factory();
 
 				ctx_holder.ctx().replace_connection_handler(
 						m_id,
@@ -739,7 +723,6 @@ protected:
 	// NOTE: this method should be called from inside logging::wrap_logging.
 	void
 	log_message_for_connection(
-		can_throw_t /*can_throw*/,
 		::arataga::logging::processed_log_level_t level,
 		std::string_view message )
 	{
@@ -749,26 +732,21 @@ protected:
 	// Simple logging for the case when log message is a string literal.
 	void
 	easy_log_for_connection(
-		can_throw_t can_throw,
 		spdlog::level::level_enum level,
 		arataga::utils::string_literal_t description )
 	{
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				level,
-				[this, can_throw, description]( auto level )
+				[this, description]( auto level )
 				{
-					log_message_for_connection(
-							can_throw,
-							level,
-							description );
+					log_message_for_connection( level, description );
 				} );
 	}
 
 	// Helper data structure to be used like strong typedef in case like that:
 	//
 	// easy_log_for_connection(
-	// 	can_throw,
 	// 	spdlog::level::warn,
 	// 	format_string{ "unexpected result: {}" },
 	// 	result );
@@ -784,7 +762,6 @@ protected:
 	template< typename... Args >
 	void
 	easy_log_for_connection(
-		can_throw_t can_throw,
 		spdlog::level::level_enum level,
 		format_string format,
 		Args && ...format_args )
@@ -795,7 +772,6 @@ protected:
 				[&]( auto actual_level )
 				{
 					log_message_for_connection(
-							can_throw,
 							actual_level,
 							fmt::format(
 									format.m_format_str,
@@ -805,7 +781,6 @@ protected:
 
 	void
 	log_on_io_error(
-		can_throw_t can_throw,
 		const asio::error_code & ec,
 		std::string_view operation_description )
 	{
@@ -814,7 +789,6 @@ protected:
 		if( asio::error::operation_aborted != ec )
 		{
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::warn,
 					format_string{ "IO-error on {}: {}" },
 					operation_description, ec.message() );
@@ -828,9 +802,7 @@ protected:
 	{
 		try
 		{
-			::arataga::utils::exception_handling_context_t ctx;
-
-			action( ctx.make_can_throw_marker() );
+			action();
 		}
 		catch( const std::exception & x )
 		{
@@ -843,10 +815,7 @@ protected:
 						remove_reason_t::unhandled_exception
 				};
 
-				::arataga::utils::exception_handling_context_t ctx;
-
 				easy_log_for_connection(
-						ctx.make_can_throw_marker(),
 						spdlog::level::err,
 						format_string{ "exception caught: {}" },
 						x.what() );
@@ -864,11 +833,8 @@ protected:
 						remove_reason_t::unhandled_exception
 				};
 
-				::arataga::utils::exception_handling_context_t ctx;
-
 				using namespace arataga::utils::string_literals;
 				easy_log_for_connection(
-						ctx.make_can_throw_marker(),
 						spdlog::level::err,
 						"unknown exception caught"_static_str );
 			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE);
@@ -914,10 +880,6 @@ protected:
 	 * gets an actual completion-handler lambda as an argument and
 	 * returns a proper wrapper.
 	 *
-	 * @attention
-	 * This first will be a value of type can_throw_t. Then there will be
-	 * parameters of types @a Args.
-	 *
 	 * @note
 	 * Initialy a wrapper, created inside make_handler() method, doesn't
 	 * catch exceptions. But then wrap_action_and_handle_exceptions() was
@@ -947,11 +909,9 @@ protected:
 					if( status_t::active == handler->m_status )
 					{
 						handler->wrap_action_and_handle_exceptions(
-								[&]( can_throw_t can_throw )
+								[&]()
 								{
-									completion_func(
-											can_throw,
-											std::forward<Args>(args)... );
+									completion_func( std::forward<Args>(args)... );
 								} );
 					}
 				};
@@ -963,7 +923,7 @@ protected:
 	 * Usage example:
 	 * @code
 	 * with<const asio::error_code &, std::size_t>().make_handler(
-	 * 	[this]( can_throw_t can_throw,
+	 * 	[this](
 	 * 		const asio::error_code & ec,
 	 * 		std::size_t bytes_transferred )
 	 * 	{
@@ -991,8 +951,7 @@ protected:
 			.make_handler(
 				// There is no sense to call shared_from_this because
 				// it's already done by make_io_completion_handler.
-				[this, op_name, completion_func = std::move(completion)]
-				( can_throw_t can_throw,
+				[this, op_name, completion_func = std::move(completion)](
 					const asio::error_code & ec,
 					std::size_t bytes_transferred ) mutable
 				{
@@ -1004,10 +963,10 @@ protected:
 								remove_reason_t::io_error
 						};
 
-						log_on_io_error( can_throw, ec, op_name );
+						log_on_io_error( ec, op_name );
 					}
 					else
-						completion_func( can_throw, bytes_transferred );
+						completion_func( bytes_transferred );
 				} );
 	}
 
@@ -1016,7 +975,6 @@ protected:
 		typename Completion >
 	void
 	read_some(
-		can_throw_t /*can_throw*/,
 		asio::ip::tcp::socket & connection,
 		Buffer & buffer,
 		Completion && completion )
@@ -1028,11 +986,10 @@ protected:
 				make_read_write_completion_handler(
 					"read"_static_str,
 					[completion_func = std::move(completion), &buffer](
-						can_throw_t can_throw,
 						std::size_t bytes_transferred )
 					{
 						buffer.increment_bytes_read( bytes_transferred );
-						completion_func( can_throw );
+						completion_func();
 					} )
 		);
 	}
@@ -1042,7 +999,6 @@ protected:
 		typename Completion >
 	void
 	write_whole(
-		can_throw_t /*can_throw*/,
 		asio::ip::tcp::socket & connection,
 		Buffer & buffer,
 		Completion && completion )
@@ -1055,11 +1011,10 @@ protected:
 				make_read_write_completion_handler(
 					"write"_static_str,
 					[&buffer, completion_func = std::move(completion)](
-						can_throw_t can_throw,
 						std::size_t bytes_transferred ) mutable
 					{
 						buffer.increment_bytes_written( bytes_transferred );
-						completion_func( can_throw );
+						completion_func();
 					} )
 		);
 	}

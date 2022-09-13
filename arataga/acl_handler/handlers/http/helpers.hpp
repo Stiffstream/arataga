@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include <arataga/utils/can_throw.hpp>
-
 #include <arataga/nothrow_block/macros.hpp>
 
 #include <nodejs/http_parser/http_parser.h>
@@ -29,16 +27,13 @@ template<
 int
 wrap_http_parser_callback(
 	http_parser * parser,
-	int (Handler::*callback)( ::arataga::utils::can_throw_t, Args... ),
+	int (Handler::*callback)( Args... ),
 	Args ...args ) noexcept
 {
 	auto * handler = reinterpret_cast<Handler *>(parser->data);
 
 	ARATAGA_NOTHROW_BLOCK_BEGIN()
-		::arataga::utils::exception_handling_context_t ctx;
-
-		return (handler->*callback)( ctx.make_can_throw_marker(),
-				std::forward<Args>(args)... );
+		return (handler->*callback)( std::forward<Args>(args)... );
 	ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE)
 
 	return -1;
@@ -49,14 +44,14 @@ struct http_parser_callback_kind_detector;
 
 template< typename Handler >
 struct http_parser_callback_kind_detector<
-	int (Handler::*)( ::arataga::utils::can_throw_t ) >
+	int (Handler::*)() >
 {
 	static constexpr bool with_data = false;
 };
 
 template< typename Handler >
 struct http_parser_callback_kind_detector<
-	int (Handler::*)( ::arataga::utils::can_throw_t, const char *, std::size_t ) >
+	int (Handler::*)( const char *, std::size_t ) >
 {
 	static constexpr bool with_data = true;
 };

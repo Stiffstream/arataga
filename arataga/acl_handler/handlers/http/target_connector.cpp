@@ -58,19 +58,18 @@ public:
 
 protected:
 	void
-	on_start_impl( can_throw_t can_throw ) override
+	on_start_impl() override
 	{
-		initiate_connect( can_throw );
+		initiate_connect();
 	}
 
 	void
-	on_timer_impl( can_throw_t can_throw ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().connect_target_timeout() )
 		{
 			send_negative_response_then_close_connection(
-					can_throw,
 					remove_reason_t::current_operation_timed_out,
 					response_bad_gateway_connect_timeout );
 		}
@@ -86,7 +85,7 @@ public:
 
 private:
 	void
-	initiate_connect( can_throw_t can_throw )
+	initiate_connect()
 	{
 		try
 		{
@@ -94,10 +93,9 @@ private:
 
 			// Helper local function to avoid data duplication.
 			const auto finish_on_failure =
-				[this, &can_throw]( std::string_view message ) -> void
+				[this]( std::string_view message ) -> void
 				{
 					log_problem_then_send_negative_response(
-							can_throw,
 							remove_reason_t::io_error,
 							spdlog::level::err,
 							message,
@@ -135,10 +133,9 @@ private:
 			}
 
 			::arataga::logging::proxy_mode::trace(
-					[this, can_throw]( auto level )
+					[this]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format( "trying to connect {} from {}",
 										fmt::streamed(m_target_endpoint),
@@ -151,17 +148,15 @@ private:
 					m_target_endpoint,
 					with<const asio::error_code &>().make_handler(
 						[this](
-							can_throw_t can_throw,
 							const asio::error_code & ec )
 						{
-							on_async_connect_result( can_throw, ec );
+							on_async_connect_result( ec );
 						} )
 				);
 		}
 		catch( const std::exception & x )
 		{
 			log_problem_then_send_negative_response(
-					can_throw,
 					remove_reason_t::unhandled_exception,
 					spdlog::level::err,
 					fmt::format( "an exception during the creation of "
@@ -175,7 +170,6 @@ private:
 
 	void
 	log_problem_then_send_negative_response(
-		can_throw_t can_throw,
 		remove_reason_t remove_reason,
 		spdlog::level::level_enum log_level,
 		std::string_view log_message,
@@ -184,23 +178,20 @@ private:
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				log_level,
-				[this, can_throw, log_message]( auto level )
+				[this, log_message]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							log_message );
 				} );
 
 		send_negative_response_then_close_connection(
-				can_throw,
 				remove_reason,
 				negative_response );
 	}
 
 	void
 	on_async_connect_result(
-		can_throw_t can_throw,
 		const asio::error_code & ec )
 	{
 		if( ec )
@@ -208,7 +199,6 @@ private:
 			if( asio::error::operation_aborted != ec )
 			{
 				log_problem_then_send_negative_response(
-						can_throw,
 						remove_reason_t::io_error,
 						spdlog::level::warn,
 						fmt::format( "can't connect to target host {}: {}",
@@ -220,10 +210,9 @@ private:
 		else
 		{
 			::arataga::logging::proxy_mode::debug(
-					[this, can_throw]( auto level )
+					[this]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format(
 										"outgoing connection to {} from {} established",
@@ -239,8 +228,7 @@ private:
 					&make_ordinary_method_handler);
 
 			replace_handler(
-					can_throw,
-					[this, &factory]( can_throw_t )
+					[this, &factory]()
 					{
 						return (*factory)(
 								std::move(m_ctx),

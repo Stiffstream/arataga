@@ -70,9 +70,7 @@ connection_handler_t::on_start()
 	// ATTENTION: it's very important for protection from deletion
 	// during replace_connection_handler or remove_connection_handler.
 	auto self = shared_from_this();
-	wrap_action_and_handle_exceptions( [this]( can_throw_t can_throw ) {
-			on_start_impl( can_throw );
-		} );
+	wrap_action_and_handle_exceptions( [this]() { on_start_impl(); } );
 }
 
 void
@@ -81,9 +79,7 @@ connection_handler_t::on_timer()
 	// ATTENTION: it's very important for protection from deletion
 	// during replace_connection_handler or remove_connection_handler.
 	auto self = shared_from_this();
-	wrap_action_and_handle_exceptions( [this]( can_throw_t can_throw ) {
-			on_timer_impl( can_throw );
-		} );
+	wrap_action_and_handle_exceptions( [this]() { on_timer_impl(); } );
 }
 
 void

@@ -91,7 +91,7 @@ class ordinary_method_handler_t final : public handler_with_out_connection_t
 	//! Type of pointer to method that should be called when
 	//! a write operation completes.
 	using write_completed_handler_t =
-		void (ordinary_method_handler_t::*)(can_throw_t);
+		void (ordinary_method_handler_t::*)();
 
 	/*!
 	 * @brief State of a single direction.
@@ -255,10 +255,7 @@ public:
 			}
 		,	m_brief_request_info{ make_brief_request_info( request_info ) }
 	{
-		// We can throw exceptions in the constructor.
-		::arataga::utils::exception_handling_context_t exception_ctx;
-
-		tune_http_settings( exception_ctx.make_can_throw_marker() );
+		tune_http_settings();
 
 		// It is not good to call this method in the constructor:
 		// if an exception is thrown then this exception will be caught
@@ -289,20 +286,17 @@ public:
 		// a new response at all.
 		//
 		// So the call to make_user_end_outgoing_data() is kept here for now.
-		make_user_end_outgoing_data(
-				exception_ctx.make_can_throw_marker(),
-				request_info );
+		make_user_end_outgoing_data( request_info );
 	}
 
 protected:
 	void
-	on_start_impl( can_throw_t can_throw ) override
+	on_start_impl() override
 	{
 		::arataga::logging::proxy_mode::info(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							fmt::format( "outgoing-request={}, host={}, "
 									"request-target={}",
@@ -316,14 +310,14 @@ protected:
 				} );
 
 		// There is data in user_end that should be sent into target_end.
-		write_data_read_from( can_throw, m_user_end, m_target_end );
+		write_data_read_from( m_user_end, m_target_end );
 
 		// Now we can read incoming data from the target end.
-		initiate_async_read_for_direction( can_throw, m_target_end );
+		initiate_async_read_for_direction( m_target_end );
 	}
 
 	void
-	on_timer_impl( can_throw_t can_throw ) override
+	on_timer_impl() override
 	{
 		using namespace arataga::utils::string_literals;
 
@@ -336,7 +330,6 @@ protected:
 			};
 
 			return easy_log_for_connection(
-					can_throw,
 					spdlog::level::warn,
 					"both connections are closed"_static_str );
 		}
@@ -352,7 +345,6 @@ protected:
 			};
 
 			return easy_log_for_connection(
-					can_throw,
 					spdlog::level::warn,
 					"no data read for long time"_static_str );
 		}
@@ -363,12 +355,12 @@ protected:
 		if( m_user_end.m_is_traffic_limit_exceeded )
 		{
 			initiate_write_outgoing_data_or_read_next_incoming_portion(
-					can_throw, m_user_end, m_target_end );
+					m_user_end, m_target_end );
 		}
 		if( m_target_end.m_is_traffic_limit_exceeded )
 		{
 			initiate_write_outgoing_data_or_read_next_incoming_portion(
-					can_throw, m_target_end, m_user_end );
+					m_target_end, m_user_end );
 		}
 	}
 
@@ -407,7 +399,7 @@ private:
 	}
 
 	void
-	tune_http_settings( can_throw_t /*can_throw*/ )
+	tune_http_settings()
 	{
 		// http_parser for user_end direction is already initialized.
 		// But it's paused and has old data.
@@ -511,7 +503,6 @@ private:
 
 	void
 	make_user_end_outgoing_data(
-		can_throw_t can_throw,
 		const request_info_t & request_info )
 	{
 		// Collect the pieces of outgoing data into one buffer.
@@ -532,19 +523,18 @@ private:
 				m_brief_request_info.m_host_field_value );
 
 		// Form the list of header fields that should go to the target host.
-		fill_headers_for_outgoing_request( can_throw, request_info, out_data );
+		fill_headers_for_outgoing_request( request_info, out_data );
 
 		// This the end of the header.
 		fmt::format_to( std::back_inserter(out_data), "\r\n" );
 
 		m_user_end.m_pieces_read.push_back( std::move(out_data) );
 
-		try_complete_parsing_of_initial_user_end_data( can_throw );
+		try_complete_parsing_of_initial_user_end_data();
 	}
 
 	static void
 	fill_headers_for_outgoing_request(
-		can_throw_t /*can_throw*/,
 		const request_info_t & request_info,
 		// Outgoing data should be written here.
 		fmt::memory_buffer & out_data )
@@ -561,8 +551,7 @@ private:
 	}
 
 	void
-	try_complete_parsing_of_initial_user_end_data(
-		can_throw_t /*can_throw*/ )
+	try_complete_parsing_of_initial_user_end_data()
 	{
 		http_handling_state_t & http_state = *(m_user_end.m_http_state);
 
@@ -607,27 +596,25 @@ private:
 
 	// Handler for the completion of write of data read from the user_end.
 	void
-	user_end_default_write_completed_handler(
-		can_throw_t can_throw )
+	user_end_default_write_completed_handler()
 	{
 		// If the incoming request wasn't read completely then we
 		// have to read more.
 		if( incoming_http_message_stage_t::in_progress ==
 				m_user_end.m_incoming_message_stage )
 		{
-			initiate_async_read_for_direction( can_throw, m_user_end );
+			initiate_async_read_for_direction( m_user_end );
 		}
 	}
 
 	// Default handler for the completion of write of data read from the
 	// target_end.
 	void
-	target_end_default_write_completed_handler(
-		can_throw_t can_throw )
+	target_end_default_write_completed_handler()
 	{
 		// This handler is used only while the whole HTTP-response isn't read.
 		// That is why the only thing we can do here is to read more.
-		initiate_async_read_for_direction( can_throw, m_target_end );
+		initiate_async_read_for_direction( m_target_end );
 	}
 
 	// The handler for the completion of write of data read from the
@@ -635,8 +622,7 @@ private:
 	// and switching for the normal procedure of connection-handler
 	// completion.
 	void
-	target_end_normal_finilization_write_completed_handler(
-		can_throw_t can_throw)
+	target_end_normal_finilization_write_completed_handler()
 	{
 		// If there is no need to keep the connection then we can
 		// simply delete the handler.
@@ -652,8 +638,7 @@ private:
 					m_user_end.m_http_state->m_incoming_data_size );
 
 			replace_handler(
-					can_throw,
-					[this, fcd = std::move(first_chunk_data)]( can_throw_t ) mutable
+					[this, fcd = std::move(first_chunk_data)]() mutable
 					{
 						return make_http_handler(
 								std::move(m_ctx),
@@ -677,8 +662,7 @@ private:
 	// target_end that is used in the case of forced deletion of
 	// the current connection-handler.
 	void
-	target_end_destroy_handler_write_completed_handler(
-		can_throw_t )
+	target_end_destroy_handler_write_completed_handler()
 	{
 		connection_remover_t{
 				*this,
@@ -687,13 +671,12 @@ private:
 	}
 
 	int
-	user_end__on_message_begin( can_throw_t can_throw )
+	user_end__on_message_begin()
 	{
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"unexpected case: new message is found in data stream "
 							"from client" );
@@ -703,15 +686,12 @@ private:
 	}
 
 	int
-	user_end__on_url( can_throw_t can_throw,
-		const char *,
-		std::size_t )
+	user_end__on_url( const char *, std::size_t )
 	{
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"unexpected case: URL is found in data stream "
 							"from client" );
@@ -721,15 +701,12 @@ private:
 	}
 
 	int
-	user_end__on_status( can_throw_t can_throw,
-		const char *,
-		std::size_t )
+	user_end__on_status( const char *, std::size_t )
 	{
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"unexpected case: status-line is found in data "
 							"stream from client" );
@@ -739,9 +716,7 @@ private:
 	}
 
 	int
-	user_end__on_header_field( can_throw_t /*can_throw*/,
-		const char *,
-		std::size_t )
+	user_end__on_header_field( const char *, std::size_t )
 	{
 		// It can only be a trailing-header in chunked encoding.
 		// Because we don't support trailing-headers just ignore it.
@@ -749,9 +724,7 @@ private:
 	}
 
 	int
-	user_end__on_header_value( can_throw_t /*can_throw*/,
-		const char *,
-		std::size_t )
+	user_end__on_header_value( const char *, std::size_t )
 	{
 		// It can only be a trailing-header in chunked encoding.
 		// Because we don't support trailing-headers just ignore it.
@@ -759,13 +732,12 @@ private:
 	}
 
 	int
-	user_end__on_headers_complete( can_throw_t can_throw )
+	user_end__on_headers_complete()
 	{
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"unexpected case: repeated call of "
 							"on_headers_complete callback" );
@@ -775,9 +747,7 @@ private:
 	}
 
 	int
-	user_end__on_body( can_throw_t /*can_throw*/,
-		const char * data,
-		std::size_t size )
+	user_end__on_body( const char * data, std::size_t size )
 	{
 		// It's necessarty to write the current piece of data to
 		// the outgoing stream.
@@ -791,7 +761,7 @@ private:
 	}
 
 	int
-	user_end__on_message_complete( can_throw_t /*can_throw*/ )
+	user_end__on_message_complete()
 	{
 		m_user_end.m_incoming_message_stage =
 				incoming_http_message_stage_t::message_completed;
@@ -806,7 +776,7 @@ private:
 	}
 
 	int
-	user_end__on_chunk_header( can_throw_t /*can_throw*/ )
+	user_end__on_chunk_header()
 	{
 		// At this moment http_parser.content_length contains the size
 		// of the current chunk. Use that value to form a header
@@ -819,7 +789,7 @@ private:
 	}
 
 	int
-	user_end__on_chunk_complete( can_throw_t /*can_throw*/ )
+	user_end__on_chunk_complete()
 	{
 		m_user_end.m_pieces_read.push_back( ("\r\n"_static_str).as_view() );
 
@@ -827,22 +797,19 @@ private:
 	}
 
 	int
-	target_end__on_message_begin( can_throw_t /*can_throw*/ )
+	target_end__on_message_begin()
 	{
 		// Nothing to do here.
 		return 0;
 	}
 
 	int
-	target_end__on_url( can_throw_t can_throw,
-		const char *,
-		std::size_t )
+	target_end__on_url( const char *, std::size_t )
 	{
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"unexpected case: URL extracted from HTTP "
 							"response (when HTTP status is expected" );
@@ -852,9 +819,7 @@ private:
 	}
 
 	int
-	target_end__on_status( can_throw_t can_throw,
-		const char * data,
-		std::size_t size )
+	target_end__on_status( const char * data, std::size_t size )
 	{
 		const std::string_view reason_phrase{ data, size };
 
@@ -873,10 +838,9 @@ private:
 					status_line_processing_stage_t::status_code_written;
 
 			::arataga::logging::proxy_mode::info(
-					[this, can_throw, &reason_phrase]( auto level )
+					[this, &reason_phrase]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format( "incoming-reply=HTTP/{}.{} {} {}",
 										m_target_end.m_http_state->m_parser.http_major,
@@ -907,10 +871,9 @@ private:
 				lim < m_response_processing_state.m_status_line.size() )
 		{
 			::arataga::logging::proxy_mode::err(
-					[this, can_throw, &lim]( auto level )
+					[this, &lim]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format(
 										"status-line exceeds limit: size={}, limit={}",
@@ -926,9 +889,7 @@ private:
 	}
 
 	int
-	target_end__on_header_field( can_throw_t can_throw,
-		const char * data,
-		std::size_t size )
+	target_end__on_header_field( const char * data, std::size_t size )
 	{
 		if( m_response_processing_state.m_leading_headers_completed )
 		{
@@ -936,7 +897,7 @@ private:
 			return 0;
 		}
 
-		if( const auto rc = try_complete_response_last_header( can_throw );
+		if( const auto rc = try_complete_response_last_header();
 				0 != rc )
 		{
 			return rc;
@@ -950,10 +911,9 @@ private:
 				lim < m_response_processing_state.m_last_header_name.size() )
 		{
 			::arataga::logging::proxy_mode::err(
-					[this, can_throw, &lim]( auto level )
+					[this, &lim]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format(
 										"http-field name exceeds limit: size={}, "
@@ -971,9 +931,7 @@ private:
 	}
 
 	int
-	target_end__on_header_value( can_throw_t can_throw,
-		const char * data,
-		std::size_t size )
+	target_end__on_header_value( const char * data, std::size_t size )
 	{
 		if( m_response_processing_state.m_leading_headers_completed )
 		{
@@ -990,10 +948,9 @@ private:
 				lim < m_response_processing_state.m_last_header_value.size() )
 		{
 			::arataga::logging::proxy_mode::err(
-					[this, can_throw, &lim]( auto level )
+					[this, &lim]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format(
 										"http-field value exceeds limit: size={}, "
@@ -1011,7 +968,7 @@ private:
 	}
 
 	void
-	handle_connection_header_for_response( can_throw_t /*can_throw*/ )
+	handle_connection_header_for_response()
 	{
 		using namespace restinio::http_field_parsers;
 
@@ -1054,7 +1011,7 @@ private:
 	}
 
 	void
-	remove_hop_by_hop_headers_from_response( can_throw_t /*can_throw*/ )
+	remove_hop_by_hop_headers_from_response()
 	{
 		// Remove all top-to-hop headers.
 		//
@@ -1076,7 +1033,6 @@ private:
 
 	void
 	concat_response_headers_to(
-		can_throw_t /*can_throw*/,
 		fmt::memory_buffer & out_data )
 	{
 		const auto & headers = m_response_processing_state.m_headers;
@@ -1090,13 +1046,13 @@ private:
 	}
 
 	int
-	target_end__on_headers_complete( can_throw_t can_throw )
+	target_end__on_headers_complete()
 	{
 		// Set the flag that leading header fields are completed.
 		// It allows us to ignore trailing-headers.
 		m_response_processing_state.m_leading_headers_completed = true;
 
-		if( const auto rc = try_complete_response_last_header( can_throw );
+		if( const auto rc = try_complete_response_last_header();
 				0 != rc )
 		{
 			return rc;
@@ -1107,9 +1063,9 @@ private:
 
 		complete_and_write_status_line( out_data );
 
-		handle_connection_header_for_response( can_throw );
-		remove_hop_by_hop_headers_from_response( can_throw );
-		concat_response_headers_to( can_throw, out_data );
+		handle_connection_header_for_response();
+		remove_hop_by_hop_headers_from_response();
+		concat_response_headers_to( out_data );
 
 		// The separator between headers and the body.
 		fmt::format_to( std::back_inserter(out_data), "\r\n" );
@@ -1121,9 +1077,7 @@ private:
 	}
 
 	int
-	target_end__on_body( can_throw_t /*can_throw*/,
-		const char * data,
-		std::size_t size )
+	target_end__on_body( const char * data, std::size_t size )
 	{
 		// Have to write another part of the body.
 		m_target_end.m_pieces_read.push_back( 
@@ -1135,7 +1089,7 @@ private:
 	}
 
 	int
-	target_end__on_message_complete( can_throw_t /*can_throw*/ )
+	target_end__on_message_complete()
 	{
 		m_target_end.m_incoming_message_stage =
 				incoming_http_message_stage_t::message_completed;
@@ -1147,7 +1101,7 @@ private:
 	}
 
 	int
-	target_end__on_chunk_header( can_throw_t /*can_throw*/ )
+	target_end__on_chunk_header()
 	{
 		// At this moment http_parser.content_length contains the size
 		// of the current chunk. Use that value to form a header
@@ -1159,7 +1113,7 @@ private:
 	}
 
 	int
-	target_end__on_chunk_complete( can_throw_t /*can_throw*/ )
+	target_end__on_chunk_complete()
 	{
 		m_target_end.m_pieces_read.push_back( ("\r\n"_static_str).as_view() );
 
@@ -1169,7 +1123,7 @@ private:
 	// The return value the same as for http_parser's callbacks.
 	[[nodiscard]]
 	int
-	try_complete_response_last_header( can_throw_t can_throw )
+	try_complete_response_last_header()
 	{
 		if( m_response_processing_state.m_on_header_value_called )
 		{
@@ -1182,10 +1136,9 @@ private:
 					lim < m_response_processing_state.m_total_headers_size )
 			{
 				::arataga::logging::proxy_mode::err(
-						[this, can_throw, &lim]( auto level )
+						[this, &lim]( auto level )
 						{
 							log_message_for_connection(
-									can_throw,
 									level,
 									fmt::format(
 											"total http-fields size exceeds limit: "
@@ -1230,7 +1183,6 @@ private:
 
 	void
 	try_parse_data_read(
-		can_throw_t can_throw,
 		direction_state_t & src_dir )
 	{
 		// Parse the data from the input buffer.
@@ -1255,7 +1207,6 @@ private:
 			// The reaction to a failure depends on the direction and
 			// amount of data written in the opposite direction.
 			return react_to_direction_failure(
-					can_throw,
 					src_dir,
 					remove_reason_t::protocol_error );
 		}
@@ -1264,18 +1215,17 @@ private:
 		switch( src_dir.m_traffic_direction )
 		{
 		case traffic_limiter_t::direction_t::from_user:
-			analyze_incoming_data_parsing_result_for_user_end( can_throw );
+			analyze_incoming_data_parsing_result_for_user_end();
 		break;
 
 		case traffic_limiter_t::direction_t::from_target:
-			analyze_incoming_data_parsing_result_for_target_end( can_throw );
+			analyze_incoming_data_parsing_result_for_target_end();
 		break;
 		}
 	}
 
 	void
 	react_to_direction_failure(
-		can_throw_t can_throw,
 		const direction_state_t & src_dir,
 		remove_reason_t remove_reason )
 	{
@@ -1288,7 +1238,6 @@ private:
 			if( 0u == m_user_end.m_bytes_from_opposite_dir )
 			{
 				return send_negative_response_then_close_connection(
-						can_throw,
 						remove_reason,
 						response_bad_gateway_invalid_response );
 			}
@@ -1301,8 +1250,7 @@ private:
 	}
 
 	void
-	analyze_incoming_data_parsing_result_for_user_end(
-		can_throw_t can_throw )
+	analyze_incoming_data_parsing_result_for_user_end()
 	{
 		// If HTTP-response hasn't read yet then we can send
 		// outgoing data to the target_end. But if HTTP-response has been
@@ -1315,7 +1263,7 @@ private:
 			// HTTP-response hasn't been read. So we can send
 			// another part of the request to the target host.
 			initiate_write_outgoing_data_or_read_next_incoming_portion(
-					can_throw, m_user_end, m_target_end );
+					m_user_end, m_target_end );
 		break;
 
 		case incoming_http_message_stage_t::message_completed:
@@ -1326,8 +1274,7 @@ private:
 	}
 
 	void
-	analyze_incoming_data_parsing_result_for_target_end(
-		can_throw_t can_throw )
+	analyze_incoming_data_parsing_result_for_target_end()
 	{
 		// We should write a part of HTTP-response in any case.
 		// The question is: should we replace on_write_completed handler?
@@ -1359,30 +1306,28 @@ private:
 
 		// Write the next part of HTTP-response.
 		initiate_write_outgoing_data_or_read_next_incoming_portion(
-				can_throw, m_target_end, m_user_end );
+				m_target_end, m_user_end );
 	}
 
 	void
 	initiate_write_outgoing_data_or_read_next_incoming_portion(
-		can_throw_t can_throw,
 		direction_state_t & src_dir,
 		direction_state_t & dest_dir )
 	{
 		if( src_dir.m_pieces_read.empty() )
 		{
 			// There is no data read. Continue the reading.
-			initiate_async_read_for_direction( can_throw, src_dir );
+			initiate_async_read_for_direction( src_dir );
 		}
 		else
 		{
-			write_data_read_from( can_throw, src_dir, dest_dir );
+			write_data_read_from( src_dir, dest_dir );
 		}
 	}
 
 	// This method shouldn't be called if src_dir.m_pieces_read is empty.
 	void
 	write_data_read_from(
-		can_throw_t /*can_throw*/,
 		direction_state_t & src_dir,
 		direction_state_t & dest_dir )
 	{
@@ -1433,7 +1378,6 @@ private:
 				data_to_write,
 				with<const asio::error_code &, std::size_t>().make_handler(
 					[this, &src_dir, &dest_dir, reserved_capacity](
-						can_throw_t can_throw,
 						const asio::error_code & ec, std::size_t bytes )
 					{
 						reserved_capacity.release(
@@ -1443,7 +1387,6 @@ private:
 								bytes );
 
 						on_write_result(
-								can_throw,
 								src_dir, dest_dir,
 								ec,
 								bytes );
@@ -1453,7 +1396,6 @@ private:
 
 	void
 	initiate_async_read_for_direction(
-		can_throw_t /*can_throw*/,
 		// Source direction for reading.
 		direction_state_t & src_dir )
 	{
@@ -1465,11 +1407,9 @@ private:
 				buffer,
 				with<const asio::error_code &, std::size_t>().make_handler(
 					[this, &src_dir](
-						can_throw_t can_throw,
 						const asio::error_code & ec, std::size_t bytes )
 					{
 						on_read_result(
-								can_throw,
 								src_dir,
 								ec,
 								bytes );
@@ -1480,7 +1420,6 @@ private:
 	[[nodiscard]]
 	remove_reason_t
 	detect_remove_reason_from_read_result_error_code(
-		can_throw_t can_throw,
 		direction_state_t & src_dir,
 		const asio::error_code & ec )
 	{
@@ -1520,10 +1459,9 @@ private:
 				// It's an I/O error.
 
 				::arataga::logging::proxy_mode::debug(
-						[this, can_throw, &src_dir, &ec]( auto level )
+						[this, &src_dir, &ec]( auto level )
 						{
 							log_message_for_connection(
-									can_throw,
 									level,
 									fmt::format( "error reading data from {}: {}",
 											src_dir.m_name,
@@ -1555,7 +1493,6 @@ private:
 	 */
 	void
 	on_read_result(
-		can_throw_t can_throw,
 		direction_state_t & src_dir,
 		const asio::error_code & ec,
 		std::size_t bytes_transferred )
@@ -1563,10 +1500,9 @@ private:
 // Kept here for debugging purposes.
 #if 0
 		::arataga::logging::proxy_mode::trace(
-				[this, can_throw, &src_dir, ec, bytes_transferred]( auto level )
+				[this, &src_dir, ec, bytes_transferred]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							fmt::format( "on_read_result {}, ec: {}, bytes: {}",
 									src_dir.m_name, ec.message(), bytes_transferred) );
@@ -1578,10 +1514,9 @@ private:
 			// We have to clode the connection or send "502 Bad Gateway"
 			// response in dependency of the direction type.
 			return react_to_direction_failure(
-					can_throw,
 					src_dir,
 					detect_remove_reason_from_read_result_error_code(
-							can_throw, src_dir, ec ) );
+							src_dir, ec ) );
 		}
 		else
 		{
@@ -1593,13 +1528,12 @@ private:
 
 			// We have to parse data read and send them into 
 			// the opposite direction.
-			try_parse_data_read( can_throw, src_dir );
+			try_parse_data_read( src_dir );
 		}
 	}
 
 	void
 	on_write_result(
-		can_throw_t can_throw,
 		direction_state_t & src_dir,
 		direction_state_t & dest_dir,
 		const asio::error_code & ec,
@@ -1614,7 +1548,7 @@ private:
 			};
 
 			log_on_io_error(
-					can_throw, ec,
+					ec,
 					fmt::format( "writting to {}", dest_dir.m_name ) );
 		}
 		else
@@ -1635,11 +1569,11 @@ private:
 
 			// If there is some remaining data it has to be written.
 			if( !src_dir.m_pieces_read.empty() )
-				write_data_read_from( can_throw, src_dir, dest_dir );
+				write_data_read_from( src_dir, dest_dir );
 			else
 				// All pending data was written, so further actions
 				// will be performed by completion handler.
-				(this->*src_dir.m_on_write_completed)( can_throw );
+				(this->*src_dir.m_on_write_completed)();
 		}
 	}
 };

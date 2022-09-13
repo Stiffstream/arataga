@@ -132,19 +132,19 @@ public:
 
 protected:
 	void
-	on_start_impl( can_throw_t can_throw ) override
+	on_start_impl() override
 	{
 		// Try to parse existing data.
-		try_handle_data_read( can_throw );
+		try_handle_data_read();
 	}
 
 	void
-	on_timer_impl( can_throw_t can_throw ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().http_headers_complete_timeout() )
 		{
-			handle_headers_complete_timeout( can_throw );
+			handle_headers_complete_timeout();
 		}
 	}
 
@@ -161,24 +161,21 @@ private:
 	// Or sends a negative response because of long time of waiting
 	// the completeness of the request.
 	void
-	handle_headers_complete_timeout(
-		can_throw_t can_throw )
+	handle_headers_complete_timeout()
 	{
 		if( m_incoming_message_started )
 		{
 			// Client started the request.
 			// In that case we should send a response.
 			::arataga::logging::proxy_mode::warn(
-					[this, can_throw]( auto level )
+					[this]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								"http_headers_complete timed out" );
 					} );
 
 			send_negative_response_then_close_connection(
-					can_throw,
 					remove_reason_t::current_operation_timed_out,
 					response_request_timeout_headers_complete_timeout );
 		}
@@ -193,7 +190,6 @@ private:
 					
 			using namespace arataga::utils::string_literals;
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::info,
 					"no incoming HTTP request for a long time"_static_str );
 		}
@@ -202,7 +198,7 @@ private:
 	// The return value the same as for http_parser's callbacks.
 	[[nodiscard]]
 	int
-	complete_current_field_if_necessary( can_throw_t can_throw )
+	complete_current_field_if_necessary()
 	{
 		if( m_on_header_value_called )
 		{
@@ -216,10 +212,9 @@ private:
 					lim < m_total_headers_size )
 			{
 				::arataga::logging::proxy_mode::err(
-						[this, can_throw, &lim]( auto level )
+						[this, &lim]( auto level )
 						{
 							log_message_for_connection(
-									can_throw,
 									level,
 									fmt::format(
 											"total http-fields size exceeds limit: "
@@ -247,7 +242,7 @@ private:
 	 * @{
 	 */
 	int
-	on_message_begin( can_throw_t /*can_throw*/ )
+	on_message_begin()
 	{
 		// Set the flag of the start of processing of new HTTP-request.
 		// We can't handle time-outs right way without that flag.
@@ -283,7 +278,7 @@ private:
 	}
 
 	int
-	on_url( can_throw_t can_throw, const char * data, std::size_t length )
+	on_url( const char * data, std::size_t length )
 	{
 		m_request_info.m_request_target.append( data, length );
 		if( const auto lim =
@@ -291,10 +286,9 @@ private:
 				lim < m_request_info.m_request_target.size() )
 		{
 			::arataga::logging::proxy_mode::err(
-					[this, can_throw, &lim]( auto level )
+					[this, &lim]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format(
 										"request-target exceeds limit: size={}, limit={}",
@@ -310,14 +304,13 @@ private:
 	}
 
 	int
-	on_status( can_throw_t can_throw, const char *, std::size_t )
+	on_status( const char *, std::size_t )
 	{
 		// Don't expect a status on incoming request.
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"HTTP status found in an incoming HTTP request" );
 				} );
@@ -326,10 +319,9 @@ private:
 	}
 
 	int
-	on_header_field(
-		can_throw_t can_throw, const char * data, std::size_t length )
+	on_header_field( const char * data, std::size_t length )
 	{
-		if( const auto rc = complete_current_field_if_necessary( can_throw );
+		if( const auto rc = complete_current_field_if_necessary();
 				0 != rc )
 		{
 			return rc;
@@ -341,10 +333,9 @@ private:
 				lim < m_current_http_field_name.size() )
 		{
 			::arataga::logging::proxy_mode::err(
-					[this, can_throw, &lim]( auto level )
+					[this, &lim]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format(
 										"http-field name exceeds limit: "
@@ -361,8 +352,7 @@ private:
 	}
 
 	int
-	on_header_value(
-		can_throw_t can_throw, const char * data, std::size_t length )
+	on_header_value( const char * data, std::size_t length )
 	{
 		m_current_http_field_value.append( data, length );
 		m_on_header_value_called = true;
@@ -371,10 +361,9 @@ private:
 				lim < m_current_http_field_value.size() )
 		{
 			::arataga::logging::proxy_mode::err(
-					[this, can_throw, &lim]( auto level )
+					[this, &lim]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format(
 										"http-field value exceeds limit: "
@@ -391,10 +380,9 @@ private:
 	}
 
 	int
-	on_headers_complete_for_bodyful_method(
-		can_throw_t can_throw )
+	on_headers_complete_for_bodyful_method()
 	{
-		if( const auto rc = complete_current_field_if_necessary( can_throw );
+		if( const auto rc = complete_current_field_if_necessary();
 				0 != rc )
 		{
 			return rc;
@@ -411,10 +399,9 @@ private:
 	}
 
 	int
-	on_headers_complete_for_bodyless_method(
-		can_throw_t can_throw )
+	on_headers_complete_for_bodyless_method()
 	{
-		if( const auto rc = complete_current_field_if_necessary( can_throw );
+		if( const auto rc = complete_current_field_if_necessary();
 				0 != rc )
 		{
 			return rc;
@@ -424,15 +411,13 @@ private:
 	}
 
 	int
-	on_body_for_bodyful_method(
-		can_throw_t can_throw, const char *, std::size_t )
+	on_body_for_bodyful_method( const char *, std::size_t )
 	{
 		// We shouldn't extract body on this stage of request processing.
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"unexpected failre: HTTP body extracted by "
 							"initial_http_handler" );
@@ -442,15 +427,13 @@ private:
 	}
 
 	int
-	on_body_for_bodyless_method(
-		can_throw_t can_throw, const char *, std::size_t )
+	on_body_for_bodyless_method( const char *, std::size_t )
 	{
 		// A body for bodyless method, this is an error.
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							fmt::format( "unexpected failre: HTTP body for "
 									"bodyless method {}",
@@ -462,15 +445,13 @@ private:
 	}
 
 	int
-	on_message_complete_for_bodyful_method(
-		can_throw_t can_throw )
+	on_message_complete_for_bodyful_method()
 	{
 		// Don't expect the end of the HTTP-request for method with a body.
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"unexpected failre: HTTP message completed "
 							"by initial_http_handler" );
@@ -480,7 +461,7 @@ private:
 	}
 
 	int
-	on_message_complete_for_bodyless_method( can_throw_t /*can_throw*/ )
+	on_message_complete_for_bodyless_method()
 	{
 		// We can create the next handler for HTTP method without a body.
 		m_should_next_handler_be_created = true;
@@ -489,15 +470,13 @@ private:
 	}
 
 	int
-	on_chunk_header_for_bodyful_method(
-		can_throw_t can_throw )
+	on_chunk_header_for_bodyful_method()
 	{
 		// Don't expect chunks on that stage.
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"unexpected failre: HTTP body chunk extracted "
 							"by initial_http_handler" );
@@ -507,15 +486,13 @@ private:
 	}
 
 	int
-	on_chunk_header_for_bodyless_method(
-		can_throw_t can_throw )
+	on_chunk_header_for_bodyless_method()
 	{
 		// Don't expect a chunk for HTTP-method without a body.
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							fmt::format( "unexpected failre: HTTP body chunk for "
 									"bodyless method {}",
@@ -527,15 +504,13 @@ private:
 	}
 
 	int
-	on_chunk_complete_for_bodyful_method(
-		can_throw_t can_throw )
+	on_chunk_complete_for_bodyful_method()
 	{
 		// Do not deal with chunks on that stage.
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							"unexpected failre: HTTP body chunk completed "
 							"by initial_http_handler" );
@@ -545,15 +520,13 @@ private:
 	}
 
 	int
-	on_chunk_complete_for_bodyless_method(
-		can_throw_t can_throw )
+	on_chunk_complete_for_bodyless_method()
 	{
 		// Don't expect chunks on that stage.
 		::arataga::logging::proxy_mode::err(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							fmt::format( "unexpected failre: HTTP body chunk for "
 									"bodyless method {}",
@@ -614,8 +587,7 @@ private:
 	}
 
 	void
-	try_handle_data_read(
-		can_throw_t can_throw )
+	try_handle_data_read()
 	{
 		const auto bytes_to_parse = m_request_state->m_incoming_data_size
 				- m_request_state->m_next_execute_position;
@@ -636,10 +608,9 @@ private:
 				HPE_PAUSED != m_request_state->m_parser.http_errno )
 		{
 			::arataga::logging::proxy_mode::err(
-					[this, can_throw]( auto level )
+					[this]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								fmt::format( "http_parser returned an error: {}",
 										http_errno_name( static_cast<http_errno>(
@@ -650,7 +621,6 @@ private:
 			// We encounter an error that doesn't allow us to continue
 			// the processing.
 			return send_negative_response_then_close_connection(
-					can_throw,
 					remove_reason_t::protocol_error,
 					response_bad_request_parse_error_detected );
 		}
@@ -660,7 +630,7 @@ private:
 		// Can we go to the next handler?
 		if( m_should_next_handler_be_created )
 		{
-			return initiate_switch_to_next_handler( can_throw );
+			return initiate_switch_to_next_handler();
 		}
 
 		// If we're still here then there is no enough data in
@@ -686,11 +656,9 @@ private:
 		m_connection.async_read_some(
 				buffer,
 				with<const asio::error_code &, std::size_t>().make_handler(
-					[this](
-						can_throw_t can_throw,
-						const asio::error_code & ec, std::size_t bytes )
+					[this]( const asio::error_code & ec, std::size_t bytes )
 					{
-						on_read_result( can_throw, ec, bytes );
+						on_read_result( ec, bytes );
 					} )
 			);
 	}
@@ -698,7 +666,6 @@ private:
 	// Handling of Connection and Proxy-Connection header fields.
 	std::optional< invalid_state_t >
 	handle_connection_header(
-		can_throw_t can_throw,
 		std::string_view field_name )
 	{
 		std::optional< invalid_state_t > opt_error;
@@ -722,11 +689,9 @@ private:
 					{
 						// There is an error of parsing a header field.
 						::arataga::logging::proxy_mode::err(
-								[this, can_throw, &field_name, &field_value, &r](
-									auto level )
+								[this, &field_name, &field_value, &r]( auto level )
 								{
 									log_message_for_connection(
-											can_throw,
 											level,
 											fmt::format(
 													"unexpected case: unable to parse "
@@ -802,15 +767,15 @@ private:
 	// A value of invalid_state_t can be returned if some error
 	// will be detected during the processing.
 	std::optional< invalid_state_t >
-	try_modify_request_headers( can_throw_t can_throw )
+	try_modify_request_headers()
 	{
 		std::optional< invalid_state_t > opt_error;
 
-		opt_error = handle_connection_header( can_throw, "Connection" );
+		opt_error = handle_connection_header( "Connection" );
 		if( opt_error )
 			return *opt_error;
 
-		opt_error = handle_connection_header( can_throw, "Proxy-Connection" );
+		opt_error = handle_connection_header( "Proxy-Connection" );
 		if( opt_error )
 			return *opt_error;
 
@@ -820,13 +785,13 @@ private:
 	}
 
 	validity_check_result_t
-	ensure_valid_state_before_switching_handler( can_throw_t can_throw )
+	ensure_valid_state_before_switching_handler()
 	{
 		// NOTE: since v.0.5.0 we don't check the presence of some
 		// additional data after the completion of parsing CONNECT request.
 		// If there are some data it will be processed by the next handler.
 
-		auto opt_error = try_modify_request_headers( can_throw );
+		auto opt_error = try_modify_request_headers();
 		if( opt_error )
 			return *opt_error;
 
@@ -834,14 +799,12 @@ private:
 	}
 
 	void
-	initiate_switch_to_next_handler(
-		can_throw_t can_throw )
+	initiate_switch_to_next_handler()
 	{
 		::arataga::logging::proxy_mode::info(
-				[this, can_throw]( auto level )
+				[this]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							fmt::format( "incoming-request={}, request-target={}",
 									http_method_str( m_request_info.m_method ),
@@ -858,8 +821,7 @@ private:
 					// Everything is fine, can delegate processing to the next
 					// connection-handler.
 					replace_handler(
-							can_throw,
-							[this]( can_throw_t )
+							[this]()
 							{
 								return make_authentification_handler(
 									std::move(m_ctx),
@@ -871,17 +833,15 @@ private:
 				},
 				[&]( const invalid_state_t & err ) {
 					send_negative_response_then_close_connection(
-							can_throw,
 							remove_reason_t::protocol_error,
 							err.m_response );
 				}
 			},
-			ensure_valid_state_before_switching_handler( can_throw ) );
+			ensure_valid_state_before_switching_handler() );
 	}
 
 	void
 	on_read_result(
-		can_throw_t can_throw,
 		const asio::error_code & ec,
 		std::size_t bytes_transferred )
 	{
@@ -904,10 +864,9 @@ private:
 				if( m_total_bytes_parsed )
 				{
 					::arataga::logging::proxy_mode::warn(
-							[this, can_throw]( auto level )
+							[this]( auto level )
 							{
 								log_message_for_connection(
-										can_throw,
 										level,
 										fmt::format(
 												"user_end closed by client after "
@@ -924,7 +883,6 @@ private:
 			if( remove_reason_t::io_error == reason )
 			{
 				log_on_io_error(
-						can_throw,
 						ec,
 						"reading incoming HTTP-request" );
 			}
@@ -932,13 +890,12 @@ private:
 		else
 		{
 			// There is no errors. Can handle the data read.
-			on_data_read( can_throw, bytes_transferred );
+			on_data_read( bytes_transferred );
 		}
 	}
 
 	void
 	on_data_read(
-		can_throw_t can_throw,
 		std::size_t bytes_transferred )
 	{
 		m_request_state->m_incoming_data_size = bytes_transferred;
@@ -947,7 +904,7 @@ private:
 		// because all previous content was already parsed.
 		m_request_state->m_next_execute_position = 0u;
 
-		try_handle_data_read( can_throw );
+		try_handle_data_read();
 	}
 };
 

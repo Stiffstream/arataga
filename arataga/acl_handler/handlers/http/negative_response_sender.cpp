@@ -49,20 +49,19 @@ public:
 
 protected:
 	void
-	on_start_impl( can_throw_t can_throw ) override
+	on_start_impl() override
 	{
 		write_whole(
-				can_throw,
 				m_connection,
 				m_negative_response_buffer,
-				[this]( can_throw_t /*can_throw*/ )
+				[this]()
 				{
 					connection_remover_t{ *this, m_remove_reason };
 				} );
 	}
 
 	void
-	on_timer_impl( can_throw_t can_throw ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().http_negative_response_timeout() )
@@ -73,10 +72,9 @@ protected:
 			};
 
 			::arataga::logging::proxy_mode::warn(
-					[this, can_throw]( auto level )
+					[this]( auto level )
 					{
 						log_message_for_connection(
-								can_throw,
 								level,
 								"http_negative_response timed out" );
 					} );
