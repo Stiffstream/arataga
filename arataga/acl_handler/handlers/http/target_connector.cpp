@@ -58,28 +58,25 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+			[this]( can_throw_t can_throw )
 			{
-				initiate_connect( delete_protector, can_throw );
+				initiate_connect( can_throw );
 			} );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().connect_target_timeout() )
 		{
 			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					send_negative_response_then_close_connection(
-							delete_protector,
 							can_throw,
 							remove_reason_t::current_operation_timed_out,
 							response_bad_gateway_connect_timeout );
@@ -97,9 +94,7 @@ public:
 
 private:
 	void
-	initiate_connect(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw )
+	initiate_connect( can_throw_t can_throw )
 	{
 		try
 		{
@@ -107,11 +102,9 @@ private:
 
 			// Helper local function to avoid data duplication.
 			const auto finish_on_failure =
-				[this, &delete_protector, &can_throw](
-					std::string_view message ) -> void
+				[this, &can_throw]( std::string_view message ) -> void
 				{
 					log_problem_then_send_negative_response(
-							delete_protector,
 							can_throw,
 							remove_reason_t::io_error,
 							spdlog::level::err,
@@ -166,19 +159,16 @@ private:
 					m_target_endpoint,
 					with<const asio::error_code &>().make_handler(
 						[this](
-							delete_protector_t delete_protector,
 							can_throw_t can_throw,
 							const asio::error_code & ec )
 						{
-							on_async_connect_result(
-									delete_protector, can_throw, ec );
+							on_async_connect_result( can_throw, ec );
 						} )
 				);
 		}
-		catch( const std::exception & x ) 
+		catch( const std::exception & x )
 		{
 			log_problem_then_send_negative_response(
-					delete_protector,
 					can_throw,
 					remove_reason_t::unhandled_exception,
 					spdlog::level::err,
@@ -193,7 +183,6 @@ private:
 
 	void
 	log_problem_then_send_negative_response(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		remove_reason_t remove_reason,
 		spdlog::level::level_enum log_level,
@@ -212,7 +201,6 @@ private:
 				} );
 
 		send_negative_response_then_close_connection(
-				delete_protector,
 				can_throw,
 				remove_reason,
 				negative_response );
@@ -220,7 +208,6 @@ private:
 
 	void
 	on_async_connect_result(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		const asio::error_code & ec )
 	{
@@ -229,7 +216,6 @@ private:
 			if( asio::error::operation_aborted != ec )
 			{
 				log_problem_then_send_negative_response(
-						delete_protector,
 						can_throw,
 						remove_reason_t::io_error,
 						spdlog::level::warn,
@@ -261,7 +247,6 @@ private:
 					&make_ordinary_method_handler);
 
 			replace_handler(
-					delete_protector,
 					can_throw,
 					[this, &factory]( can_throw_t )
 					{

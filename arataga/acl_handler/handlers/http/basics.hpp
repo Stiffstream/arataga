@@ -144,10 +144,9 @@ protected:
 	// That new handler does the send of negative response.
 	void
 	send_negative_response_then_close_connection(
-			delete_protector_t delete_protector,
-			can_throw_t can_throw,
-			remove_reason_t reason,
-			arataga::utils::string_literal_t whole_response );
+		can_throw_t can_throw,
+		remove_reason_t reason,
+		arataga::utils::string_literal_t whole_response );
 };
 
 //

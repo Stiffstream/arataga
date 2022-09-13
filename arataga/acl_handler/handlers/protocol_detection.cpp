@@ -42,11 +42,10 @@ public :
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw ) {
+			[this]( can_throw_t can_throw ) {
 				// A new connection has to be reflected in the stats.
 				context().stats_inc_connection_count( connection_type_t::generic );
 
@@ -55,29 +54,24 @@ protected:
 						can_throw,
 						m_connection,
 						m_in_buffer,
-						[this]( delete_protector_t delete_protector,
-							can_throw_t can_throw )
+						[this]( can_throw_t can_throw )
 						{
-							analyze_data_read( delete_protector, can_throw );
+							analyze_data_read( can_throw );
 						} );
 			} );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().protocol_detection_timeout() )
 		{
 			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this](
-					delete_protector_t delete_protector,
-					can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::current_operation_timed_out
 					};
 
@@ -117,9 +111,7 @@ private:
 		>;
 
 	void
-	analyze_data_read(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw )
+	analyze_data_read( can_throw_t can_throw )
 	{
 		detection_result_t detection_result{ unknown_protocol_t{} };
 
@@ -144,7 +136,7 @@ private:
 
 		// Analyze the result of acception attempt.
 		std::visit( ::arataga::utils::overloaded{
-				[this, delete_protector, can_throw]
+				[this, can_throw]
 				( connection_accepted_t & accepted )
 				{
 					// Update the stats. It should be done now because
@@ -159,19 +151,17 @@ private:
 
 					// The handler can be changed now.
 					replace_handler(
-							delete_protector,
 							can_throw,
 							[&]( can_throw_t ) {
 								return std::move(accepted.m_handler);
 							} );
 				},
-				[this, delete_protector, can_throw]
+				[this, can_throw]
 				( const unknown_protocol_t & info )
 				{
 					// We don't know the protocol, the connection has to be closed.
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::unsupported_protocol
 					};
 

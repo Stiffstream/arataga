@@ -85,11 +85,10 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw ) {
+			[this]( can_throw_t can_throw ) {
 				::arataga::logging::proxy_mode::info(
 						[this, can_throw]( auto level )
 						{
@@ -103,13 +102,11 @@ protected:
 				write_whole( can_throw,
 						m_connection,
 						m_positive_response,
-						[this]( delete_protector_t delete_protector,
-							can_throw_t can_throw )
+						[this]( can_throw_t can_throw )
 						{
 							// The response is sent. Now we can switch
 							// to data-transfer-handler.
 							replace_handler(
-									delete_protector,
 									can_throw,
 									[this]( can_throw_t )
 									{
@@ -126,11 +123,10 @@ protected:
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+			[this]( can_throw_t can_throw )
 			{
 				// Will use idle_connection_timeout as the timeout duration.
 				const auto now = std::chrono::steady_clock::now();
@@ -139,7 +135,6 @@ protected:
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::no_activity_for_too_long
 					};
 

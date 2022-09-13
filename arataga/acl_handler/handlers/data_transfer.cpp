@@ -283,11 +283,10 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw ) {
+			[this]( can_throw_t can_throw ) {
 				// If there are some data already read from m_user_end
 				// then this data has to be written.
 				if( m_user_end.m_available_for_write_buffers )
@@ -306,17 +305,15 @@ protected:
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw ) {
+			[this]( can_throw_t can_throw ) {
 				// Don't expect that case but make a check for safety.
 				if( !m_user_end.m_is_alive && !m_target_end.m_is_alive )
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::unexpected_and_unsupported_case
 					};
 
@@ -336,7 +333,6 @@ protected:
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::no_activity_for_too_long
 					};
 
@@ -444,7 +440,6 @@ private:
 						reserved_capacity.m_capacity),
 				with<const asio::error_code &, std::size_t>().make_handler(
 					[this, &src_dir, &dest_dir, reserved_capacity, selected_buffer](
-						delete_protector_t delete_protector,
 						can_throw_t can_throw,
 						const asio::error_code & ec,
 						std::size_t bytes )
@@ -456,7 +451,6 @@ private:
 								bytes );
 
 						on_read_result(
-								delete_protector,
 								can_throw,
 								src_dir, dest_dir, selected_buffer,
 								ec,
@@ -506,13 +500,11 @@ private:
 						buffer.m_data_size),
 				with<const asio::error_code &, std::size_t>().make_handler(
 					[this, &dest_dir, &src_dir, selected_buffer](
-						delete_protector_t delete_protector,
 						can_throw_t can_throw,
 						const asio::error_code & ec,
 						std::size_t bytes )
 					{
 						on_write_result(
-								delete_protector,
 								can_throw,
 								dest_dir, src_dir, selected_buffer,
 								ec, bytes );
@@ -642,7 +634,6 @@ private:
 
 	void
 	on_read_result(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		// The direction from that data was read.
 		direction_state_t & src_dir,
@@ -686,7 +677,6 @@ private:
 					// There is no sense to continue.
 					connection_remover_t{
 							*this,
-							delete_protector,
 							r.m_remove_reason
 					};
 				},
@@ -707,7 +697,6 @@ private:
 
 	void
 	on_write_result(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		// The direction to that data was written.
 		direction_state_t & dest_dir,
@@ -742,7 +731,6 @@ private:
 		{
 			connection_remover_t remover{
 					*this,
-					delete_protector,
 					remove_reason_t::io_error
 			};
 
@@ -761,7 +749,6 @@ private:
 			{
 				connection_remover_t remover{
 						*this,
-						delete_protector,
 						remove_reason_t::io_error
 				};
 						
@@ -803,7 +790,6 @@ private:
 					{
 						connection_remover_t remover{
 								*this,
-								delete_protector,
 								remove_reason_t::normal_completion
 						};
 

@@ -53,11 +53,10 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t, can_throw_t )
+				[this]( can_throw_t )
 				{
 					context().async_resolve_hostname(
 							m_id,
@@ -65,28 +64,23 @@ protected:
 							with<const dns_resolving::hostname_result_t &>()
 							.make_handler(
 								[this](
-									delete_protector_t delete_protector,
 									can_throw_t can_throw,
 									const dns_resolving::hostname_result_t & result )
 								{
-									on_hostname_result(
-											delete_protector,
-											can_throw,
-											result );
+									on_hostname_result( can_throw, result );
 								} )
 					);
 				} );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().dns_resolving_timeout() )
 		{
 			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					::arataga::logging::proxy_mode::warn(
 							[this, can_throw]( auto level )
@@ -98,7 +92,6 @@ protected:
 							} );
 
 					send_negative_response_then_close_connection(
-							delete_protector,
 							can_throw,
 							remove_reason_t::current_operation_timed_out,
 							response_request_timeout_dns_lookup_timeout );
@@ -117,7 +110,6 @@ public:
 private:
 	void
 	on_hostname_result(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		const dns_resolving::hostname_result_t & result )
 	{
@@ -132,7 +124,6 @@ private:
 						};
 
 					replace_handler(
-							delete_protector,
 							can_throw,
 							[this, &target_endpoint]( can_throw_t )
 							{
@@ -162,7 +153,6 @@ private:
 							} );
 
 					send_negative_response_then_close_connection(
-							delete_protector,
 							can_throw,
 							remove_reason_t::unresolved_target,
 							response_bad_gateway_dns_lookup_failure );

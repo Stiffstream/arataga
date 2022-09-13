@@ -255,7 +255,6 @@ public:
 
 	void
 	replace_connection_handler(
-		aclh::delete_protector_t,
 		connection_id_t id,
 		aclh::connection_handler_shptr_t handler ) override
 	{
@@ -276,7 +275,6 @@ public:
 
 	void
 	remove_connection_handler(
-		aclh::delete_protector_t,
 		connection_id_t id,
 		aclh::remove_reason_t /*reason*/ ) noexcept override
 	{

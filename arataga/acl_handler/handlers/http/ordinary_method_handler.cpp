@@ -91,8 +91,7 @@ class ordinary_method_handler_t final : public handler_with_out_connection_t
 	//! Type of pointer to method that should be called when
 	//! a write operation completes.
 	using write_completed_handler_t =
-		void (ordinary_method_handler_t::*)(
-				delete_protector_t, can_throw_t);
+		void (ordinary_method_handler_t::*)(can_throw_t);
 
 	/*!
 	 * @brief State of a single direction.
@@ -297,11 +296,10 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw )
+			[this]( can_throw_t can_throw )
 			{
 				::arataga::logging::proxy_mode::info(
 						[this, can_throw]( auto level )
@@ -329,18 +327,16 @@ protected:
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw ) {
+			[this]( can_throw_t can_throw ) {
 			{
 				// Don't expect this but let's make a check for safety...
 				if( m_user_end.is_dead() && m_target_end.is_dead() )
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::unexpected_and_unsupported_case
 					};
 
@@ -362,7 +358,6 @@ protected:
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::no_activity_for_too_long
 					};
 
@@ -626,7 +621,6 @@ private:
 	// Handler for the completion of write of data read from the user_end.
 	void
 	user_end_default_write_completed_handler(
-		delete_protector_t /*delete_protector*/,
 		can_throw_t can_throw )
 	{
 		// If the incoming request wasn't read completely then we
@@ -642,7 +636,6 @@ private:
 	// target_end.
 	void
 	target_end_default_write_completed_handler(
-		delete_protector_t /*delete_protector*/,
 		can_throw_t can_throw )
 	{
 		// This handler is used only while the whole HTTP-response isn't read.
@@ -656,7 +649,6 @@ private:
 	// completion.
 	void
 	target_end_normal_finilization_write_completed_handler(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw)
 	{
 		// If there is no need to keep the connection then we can
@@ -673,7 +665,6 @@ private:
 					m_user_end.m_http_state->m_incoming_data_size );
 
 			replace_handler(
-					delete_protector,
 					can_throw,
 					[this, fcd = std::move(first_chunk_data)]( can_throw_t ) mutable
 					{
@@ -689,7 +680,6 @@ private:
 		{
 			connection_remover_t{
 					*this,
-					delete_protector,
 					remove_reason_t::normal_completion
 			};
 		}
@@ -701,12 +691,10 @@ private:
 	// the current connection-handler.
 	void
 	target_end_destroy_handler_write_completed_handler(
-		delete_protector_t delete_protector,
 		can_throw_t )
 	{
 		connection_remover_t{
 				*this,
-				delete_protector,
 				remove_reason_t::http_response_before_completion_of_http_request
 		};
 	}
@@ -1255,7 +1243,6 @@ private:
 
 	void
 	try_parse_data_read(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		direction_state_t & src_dir )
 	{
@@ -1281,7 +1268,6 @@ private:
 			// The reaction to a failure depends on the direction and
 			// amount of data written in the opposite direction.
 			return react_to_direction_failure(
-					delete_protector,
 					can_throw,
 					src_dir,
 					remove_reason_t::protocol_error );
@@ -1302,7 +1288,6 @@ private:
 
 	void
 	react_to_direction_failure(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		const direction_state_t & src_dir,
 		remove_reason_t remove_reason )
@@ -1316,7 +1301,6 @@ private:
 			if( 0u == m_user_end.m_bytes_from_opposite_dir )
 			{
 				return send_negative_response_then_close_connection(
-						delete_protector,
 						can_throw,
 						remove_reason,
 						response_bad_gateway_invalid_response );
@@ -1326,7 +1310,7 @@ private:
 		// In all other cases just close the connections.
 		// We have read a garbage from the user_end or from the target_end
 		// (but after sending something to the user).
-		connection_remover_t{ *this, delete_protector, remove_reason };
+		connection_remover_t{ *this, remove_reason };
 	}
 
 	void
@@ -1462,7 +1446,6 @@ private:
 				data_to_write,
 				with<const asio::error_code &, std::size_t>().make_handler(
 					[this, &src_dir, &dest_dir, reserved_capacity](
-						delete_protector_t delete_protector,
 						can_throw_t can_throw,
 						const asio::error_code & ec, std::size_t bytes )
 					{
@@ -1473,7 +1456,6 @@ private:
 								bytes );
 
 						on_write_result(
-								delete_protector,
 								can_throw,
 								src_dir, dest_dir,
 								ec,
@@ -1496,12 +1478,10 @@ private:
 				buffer,
 				with<const asio::error_code &, std::size_t>().make_handler(
 					[this, &src_dir](
-						delete_protector_t delete_protector,
 						can_throw_t can_throw,
 						const asio::error_code & ec, std::size_t bytes )
 					{
 						on_read_result(
-								delete_protector,
 								can_throw,
 								src_dir,
 								ec,
@@ -1588,7 +1568,6 @@ private:
 	 */
 	void
 	on_read_result(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		direction_state_t & src_dir,
 		const asio::error_code & ec,
@@ -1612,7 +1591,6 @@ private:
 			// We have to clode the connection or send "502 Bad Gateway"
 			// response in dependency of the direction type.
 			return react_to_direction_failure(
-					delete_protector,
 					can_throw,
 					src_dir,
 					detect_remove_reason_from_read_result_error_code(
@@ -1628,13 +1606,12 @@ private:
 
 			// We have to parse data read and send them into 
 			// the opposite direction.
-			try_parse_data_read( delete_protector, can_throw, src_dir );
+			try_parse_data_read( can_throw, src_dir );
 		}
 	}
 
 	void
 	on_write_result(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		direction_state_t & src_dir,
 		direction_state_t & dest_dir,
@@ -1646,7 +1623,6 @@ private:
 		{
 			connection_remover_t remover{
 					*this,
-					delete_protector,
 					remove_reason_t::io_error
 			};
 
@@ -1676,7 +1652,7 @@ private:
 			else
 				// All pending data was written, so further actions
 				// will be performed by completion handler.
-				(this->*src_dir.m_on_write_completed)( delete_protector, can_throw );
+				(this->*src_dir.m_on_write_completed)( can_throw );
 		}
 	}
 };

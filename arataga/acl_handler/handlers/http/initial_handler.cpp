@@ -132,30 +132,26 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+			[this]( can_throw_t can_throw )
 			{
 				// Try to parse existing data.
-				try_handle_data_read( delete_protector, can_throw );
+				try_handle_data_read( can_throw );
 			} );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().http_headers_complete_timeout() )
 		{
 			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
-					handle_headers_complete_timeout(
-							delete_protector,
-							can_throw );
+					handle_headers_complete_timeout( can_throw );
 				} );
 		}
 	}
@@ -174,7 +170,6 @@ private:
 	// the completeness of the request.
 	void
 	handle_headers_complete_timeout(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw )
 	{
 		if( m_incoming_message_started )
@@ -191,7 +186,6 @@ private:
 					} );
 
 			send_negative_response_then_close_connection(
-					delete_protector,
 					can_throw,
 					remove_reason_t::current_operation_timed_out,
 					response_request_timeout_headers_complete_timeout );
@@ -202,7 +196,6 @@ private:
 			// Just close the connection.
 			connection_remover_t remover{
 					*this,
-					delete_protector,
 					remove_reason_t::http_no_incoming_request
 			};
 					
@@ -630,7 +623,6 @@ private:
 
 	void
 	try_handle_data_read(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw )
 	{
 		const auto bytes_to_parse = m_request_state->m_incoming_data_size
@@ -666,7 +658,6 @@ private:
 			// We encounter an error that doesn't allow us to continue
 			// the processing.
 			return send_negative_response_then_close_connection(
-					delete_protector,
 					can_throw,
 					remove_reason_t::protocol_error,
 					response_bad_request_parse_error_detected );
@@ -677,9 +668,7 @@ private:
 		// Can we go to the next handler?
 		if( m_should_next_handler_be_created )
 		{
-			return initiate_switch_to_next_handler(
-					delete_protector,
-					can_throw );
+			return initiate_switch_to_next_handler( can_throw );
 		}
 
 		// If we're still here then there is no enough data in
@@ -706,11 +695,10 @@ private:
 				buffer,
 				with<const asio::error_code &, std::size_t>().make_handler(
 					[this](
-						delete_protector_t delete_protector,
 						can_throw_t can_throw,
 						const asio::error_code & ec, std::size_t bytes )
 					{
-						on_read_result( delete_protector, can_throw, ec, bytes );
+						on_read_result( can_throw, ec, bytes );
 					} )
 			);
 	}
@@ -855,7 +843,6 @@ private:
 
 	void
 	initiate_switch_to_next_handler(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw )
 	{
 		::arataga::logging::proxy_mode::info(
@@ -879,7 +866,6 @@ private:
 					// Everything is fine, can delegate processing to the next
 					// connection-handler.
 					replace_handler(
-							delete_protector,
 							can_throw,
 							[this]( can_throw_t )
 							{
@@ -893,7 +879,6 @@ private:
 				},
 				[&]( const invalid_state_t & err ) {
 					send_negative_response_then_close_connection(
-							delete_protector,
 							can_throw,
 							remove_reason_t::protocol_error,
 							err.m_response );
@@ -904,7 +889,6 @@ private:
 
 	void
 	on_read_result(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		const asio::error_code & ec,
 		std::size_t bytes_transferred )
@@ -941,7 +925,7 @@ private:
 				}
 			}
 
-			connection_remover_t remover{ *this, delete_protector, reason };
+			connection_remover_t remover{ *this, reason };
 
 			// If this is an I/O error then this fact should be logged
 			// before removal of the connection-handler.
@@ -956,13 +940,12 @@ private:
 		else
 		{
 			// There is no errors. Can handle the data read.
-			on_data_read( delete_protector, can_throw, bytes_transferred );
+			on_data_read( can_throw, bytes_transferred );
 		}
 	}
 
 	void
 	on_data_read(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		std::size_t bytes_transferred )
 	{
@@ -972,7 +955,7 @@ private:
 		// because all previous content was already parsed.
 		m_request_state->m_next_execute_position = 0u;
 
-		try_handle_data_read( delete_protector, can_throw );
+		try_handle_data_read( can_throw );
 	}
 };
 

@@ -187,31 +187,27 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+			[this]( can_throw_t can_throw )
 			{
 				// Try to select an authentification method.
-				handle_data_already_read_or_read_more(
-						delete_protector, can_throw );
+				handle_data_already_read_or_read_more( can_throw );
 			} );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
 		{
 			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::current_operation_timed_out
 					};
 
@@ -234,12 +230,9 @@ public:
 
 private:
 	void
-	handle_data_already_read_or_read_more(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw )
+	handle_data_already_read_or_read_more( can_throw_t can_throw )
 	{
-		if( const auto read_result = try_handle_data_read(
-				delete_protector, can_throw );
+		if( const auto read_result = try_handle_data_read( can_throw );
 				data_parsing_result_t::need_more == read_result )
 		{
 			// Has to read more data.
@@ -247,21 +240,16 @@ private:
 					can_throw,
 					m_connection,
 					m_first_pdu,
-					[this](
-						delete_protector_t delete_protector,
-						can_throw_t can_throw )
+					[this]( can_throw_t can_throw )
 					{
-						handle_data_already_read_or_read_more(
-								delete_protector, can_throw );
+						handle_data_already_read_or_read_more( can_throw );
 					} );
 		}
 	}
 
 	[[nodiscard]]
 	data_parsing_result_t
-	try_handle_data_read(
-		delete_protector_t /*delete_protector*/,
-		can_throw_t can_throw )
+	try_handle_data_read( can_throw_t can_throw )
 	{
 		// NOTE: this check is used for safety reasons.
 		if( !m_first_pdu.remaining() )
@@ -347,11 +335,9 @@ private:
 					can_throw,
 					m_connection,
 					m_response,
-					[this]
-					( delete_protector_t delete_protector, can_throw_t can_throw )
+					[this]( can_throw_t can_throw )
 					{
 						replace_handler(
-								delete_protector,
 								can_throw,
 								[this]( can_throw_t can_throw ) {
 									return make_appropriate_handler( can_throw );
@@ -369,11 +355,10 @@ private:
 					m_response,
 					[this, method_ids = collect_method_ids(
 							can_throw, methods_sequence )]
-					( delete_protector_t delete_protector, can_throw_t can_throw )
+					( can_throw_t can_throw )
 					{
 						connection_remover_t remover{
 								*this,
-								delete_protector,
 								remove_reason_t::protocol_error
 						};
 
@@ -516,32 +501,28 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+			[this]( can_throw_t can_throw )
 			{
 				// Since v.0.3.2 we assume that some bytes from auth PDU
 				// can already be in m_auth_pdu buffer.
-				handle_data_already_read_or_read_more(
-						delete_protector, can_throw );
+				handle_data_already_read_or_read_more( can_throw );
 			} );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
 		{
 			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::current_operation_timed_out
 					};
 
@@ -564,12 +545,9 @@ public:
 
 private:
 	void
-	handle_data_already_read_or_read_more(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw )
+	handle_data_already_read_or_read_more( can_throw_t can_throw )
 	{
-		if( const auto read_result = try_handle_data_read(
-				delete_protector, can_throw );
+		if( const auto read_result = try_handle_data_read( can_throw );
 				data_parsing_result_t::need_more == read_result )
 		{
 			// Has to read the next portion of data.
@@ -577,20 +555,16 @@ private:
 					can_throw,
 					m_connection,
 					m_auth_pdu,
-					[this]
-					( delete_protector_t delete_protector, can_throw_t can_throw )
+					[this]( can_throw_t can_throw )
 					{
-						handle_data_already_read_or_read_more(
-								delete_protector, can_throw );
+						handle_data_already_read_or_read_more( can_throw );
 					} );
 		}
 	}
 
 	[[nodiscard]]
 	data_parsing_result_t
-	try_handle_data_read(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw )
+	try_handle_data_read( can_throw_t can_throw )
 	{
 		// Since v.0.3.2 this method can be called when m_auth_pdu is empty.
 		if( 0u == m_auth_pdu.total_size() )
@@ -604,7 +578,6 @@ private:
 		{
 			connection_remover_t remover{
 					*this,
-					delete_protector,
 					remove_reason_t::protocol_error
 			};
 
@@ -671,10 +644,9 @@ private:
 				m_connection,
 				m_response,
 				[this, uname = std::move(username), passwd = std::move(password)]
-				( delete_protector_t delete_protector, can_throw_t can_throw )
-				{ 
+				( can_throw_t can_throw )
+				{
 					replace_handler(
-							delete_protector,
 							can_throw,
 							[&]( can_throw_t )
 							{
@@ -753,40 +725,33 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw )
+			[this]( can_throw_t can_throw )
 			{
 				read_some(
 						can_throw,
 						m_connection,
 						m_auth_pdu,
-						[this]
-						( delete_protector_t delete_protector,
-							can_throw_t can_throw )
+						[this]( can_throw_t can_throw )
 						{
-							handle_data_already_read_or_read_more(
-									delete_protector,
-									can_throw );
+							handle_data_already_read_or_read_more( can_throw );
 						} );
 			} );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
 		{
 			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::current_operation_timed_out
 					};
 
@@ -809,12 +774,9 @@ public:
 
 private:
 	void
-	handle_data_already_read_or_read_more(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw )
+	handle_data_already_read_or_read_more( can_throw_t can_throw )
 	{
-		if( const auto read_result = try_handle_data_read(
-				delete_protector, can_throw );
+		if( const auto read_result = try_handle_data_read( can_throw );
 				data_parsing_result_t::need_more == read_result )
 		{
 			// Has to read the next portion of data.
@@ -822,20 +784,16 @@ private:
 					can_throw,
 					m_connection,
 					m_auth_pdu,
-					[this]
-					( delete_protector_t delete_protector, can_throw_t can_throw )
+					[this]( can_throw_t can_throw )
 					{
-						handle_data_already_read_or_read_more(
-								delete_protector, can_throw );
+						handle_data_already_read_or_read_more( can_throw );
 					} );
 		}
 	}
 
 	[[nodiscard]]
 	data_parsing_result_t
-	try_handle_data_read(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw )
+	try_handle_data_read( can_throw_t can_throw )
 	{
 		// NOTE: this check is used for safety reasons.
 		if( !m_auth_pdu.remaining() )
@@ -857,7 +815,6 @@ private:
 		if( version_byte == version )
 		{
 			replace_handler(
-					delete_protector,
 					can_throw,
 					[this]( can_throw_t )
 					{
@@ -883,7 +840,6 @@ private:
 		{
 			connection_remover_t remover{
 					*this,
-					delete_protector,
 					remove_reason_t::protocol_error
 			};
 
@@ -909,7 +865,6 @@ private:
 		{
 			connection_remover_t remover{
 					*this,
-					delete_protector,
 					remove_reason_t::protocol_error
 			};
 
@@ -932,7 +887,6 @@ private:
 		{
 			connection_remover_t remover{
 					*this,
-					delete_protector,
 					remove_reason_t::protocol_error
 			};
 
@@ -966,11 +920,9 @@ private:
 				can_throw,
 				m_connection,
 				m_response,
-				[this]
-				( delete_protector_t delete_protector, can_throw_t can_throw )
-				{ 
+				[this]( can_throw_t can_throw )
+				{
 					replace_handler(
-							delete_protector,
 							can_throw,
 							[this]( can_throw_t ) 
 							{
@@ -1069,38 +1021,33 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw )
+			[this]( can_throw_t can_throw )
 			{
 				read_some(
 					can_throw,
 					m_connection,
 					m_command_pdu,
-					[this]
-					( delete_protector_t delete_protector, can_throw_t can_throw )
+					[this]( can_throw_t can_throw )
 					{
-						handle_data_already_read_or_read_more(
-								delete_protector, can_throw );
+						handle_data_already_read_or_read_more( can_throw );
 					} );
 			} );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
 		{
 			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::current_operation_timed_out
 					};
 
@@ -1128,12 +1075,9 @@ public:
 
 private:
 	void
-	handle_data_already_read_or_read_more(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw )
+	handle_data_already_read_or_read_more( can_throw_t can_throw )
 	{
-		if( const auto read_result = try_handle_data_read(
-				delete_protector, can_throw );
+		if( const auto read_result = try_handle_data_read( can_throw );
 				data_parsing_result_t::need_more == read_result )
 		{
 			// Has to read the next portion of data.
@@ -1141,12 +1085,9 @@ private:
 					can_throw,
 					m_connection,
 					m_command_pdu,
-					[this]
-					( delete_protector_t delete_protector, can_throw_t can_throw )
+					[this]( can_throw_t can_throw )
 					{
-						handle_data_already_read_or_read_more(
-								delete_protector,
-								can_throw );
+						handle_data_already_read_or_read_more( can_throw );
 					} );
 		}
 	}
@@ -1154,7 +1095,6 @@ private:
 	[[nodiscard]]
 	data_parsing_result_t
 	try_handle_data_read(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw )
 	{
 		// NOTE: this check is used for safety reasons.
@@ -1171,7 +1111,6 @@ private:
 		{
 			connection_remover_t remover{
 					*this,
-					delete_protector,
 					remove_reason_t::protocol_error
 			};
 
@@ -1201,7 +1140,7 @@ private:
 		data_parsing_result_t success_flag;
 		byte_sequence_t dst_addr_bytes;
 		std::tie(success_flag, dst_addr_bytes) = try_extract_dst_addr(
-				delete_protector, can_throw, atype );
+				can_throw, atype );
 		if( success_flag != data_parsing_result_t::success )
 			return success_flag;
 
@@ -1225,7 +1164,6 @@ private:
 			// This command has to be handled by another handler.
 			// That handler will send the reply.
 			replace_handler(
-					delete_protector,
 					can_throw,
 					[&]( can_throw_t )
 					{
@@ -1247,7 +1185,6 @@ private:
 			// This command has to be handled by another handler.
 			// That handler will send the reply.
 			replace_handler(
-					delete_protector,
 					can_throw,
 					[&]( can_throw_t )
 					{
@@ -1290,7 +1227,6 @@ private:
 	[[nodiscard]]
 	std::tuple< data_parsing_result_t, byte_sequence_t >
 	try_extract_dst_addr(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		std::byte atype )
 	{
@@ -1323,7 +1259,6 @@ private:
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::protocol_error
 					};
 
@@ -1368,10 +1303,9 @@ private:
 				can_throw,
 				m_connection,
 				m_negative_reply_pdu,
-				[this, reason]
-				( delete_protector_t delete_protector, can_throw_t )
+				[this, reason]( can_throw_t )
 				{
-					connection_remover_t{ *this, delete_protector, reason };
+					connection_remover_t{ *this, reason };
 				} );
 	}
 };
@@ -1452,7 +1386,6 @@ protected:
 	//! the current operation.
 	using timeout_handler_t = void (*)(
 			connect_and_bind_handler_base_t &,
-			delete_protector_t,
 			can_throw_t);
 
 	//! The pointer to the method that controls the duration of
@@ -1526,11 +1459,10 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw ) {
+			[this]( can_throw_t can_throw ) {
 				// Starting action depends on the type of dst_addr.
 				std::visit( ::arataga::utils::overloaded{
 					[this, can_throw]( const asio::ip::address_v4 & ipv4 ) {
@@ -1555,16 +1487,12 @@ protected:
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+			[this]( can_throw_t can_throw )
 			{
-				(*m_last_op_timeout_handler)(
-						*this,
-						delete_protector,
-						can_throw );
+				(*m_last_op_timeout_handler)( *this, can_throw );
 			} );
 	}
 
@@ -1579,7 +1507,6 @@ protected:
 	static void
 	dns_resolving_timeout_handler(
 		connect_and_bind_handler_base_t & self,
-		delete_protector_t,
 		can_throw_t can_throw )
 	{
 		if( std::chrono::steady_clock::now() >= self.m_last_op_started_at +
@@ -1597,7 +1524,6 @@ protected:
 	static void
 	authentification_timeout_handler(
 		connect_and_bind_handler_base_t & self,
-		delete_protector_t,
 		can_throw_t can_throw )
 	{
 		if( std::chrono::steady_clock::now() >= self.m_last_op_started_at +
@@ -1704,7 +1630,6 @@ protected:
 				hostname,
 				with<const dns_resolving::hostname_result_t &>().make_handler(
 					[this](
-						delete_protector_t,
 						can_throw_t can_throw,
 						const dns_resolving::hostname_result_t & result )
 					{
@@ -1732,7 +1657,7 @@ protected:
 					m_dst_port
 				},
 				with<authentification::result_t>().make_handler(
-					[this]( delete_protector_t /*delete_protector*/,
+					[this](
 						can_throw_t can_throw,
 						authentification::result_t result )
 					{
@@ -1835,9 +1760,9 @@ protected:
 				can_throw,
 				m_connection,
 				m_response,
-				[this, reason]( delete_protector_t delete_protector, can_throw_t )
+				[this, reason]( can_throw_t )
 				{
-					connection_remover_t{ *this, delete_protector, reason };
+					connection_remover_t{ *this, reason };
 				} );
 	}
 
@@ -1932,7 +1857,6 @@ private:
 	static void
 	connect_target_timeout_handler(
 		connect_and_bind_handler_base_t & self,
-		delete_protector_t,
 		can_throw_t can_throw )
 	{
 		// We can't simply access the content via a reference to the base class,
@@ -2039,7 +1963,6 @@ private:
 					target_endpoint,
 					with<const asio::error_code &>().make_handler(
 						[this](
-							delete_protector_t /*delete_protector*/,
 							can_throw_t can_throw,
 							const asio::error_code & ec )
 						{
@@ -2115,11 +2038,10 @@ private:
 				can_throw,
 				m_connection,
 				m_response,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					// ...the response is sent, we can replace the handler.
 					replace_handler(
-							delete_protector,
 							can_throw,
 							[this]( can_throw_t )
 							{
@@ -2194,7 +2116,6 @@ private:
 	static void
 	accept_incoming_timeout_handler(
 		connect_and_bind_handler_base_t & self,
-		delete_protector_t,
 		can_throw_t can_throw )
 	{
 		// We can't simply access the content via a reference to the base class,
@@ -2328,7 +2249,7 @@ private:
 		m_acceptor.async_accept(
 				with<const asio::error_code &, asio::ip::tcp::socket>()
 				.make_handler(
-					[this]( delete_protector_t /*delete_protector*/,
+					[this](
 						can_throw_t can_throw,
 						const asio::error_code & ec,
 						asio::ip::tcp::socket connection )
@@ -2411,7 +2332,7 @@ private:
 				can_throw,
 				m_connection,
 				m_response,
-				[this]( delete_protector_t, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					// The reply is sent, now we can accept incoming connections.
 					initiate_async_accept( can_throw );
@@ -2435,12 +2356,10 @@ private:
 				m_connection,
 				m_response,
 				[this, in_conn = std::move(connection)](
-					delete_protector_t delete_protector,
 					can_throw_t can_throw ) mutable
 				{
 					// The reply has been sent, now we can replace the handler.
 					replace_handler(
-							delete_protector,
 							can_throw,
 							[this, &in_conn]( can_throw_t )
 							{

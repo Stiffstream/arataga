@@ -120,11 +120,10 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+			[this]( can_throw_t can_throw )
 			{
 				// If username/password are set, they have to be extracted.
 				auto username_password_extraction_result =
@@ -145,7 +144,6 @@ protected:
 							} );
 
 					send_negative_response_then_close_connection(
-							delete_protector,
 							can_throw,
 							remove_reason_t::protocol_error,
 							response_bad_request_auth_params_extraction_failure );
@@ -171,7 +169,6 @@ protected:
 							} );
 
 					send_negative_response_then_close_connection(
-							delete_protector,
 							can_throw,
 							remove_reason_t::protocol_error,
 							response_bad_request_target_host_extraction_failure );
@@ -198,7 +195,6 @@ protected:
 							} );
 
 					send_negative_response_then_close_connection(
-							delete_protector,
 							can_throw,
 							remove_reason_t::protocol_error,
 							response_bad_request_invalid_request_target );
@@ -216,14 +212,13 @@ protected:
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().authentification_timeout() )
 		{
 			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					::arataga::logging::proxy_mode::warn(
 							[this, can_throw]( auto level )
@@ -236,7 +231,6 @@ protected:
 
 					// We can only send the response and close the connection.
 					send_negative_response_then_close_connection(
-							delete_protector,
 							can_throw,
 							remove_reason_t::current_operation_timed_out,
 							response_proxy_auth_required_auth_timeout );
@@ -583,19 +577,17 @@ private:
 				},
 				with<authentification::result_t>().make_handler(
 					[this](
-						delete_protector_t delete_protector,
 						can_throw_t can_throw,
 						authentification::result_t result )
 					{
 						on_authentification_result(
-								delete_protector, can_throw, result );
+								can_throw, result );
 					} )
 			);
 	}
 
 	void
 	on_authentification_result(
-		delete_protector_t delete_protector,
 		can_throw_t can_throw,
 		authentification::result_t & result )
 	{
@@ -603,7 +595,6 @@ private:
 				[&]( authentification::success_t & info )
 				{
 					replace_handler(
-							delete_protector,
 							can_throw,
 							[this, &info]( can_throw_t )
 							{
@@ -631,7 +622,6 @@ private:
 							} );
 
 					send_negative_response_then_close_connection(
-							delete_protector,
 							can_throw,
 							remove_reason_t::access_denied,
 							response_proxy_auth_required_not_authorized );

@@ -49,23 +49,19 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
 		wrap_action_and_handle_exceptions(
-				delete_protector,
-				[&]( delete_protector_t, can_throw_t can_throw )
+				[&]( can_throw_t can_throw )
 				{
 					write_whole(
 							can_throw,
 							m_connection,
 							m_negative_response_buffer,
-							[this](
-								delete_protector_t delete_protector,
-								can_throw_t /*can_throw*/ )
+							[this]( can_throw_t /*can_throw*/ )
 							{
 								connection_remover_t{
 										*this,
-										delete_protector,
 										m_remove_reason
 									};
 							} );
@@ -73,18 +69,16 @@ protected:
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().http_negative_response_timeout() )
 		{
 			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
+				[this]( can_throw_t can_throw )
 				{
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::current_operation_timed_out
 					};
 

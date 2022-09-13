@@ -437,7 +437,6 @@ a_handler_t::so_evt_finish()
 
 void
 a_handler_t::replace_connection_handler(
-	delete_protector_t,
 	connection_id_t id,
 	connection_handler_shptr_t handler )
 {
@@ -464,7 +463,6 @@ a_handler_t::replace_connection_handler(
 
 void
 a_handler_t::remove_connection_handler(
-	delete_protector_t,
 	connection_id_t id,
 	remove_reason_t reason ) noexcept
 {
