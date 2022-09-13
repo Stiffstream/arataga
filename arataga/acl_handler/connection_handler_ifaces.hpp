@@ -663,10 +663,10 @@ protected:
 	 * @{
 	 */
 	virtual void
-	on_start_impl() = 0;
+	on_start_impl( can_throw_t can_throw ) = 0;
 
 	virtual void
-	on_timer_impl() = 0;
+	on_timer_impl( can_throw_t can_throw ) = 0;
 	/*!
 	 * @}
 	 */

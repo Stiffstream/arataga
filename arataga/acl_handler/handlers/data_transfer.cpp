@@ -283,81 +283,75 @@ public:
 
 protected:
 	void
-	on_start_impl() override
+	on_start_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw ) {
-				// If there are some data already read from m_user_end
-				// then this data has to be written.
-				if( m_user_end.m_available_for_write_buffers )
-				{
-					initiate_async_write_for_direction(
-							can_throw,
-							m_target_end,
-							m_user_end );
-				}
+		// If there are some data already read from m_user_end
+		// then this data has to be written.
+		if( m_user_end.m_available_for_write_buffers )
+		{
+			initiate_async_write_for_direction(
+					can_throw,
+					m_target_end,
+					m_user_end );
+		}
 
-				// Initiate the data read from both connection.
-				// The data that is read first will be written first.
-				initiate_read_user_end( can_throw );
-				initiate_read_target_end( can_throw );
-			} );
+		// Initiate the data read from both connection.
+		// The data that is read first will be written first.
+		initiate_read_user_end( can_throw );
+		initiate_read_target_end( can_throw );
 	}
 
 	void
-	on_timer_impl() override
+	on_timer_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw ) {
-				// Don't expect that case but make a check for safety.
-				if( !m_user_end.m_is_alive && !m_target_end.m_is_alive )
-				{
-					connection_remover_t remover{
-							*this,
-							remove_reason_t::unexpected_and_unsupported_case
-					};
+		// Don't expect that case but make a check for safety.
+		if( !m_user_end.m_is_alive && !m_target_end.m_is_alive )
+		{
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::unexpected_and_unsupported_case
+			};
 
-					using namespace arataga::utils::string_literals;
-					return easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"both connections are closed"_static_str );
-				}
+			using namespace arataga::utils::string_literals;
+			return easy_log_for_connection(
+					can_throw,
+					spdlog::level::warn,
+					"both connections are closed"_static_str );
+		}
 
-				// Some connection is still alive. So we have to check
-				// inactivity time.
-				const auto now = std::chrono::steady_clock::now();
+		// Some connection is still alive. So we have to check
+		// inactivity time.
+		const auto now = std::chrono::steady_clock::now();
 
-				if( m_last_read_at +
-						context().config().idle_connection_timeout() < now )
-				{
-					connection_remover_t remover{
-							*this,
-							remove_reason_t::no_activity_for_too_long
-					};
+		if( m_last_read_at +
+				context().config().idle_connection_timeout() < now )
+		{
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::no_activity_for_too_long
+			};
 
-					using namespace arataga::utils::string_literals;
-					return easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"no data read for long time"_static_str );
-				}
+			using namespace arataga::utils::string_literals;
+			return easy_log_for_connection(
+					can_throw,
+					spdlog::level::warn,
+					"no data read for long time"_static_str );
+		}
 
-				// If some bandwidth limit was exceeded then we have to
-				// recheck that limit and initiate a new read if it's possible.
-				if( m_user_end.m_is_traffic_limit_exceeded )
-				{
-					// It's safe to initiate a new read operation because
-					// yet another check will be done inside initiate_read_*
-					// methods. As the result the flag will be set into the
-					// right value.
-					initiate_read_user_end( can_throw );
-				}
-				if( m_target_end.m_is_traffic_limit_exceeded )
-				{
-					initiate_read_target_end( can_throw );
-				}
-			} );
+		// If some bandwidth limit was exceeded then we have to
+		// recheck that limit and initiate a new read if it's possible.
+		if( m_user_end.m_is_traffic_limit_exceeded )
+		{
+			// It's safe to initiate a new read operation because
+			// yet another check will be done inside initiate_read_*
+			// methods. As the result the flag will be set into the
+			// right value.
+			initiate_read_user_end( can_throw );
+		}
+		if( m_target_end.m_is_traffic_limit_exceeded )
+		{
+			initiate_read_target_end( can_throw );
+		}
 	}
 
 	arataga::utils::string_literal_t

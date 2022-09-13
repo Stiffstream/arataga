@@ -187,36 +187,28 @@ public:
 
 protected:
 	void
-	on_start_impl() override
+	on_start_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw )
-			{
-				// Try to select an authentification method.
-				handle_data_already_read_or_read_more( can_throw );
-			} );
+		// Try to select an authentification method.
+		handle_data_already_read_or_read_more( can_throw );
 	}
 
 	void
-	on_timer_impl() override
+	on_timer_impl( can_throw_t can_throw ) override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
 		{
-			wrap_action_and_handle_exceptions(
-				[this]( can_throw_t can_throw )
-				{
-					connection_remover_t remover{
-							*this,
-							remove_reason_t::current_operation_timed_out
-					};
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::current_operation_timed_out
+			};
 
-					using namespace arataga::utils::string_literals;
-					easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"socks5: handshake phase timed out"_static_str );
-				} );
+			using namespace arataga::utils::string_literals;
+			easy_log_for_connection(
+					can_throw,
+					spdlog::level::warn,
+					"socks5: handshake phase timed out"_static_str );
 		}
 	}
 
@@ -501,37 +493,29 @@ public:
 
 protected:
 	void
-	on_start_impl() override
+	on_start_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw )
-			{
-				// Since v.0.3.2 we assume that some bytes from auth PDU
-				// can already be in m_auth_pdu buffer.
-				handle_data_already_read_or_read_more( can_throw );
-			} );
+		// Since v.0.3.2 we assume that some bytes from auth PDU
+		// can already be in m_auth_pdu buffer.
+		handle_data_already_read_or_read_more( can_throw );
 	}
 
 	void
-	on_timer_impl() override
+	on_timer_impl( can_throw_t can_throw ) override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
 		{
-			wrap_action_and_handle_exceptions(
-				[this]( can_throw_t can_throw )
-				{
-					connection_remover_t remover{
-							*this,
-							remove_reason_t::current_operation_timed_out
-					};
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::current_operation_timed_out
+			};
 
-					using namespace arataga::utils::string_literals;
-					easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"socks5: handshake phase timed out"_static_str );
-				} );
+			using namespace arataga::utils::string_literals;
+			easy_log_for_connection(
+					can_throw,
+					spdlog::level::warn,
+					"socks5: handshake phase timed out"_static_str );
 		}
 	}
 
@@ -725,42 +709,34 @@ public:
 
 protected:
 	void
-	on_start_impl() override
+	on_start_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw )
-			{
-				read_some(
-						can_throw,
-						m_connection,
-						m_auth_pdu,
-						[this]( can_throw_t can_throw )
-						{
-							handle_data_already_read_or_read_more( can_throw );
-						} );
-			} );
+		read_some(
+				can_throw,
+				m_connection,
+				m_auth_pdu,
+				[this]( can_throw_t can_throw )
+				{
+					handle_data_already_read_or_read_more( can_throw );
+				} );
 	}
 
 	void
-	on_timer_impl() override
+	on_timer_impl( can_throw_t can_throw ) override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
 		{
-			wrap_action_and_handle_exceptions(
-				[this]( can_throw_t can_throw )
-				{
-					connection_remover_t remover{
-							*this,
-							remove_reason_t::current_operation_timed_out
-					};
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::current_operation_timed_out
+			};
 
-					using namespace arataga::utils::string_literals;
-					easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"socks5: handshake phase timed out"_static_str );
-				} );
+			using namespace arataga::utils::string_literals;
+			easy_log_for_connection(
+					can_throw,
+					spdlog::level::warn,
+					"socks5: handshake phase timed out"_static_str );
 		}
 	}
 
@@ -1021,47 +997,39 @@ public:
 
 protected:
 	void
-	on_start_impl() override
+	on_start_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
+		read_some(
+			can_throw,
+			m_connection,
+			m_command_pdu,
 			[this]( can_throw_t can_throw )
 			{
-				read_some(
-					can_throw,
-					m_connection,
-					m_command_pdu,
-					[this]( can_throw_t can_throw )
-					{
-						handle_data_already_read_or_read_more( can_throw );
-					} );
+				handle_data_already_read_or_read_more( can_throw );
 			} );
 	}
 
 	void
-	on_timer_impl() override
+	on_timer_impl( can_throw_t can_throw ) override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().socks_handshake_phase_timeout() )
 		{
-			wrap_action_and_handle_exceptions(
-				[this]( can_throw_t can_throw )
-				{
-					connection_remover_t remover{
-							*this,
-							remove_reason_t::current_operation_timed_out
-					};
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::current_operation_timed_out
+			};
 
-					using namespace arataga::utils::string_literals;
-					easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"socks5_command timed out"_static_str );
+			using namespace arataga::utils::string_literals;
+			easy_log_for_connection(
+					can_throw,
+					spdlog::level::warn,
+					"socks5_command timed out"_static_str );
 
-					easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"socks5: handshake phase timed out"_static_str );
-				} );
+			easy_log_for_connection(
+					can_throw,
+					spdlog::level::warn,
+					"socks5: handshake phase timed out"_static_str );
 		}
 	}
 
@@ -1459,41 +1427,34 @@ public:
 
 protected:
 	void
-	on_start_impl() override
+	on_start_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw ) {
-				// Starting action depends on the type of dst_addr.
-				std::visit( ::arataga::utils::overloaded{
-					[this, can_throw]( const asio::ip::address_v4 & ipv4 ) {
-						try_start_with_direct_address( can_throw, ipv4 );
-					},
-					[this, can_throw]( const asio::ip::address_v6 & ipv6 ) {
-						try_start_with_direct_address( can_throw, ipv6 );
-					},
-					[this, can_throw]( const std::string & hostname ) {
-						// The domain name of the target host is known.
-						// Store it now to be used later for authentification.
-						m_target_host = hostname;
+		// Starting action depends on the type of dst_addr.
+		std::visit( ::arataga::utils::overloaded{
+			[this, can_throw]( const asio::ip::address_v4 & ipv4 ) {
+				try_start_with_direct_address( can_throw, ipv4 );
+			},
+			[this, can_throw]( const asio::ip::address_v6 & ipv6 ) {
+				try_start_with_direct_address( can_throw, ipv6 );
+			},
+			[this, can_throw]( const std::string & hostname ) {
+				// The domain name of the target host is known.
+				// Store it now to be used later for authentification.
+				m_target_host = hostname;
 
-						// DNS lookup can be a long operation.
-						// So we authenitificate the user first and only then
-						// initiate DNS lookup (in the case of successful
-						// authentification).
-						initiate_authentification( can_throw );
-					} },
-					m_dst_addr );
-			} );
+				// DNS lookup can be a long operation.
+				// So we authenitificate the user first and only then
+				// initiate DNS lookup (in the case of successful
+				// authentification).
+				initiate_authentification( can_throw );
+			} },
+			m_dst_addr );
 	}
 
 	void
-	on_timer_impl() override
+	on_timer_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw )
-			{
-				(*m_last_op_timeout_handler)( *this, can_throw );
-			} );
+		(*m_last_op_timeout_handler)( *this, can_throw );
 	}
 
 	//! Start a main operation after the successful authentification

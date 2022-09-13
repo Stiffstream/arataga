@@ -49,48 +49,37 @@ public:
 
 protected:
 	void
-	on_start_impl() override
+	on_start_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-				[&]( can_throw_t can_throw )
+		write_whole(
+				can_throw,
+				m_connection,
+				m_negative_response_buffer,
+				[this]( can_throw_t /*can_throw*/ )
 				{
-					write_whole(
-							can_throw,
-							m_connection,
-							m_negative_response_buffer,
-							[this]( can_throw_t /*can_throw*/ )
-							{
-								connection_remover_t{
-										*this,
-										m_remove_reason
-									};
-							} );
+					connection_remover_t{ *this, m_remove_reason };
 				} );
 	}
 
 	void
-	on_timer_impl() override
+	on_timer_impl( can_throw_t can_throw ) override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().http_negative_response_timeout() )
 		{
-			wrap_action_and_handle_exceptions(
-				[this]( can_throw_t can_throw )
-				{
-					connection_remover_t remover{
-							*this,
-							remove_reason_t::current_operation_timed_out
-					};
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::current_operation_timed_out
+			};
 
-					::arataga::logging::proxy_mode::warn(
-							[this, can_throw]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										"http_negative_response timed out" );
-							} );
-				} );
+			::arataga::logging::proxy_mode::warn(
+					[this, can_throw]( auto level )
+					{
+						log_message_for_connection(
+								can_throw,
+								level,
+								"http_negative_response timed out" );
+					} );
 		}
 	}
 

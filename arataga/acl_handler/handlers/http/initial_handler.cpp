@@ -132,27 +132,19 @@ public:
 
 protected:
 	void
-	on_start_impl() override
+	on_start_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw )
-			{
-				// Try to parse existing data.
-				try_handle_data_read( can_throw );
-			} );
+		// Try to parse existing data.
+		try_handle_data_read( can_throw );
 	}
 
 	void
-	on_timer_impl() override
+	on_timer_impl( can_throw_t can_throw ) override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().http_headers_complete_timeout() )
 		{
-			wrap_action_and_handle_exceptions(
-				[this]( can_throw_t can_throw )
-				{
-					handle_headers_complete_timeout( can_throw );
-				} );
+			handle_headers_complete_timeout( can_throw );
 		}
 	}
 

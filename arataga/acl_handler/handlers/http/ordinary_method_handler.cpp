@@ -296,93 +296,80 @@ public:
 
 protected:
 	void
-	on_start_impl() override
+	on_start_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw )
-			{
-				::arataga::logging::proxy_mode::info(
-						[this, can_throw]( auto level )
-						{
-							log_message_for_connection(
-									can_throw,
-									level,
-									fmt::format( "outgoing-request={}, host={}, "
-											"request-target={}",
-											http_method_str( m_brief_request_info.m_method ),
-											::arataga::utils::subview_of<100>(
-													m_brief_request_info.m_host_field_value ),
-											::arataga::utils::subview_of<100>(
-													m_brief_request_info.m_request_target )
-									)
-								);
-						} );
+		::arataga::logging::proxy_mode::info(
+				[this, can_throw]( auto level )
+				{
+					log_message_for_connection(
+							can_throw,
+							level,
+							fmt::format( "outgoing-request={}, host={}, "
+									"request-target={}",
+									http_method_str( m_brief_request_info.m_method ),
+									::arataga::utils::subview_of<100>(
+											m_brief_request_info.m_host_field_value ),
+									::arataga::utils::subview_of<100>(
+											m_brief_request_info.m_request_target )
+							)
+						);
+				} );
 
-				// There is data in user_end that should be sent into target_end.
-				write_data_read_from( can_throw, m_user_end, m_target_end );
+		// There is data in user_end that should be sent into target_end.
+		write_data_read_from( can_throw, m_user_end, m_target_end );
 
-				// Now we can read incoming data from the target end.
-				initiate_async_read_for_direction( can_throw, m_target_end );
-			} );
+		// Now we can read incoming data from the target end.
+		initiate_async_read_for_direction( can_throw, m_target_end );
 	}
 
 	void
-	on_timer_impl() override
+	on_timer_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw ) {
-			{
-				// Don't expect this but let's make a check for safety...
-				if( m_user_end.is_dead() && m_target_end.is_dead() )
-				{
-					connection_remover_t remover{
-							*this,
-							remove_reason_t::unexpected_and_unsupported_case
-					};
+		using namespace arataga::utils::string_literals;
 
-					using namespace arataga::utils::string_literals;
-					return easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"both connections are closed"_static_str );
-				}
-			}
+		// Don't expect this but let's make a check for safety...
+		if( m_user_end.is_dead() && m_target_end.is_dead() )
+		{
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::unexpected_and_unsupported_case
+			};
 
-			{
-				// At least one of the directions is still alive.
-				// We can check inactivity time.
-				const auto now = std::chrono::steady_clock::now();
+			return easy_log_for_connection(
+					can_throw,
+					spdlog::level::warn,
+					"both connections are closed"_static_str );
+		}
 
-				if( m_last_read_at +
-						context().config().idle_connection_timeout() < now )
-				{
-					connection_remover_t remover{
-							*this,
-							remove_reason_t::no_activity_for_too_long
-					};
+		// At least one of the directions is still alive.
+		// We can check inactivity time.
+		if( const auto now = std::chrono::steady_clock::now();
+				m_last_read_at + context().config().idle_connection_timeout() < now )
+		{
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::no_activity_for_too_long
+			};
 
-					using namespace arataga::utils::string_literals;
-					return easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"no data read for long time"_static_str );
-				}
-			}
+			return easy_log_for_connection(
+					can_throw,
+					spdlog::level::warn,
+					"no data read for long time"_static_str );
+		}
 
-			// If bandwidth limit was exceeded we should recheck it again.
-			// A special case related to HTTP: the limit is checked for
-			// write operations, not for read ones.
-			if( m_user_end.m_is_traffic_limit_exceeded )
-			{
-				initiate_write_outgoing_data_or_read_next_incoming_portion(
-						can_throw, m_user_end, m_target_end );
-			}
-			if( m_target_end.m_is_traffic_limit_exceeded )
-			{
-				initiate_write_outgoing_data_or_read_next_incoming_portion(
-						can_throw, m_target_end, m_user_end );
-			}
-		} );
+		// If bandwidth limit was exceeded we should recheck it again.
+		// A special case related to HTTP: the limit is checked for
+		// write operations, not for read ones.
+		if( m_user_end.m_is_traffic_limit_exceeded )
+		{
+			initiate_write_outgoing_data_or_read_next_incoming_portion(
+					can_throw, m_user_end, m_target_end );
+		}
+		if( m_target_end.m_is_traffic_limit_exceeded )
+		{
+			initiate_write_outgoing_data_or_read_next_incoming_portion(
+					can_throw, m_target_end, m_user_end );
+		}
 	}
 
 public:

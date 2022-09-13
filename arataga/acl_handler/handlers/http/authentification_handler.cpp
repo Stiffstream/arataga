@@ -120,121 +120,112 @@ public:
 
 protected:
 	void
-	on_start_impl() override
+	on_start_impl( can_throw_t can_throw ) override
 	{
-		wrap_action_and_handle_exceptions(
-			[this]( can_throw_t can_throw )
-			{
-				// If username/password are set, they have to be extracted.
-				auto username_password_extraction_result =
-						try_extract_username_and_password( can_throw );
-				// There is no sense to continue in the case of an error.
-				if( auto * err = std::get_if<username_password_extraction_failure_t>(
-						&username_password_extraction_result); err )
-				{
-					::arataga::logging::proxy_mode::err(
-							[this, can_throw, err]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										fmt::format(
-												"username/password extraction failure: {}",
-												err->m_description ) );
-							} );
+		// If username/password are set, they have to be extracted.
+		auto username_password_extraction_result =
+				try_extract_username_and_password( can_throw );
+		// There is no sense to continue in the case of an error.
+		if( auto * err = std::get_if<username_password_extraction_failure_t>(
+				&username_password_extraction_result); err )
+		{
+			::arataga::logging::proxy_mode::err(
+					[this, can_throw, err]( auto level )
+					{
+						log_message_for_connection(
+								can_throw,
+								level,
+								fmt::format(
+										"username/password extraction failure: {}",
+										err->m_description ) );
+					} );
 
-					send_negative_response_then_close_connection(
-							can_throw,
-							remove_reason_t::protocol_error,
-							response_bad_request_auth_params_extraction_failure );
+			send_negative_response_then_close_connection(
+					can_throw,
+					remove_reason_t::protocol_error,
+					response_bad_request_auth_params_extraction_failure );
 
-					return;
-				}
+			return;
+		}
 
-				// Detect the target host and port.
-				auto target_host_and_port_extraction_result =
-						try_extract_target_host_and_port( can_throw );
-				if( auto * err = std::get_if<target_host_and_port_extraction_failure_t>(
-						&target_host_and_port_extraction_result); err )
-				{
-					::arataga::logging::proxy_mode::err(
-							[this, can_throw, err]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										fmt::format(
-												"target-host+port extraction failure: {}",
-												err->m_description ) );
-							} );
+		// Detect the target host and port.
+		auto target_host_and_port_extraction_result =
+				try_extract_target_host_and_port( can_throw );
+		if( auto * err = std::get_if<target_host_and_port_extraction_failure_t>(
+				&target_host_and_port_extraction_result); err )
+		{
+			::arataga::logging::proxy_mode::err(
+					[this, can_throw, err]( auto level )
+					{
+						log_message_for_connection(
+								can_throw,
+								level,
+								fmt::format(
+										"target-host+port extraction failure: {}",
+										err->m_description ) );
+					} );
 
-					send_negative_response_then_close_connection(
-							can_throw,
-							remove_reason_t::protocol_error,
-							response_bad_request_target_host_extraction_failure );
+			send_negative_response_then_close_connection(
+					can_throw,
+					remove_reason_t::protocol_error,
+					response_bad_request_target_host_extraction_failure );
 
-					return;
-				}
+			return;
+		}
 
-				// If request-target is in absolute-form it should be
-				// transformed into origin-form.
-				auto update_request_target_result =
-						try_update_request_target( can_throw );
-				if( auto * err = std::get_if<update_request_target_failure_t>(
-						&update_request_target_result); err )
-				{
-					::arataga::logging::proxy_mode::err(
-							[this, can_throw, err]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										fmt::format(
-												"update request-target failure: {}",
-												err->m_description ) );
-							} );
+		// If request-target is in absolute-form it should be
+		// transformed into origin-form.
+		auto update_request_target_result =
+				try_update_request_target( can_throw );
+		if( auto * err = std::get_if<update_request_target_failure_t>(
+				&update_request_target_result); err )
+		{
+			::arataga::logging::proxy_mode::err(
+					[this, can_throw, err]( auto level )
+					{
+						log_message_for_connection(
+								can_throw,
+								level,
+								fmt::format(
+										"update request-target failure: {}",
+										err->m_description ) );
+					} );
 
-					send_negative_response_then_close_connection(
-							can_throw,
-							remove_reason_t::protocol_error,
-							response_bad_request_invalid_request_target );
+			send_negative_response_then_close_connection(
+					can_throw,
+					remove_reason_t::protocol_error,
+					response_bad_request_invalid_request_target );
 
-					return;
-				}
+			return;
+		}
 
-
-				// Now we can initiate the authentification.
-				initiate_authentification(
-						can_throw,
-						username_password_extraction_result,
-						target_host_and_port_extraction_result );
-			} );
+		// Now we can initiate the authentification.
+		initiate_authentification(
+				can_throw,
+				username_password_extraction_result,
+				target_host_and_port_extraction_result );
 	}
 
 	void
-	on_timer_impl() override
+	on_timer_impl( can_throw_t can_throw ) override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().authentification_timeout() )
 		{
-			wrap_action_and_handle_exceptions(
-				[this]( can_throw_t can_throw )
-				{
-					::arataga::logging::proxy_mode::warn(
-							[this, can_throw]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										"authentification timed out" );
-							} );
+			::arataga::logging::proxy_mode::warn(
+					[this, can_throw]( auto level )
+					{
+						log_message_for_connection(
+								can_throw,
+								level,
+								"authentification timed out" );
+					} );
 
-					// We can only send the response and close the connection.
-					send_negative_response_then_close_connection(
-							can_throw,
-							remove_reason_t::current_operation_timed_out,
-							response_proxy_auth_required_auth_timeout );
-				} );
+			// We can only send the response and close the connection.
+			send_negative_response_then_close_connection(
+					can_throw,
+					remove_reason_t::current_operation_timed_out,
+					response_proxy_auth_required_auth_timeout );
 		}
 	}
 
