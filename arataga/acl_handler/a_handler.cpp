@@ -807,7 +807,8 @@ a_handler_t::on_try_create_entry_point(
 	tmp_acceptor.open( endpoint.protocol(), ec );
 	if( ec )
 	{
-		return finish_on_failure( "{}: unable to open acceptor: {}",
+		return finish_on_failure(
+				fmt::runtime( "{}: unable to open acceptor: {}" ),
 				m_params.m_name,
 				ec.message() );
 	}
@@ -816,7 +817,7 @@ a_handler_t::on_try_create_entry_point(
 	if( ec )
 	{
 		return finish_on_failure(
-				"{}: unable to turn non-blocking mode on acceptor: {}",
+				fmt::runtime( "{}: unable to turn non-blocking mode on acceptor: {}" ),
 				m_params.m_name,
 				ec.message() );
 	}
@@ -826,7 +827,7 @@ a_handler_t::on_try_create_entry_point(
 	if( ec )
 	{
 		return finish_on_failure(
-				"{}: unable to sent REUSEADDR option: {}",
+				fmt::runtime( "{}: unable to sent REUSEADDR option: {}" ),
 				m_params.m_name,
 				ec.message() );
 	}
@@ -835,7 +836,7 @@ a_handler_t::on_try_create_entry_point(
 	if( ec )
 	{
 		return finish_on_failure(
-				"{}: unable to bind acceptor to endpoint {}: {}",
+				fmt::runtime( "{}: unable to bind acceptor to endpoint {}: {}" ),
 				m_params.m_name,
 				fmt::streamed(endpoint),
 				ec.message() );
@@ -848,7 +849,7 @@ a_handler_t::on_try_create_entry_point(
 	if( ec )
 	{
 		return finish_on_failure(
-				"{}: call to acceptor's listen failed: {}",
+				fmt::runtime( "{}: call to acceptor's listen failed: {}" ),
 				m_params.m_name,
 				ec.message() );
 	}

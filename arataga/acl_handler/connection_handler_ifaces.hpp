@@ -774,7 +774,7 @@ protected:
 					log_message_for_connection(
 							actual_level,
 							fmt::format(
-									format.m_format_str,
+									fmt::runtime( format.m_format_str ),
 									std::forward<Args>(format_args)... ) );
 				} );
 	}
