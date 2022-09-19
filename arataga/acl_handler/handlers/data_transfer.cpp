@@ -283,85 +283,72 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
-		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw ) {
-				// If there are some data already read from m_user_end
-				// then this data has to be written.
-				if( m_user_end.m_available_for_write_buffers )
-				{
-					initiate_async_write_for_direction(
-							can_throw,
-							m_target_end,
-							m_user_end );
-				}
+		// If there are some data already read from m_user_end
+		// then this data has to be written.
+		if( m_user_end.m_available_for_write_buffers )
+		{
+			initiate_async_write_for_direction(
+					m_target_end,
+					m_user_end );
+		}
 
-				// Initiate the data read from both connection.
-				// The data that is read first will be written first.
-				initiate_read_user_end( can_throw );
-				initiate_read_target_end( can_throw );
-			} );
+		// Initiate the data read from both connection.
+		// The data that is read first will be written first.
+		initiate_read_user_end();
+		initiate_read_target_end();
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
-		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw ) {
-				// Don't expect that case but make a check for safety.
-				if( !m_user_end.m_is_alive && !m_target_end.m_is_alive )
-				{
-					connection_remover_t remover{
-							*this,
-							delete_protector,
-							remove_reason_t::unexpected_and_unsupported_case
-					};
+		// Don't expect that case but make a check for safety.
+		if( !m_user_end.m_is_alive && !m_target_end.m_is_alive )
+		{
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::unexpected_and_unsupported_case
+			};
 
-					using namespace arataga::utils::string_literals;
-					return easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"both connections are closed"_static_str );
-				}
+			using namespace arataga::utils::string_literals;
+			return easy_log_for_connection(
+					spdlog::level::warn,
+					"both connections are closed"_static_str );
+		}
 
-				// Some connection is still alive. So we have to check
-				// inactivity time.
-				const auto now = std::chrono::steady_clock::now();
+		// Some connection is still alive. So we have to check
+		// inactivity time.
+		const auto now = std::chrono::steady_clock::now();
 
-				if( m_last_read_at +
-						context().config().idle_connection_timeout() < now )
-				{
-					connection_remover_t remover{
-							*this,
-							delete_protector,
-							remove_reason_t::no_activity_for_too_long
-					};
+		if( m_last_read_at +
+				context().config().idle_connection_timeout() < now )
+		{
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::no_activity_for_too_long
+			};
 
-					using namespace arataga::utils::string_literals;
-					return easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"no data read for long time"_static_str );
-				}
+			using namespace arataga::utils::string_literals;
+			return easy_log_for_connection(
+					spdlog::level::warn,
+					"no data read for long time"_static_str );
+		}
 
-				// If some bandwidth limit was exceeded then we have to
-				// recheck that limit and initiate a new read if it's possible.
-				if( m_user_end.m_is_traffic_limit_exceeded )
-				{
-					// It's safe to initiate a new read operation because
-					// yet another check will be done inside initiate_read_*
-					// methods. As the result the flag will be set into the
-					// right value.
-					initiate_read_user_end( can_throw );
-				}
-				if( m_target_end.m_is_traffic_limit_exceeded )
-				{
-					initiate_read_target_end( can_throw );
-				}
-			} );
+		// If some bandwidth limit was exceeded then we have to
+		// recheck that limit and initiate a new read if it's possible.
+		if( m_user_end.m_is_traffic_limit_exceeded )
+		{
+			// It's safe to initiate a new read operation because
+			// yet another check will be done inside initiate_read_*
+			// methods. As the result the flag will be set into the
+			// right value.
+			initiate_read_user_end();
+		}
+		if( m_target_end.m_is_traffic_limit_exceeded )
+		{
+			initiate_read_target_end();
+		}
 	}
 
 	arataga::utils::string_literal_t
@@ -387,24 +374,19 @@ protected:
 
 private:
 	void
-	initiate_read_user_end(
-		can_throw_t can_throw )
+	initiate_read_user_end()
 	{
-		initiate_async_read_for_direction(
-				can_throw, m_user_end, m_target_end );
+		initiate_async_read_for_direction( m_user_end, m_target_end );
 	}
 
 	void
-	initiate_read_target_end(
-		can_throw_t can_throw )
+	initiate_read_target_end()
 	{
-		initiate_async_read_for_direction(
-				can_throw, m_target_end, m_user_end );
+		initiate_async_read_for_direction( m_target_end, m_user_end );
 	}
 
 	void
 	initiate_async_read_for_direction(
-		can_throw_t,
 		// The direction from that data should be read.
 		direction_state_t & src_dir,
 		// The direction to that data should be written.
@@ -444,8 +426,6 @@ private:
 						reserved_capacity.m_capacity),
 				with<const asio::error_code &, std::size_t>().make_handler(
 					[this, &src_dir, &dest_dir, reserved_capacity, selected_buffer](
-						delete_protector_t delete_protector,
-						can_throw_t can_throw,
 						const asio::error_code & ec,
 						std::size_t bytes )
 					{
@@ -456,8 +436,6 @@ private:
 								bytes );
 
 						on_read_result(
-								delete_protector,
-								can_throw,
 								src_dir, dest_dir, selected_buffer,
 								ec,
 								bytes );
@@ -473,7 +451,6 @@ private:
 
 	void
 	initiate_async_write_for_direction(
-		can_throw_t,
 		// The direction to that data has to be written.
 		direction_state_t & dest_dir,
 		// The direction from that outgoint data has to be got.
@@ -506,14 +483,10 @@ private:
 						buffer.m_data_size),
 				with<const asio::error_code &, std::size_t>().make_handler(
 					[this, &dest_dir, &src_dir, selected_buffer](
-						delete_protector_t delete_protector,
-						can_throw_t can_throw,
 						const asio::error_code & ec,
 						std::size_t bytes )
 					{
 						on_write_result(
-								delete_protector,
-								can_throw,
 								dest_dir, src_dir, selected_buffer,
 								ec, bytes );
 					} )
@@ -555,7 +528,6 @@ private:
 
 	read_error_code_handling_result_t
 	handle_read_error_code(
-		can_throw_t can_throw,
 		direction_state_t & src_dir,
 		const direction_state_t & dest_dir,
 		// Index of buffer used for the reading.
@@ -627,10 +599,9 @@ private:
 
 		// If we are here then some I/O error happened. Log it.
 		::arataga::logging::proxy_mode::debug(
-				[this, can_throw, &src_dir, &ec]( auto level )
+				[this, &src_dir, &ec]( auto level )
 				{
 					log_message_for_connection(
-							can_throw,
 							level,
 							fmt::format( "error reading data from {}: {}",
 									src_dir.m_name,
@@ -642,8 +613,6 @@ private:
 
 	void
 	on_read_result(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw,
 		// The direction from that data was read.
 		direction_state_t & src_dir,
 		// The direction to that the data has to be written.
@@ -658,7 +627,6 @@ private:
 		::arataga::logging::proxy_mode::trace(
 				[&]( auto level ) {
 					log_message_for_connection(
-							can_throw,
 							level,
 							fmt::format( "on_read_result {}, selected_buffer: {}, "
 									"ec: {}, bytes: {}",
@@ -674,7 +642,6 @@ private:
 
 		// Handle the result of read operation...
 		const auto handling_result = handle_read_error_code(
-				can_throw,
 				src_dir,
 				dest_dir,
 				selected_buffer,
@@ -686,20 +653,17 @@ private:
 					// There is no sense to continue.
 					connection_remover_t{
 							*this,
-							delete_protector,
 							r.m_remove_reason
 					};
 				},
 				[&]( const work_should_be_continued_t & r ) {
 					if( can_write_dest_dir_t::yes == r.m_can_write_dest_dir )
 					{
-						initiate_async_write_for_direction(
-								can_throw, dest_dir, src_dir );
+						initiate_async_write_for_direction( dest_dir, src_dir );
 					}
 					if( can_read_src_dir_t::yes == r.m_can_read_src_dir )
 					{
-						initiate_async_read_for_direction(
-								can_throw, src_dir, dest_dir );
+						initiate_async_read_for_direction( src_dir, dest_dir );
 					}
 				} },
 				handling_result );
@@ -707,8 +671,6 @@ private:
 
 	void
 	on_write_result(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw,
 		// The direction to that data was written.
 		direction_state_t & dest_dir,
 		// The direction from that the outgoing data was taken.
@@ -723,7 +685,6 @@ private:
 		::arataga::logging::proxy_mode::trace(
 				[&]( auto level ) {
 					log_message_for_connection(
-							can_throw,
 							level,
 							fmt::format( "on_write_result {}, selected_buffer: {}, "
 									"ec: {}, bytes: {}",
@@ -742,12 +703,11 @@ private:
 		{
 			connection_remover_t remover{
 					*this,
-					delete_protector,
 					remove_reason_t::io_error
 			};
 
 			log_on_io_error(
-					can_throw, ec,
+					ec,
 					fmt::format( "writting to {}", dest_dir.m_name ) );
 		}
 		else
@@ -761,12 +721,10 @@ private:
 			{
 				connection_remover_t remover{
 						*this,
-						delete_protector,
 						remove_reason_t::io_error
 				};
 						
 				easy_log_for_connection(
-						can_throw,
 						spdlog::level::critical,
 						format_string{
 								"unexpected write result: {} data_size {} != "
@@ -790,8 +748,7 @@ private:
 				{
 					// Because we've written some data to dest_dir we
 					// can now initiate a new read from src_dir.
-					initiate_async_read_for_direction(
-							can_throw, src_dir, dest_dir );
+					initiate_async_read_for_direction( src_dir, dest_dir );
 
 				}
 				else
@@ -803,12 +760,10 @@ private:
 					{
 						connection_remover_t remover{
 								*this,
-								delete_protector,
 								remove_reason_t::normal_completion
 						};
 
 						easy_log_for_connection(
-								can_throw,
 								spdlog::level::trace,
 								format_string{
 										"no more outgoing data for: {}, "
@@ -822,8 +777,7 @@ private:
 				// There is some pending outgoing data, we should write it.
 				if( has_outgoing_data )
 				{
-					initiate_async_write_for_direction(
-							can_throw, dest_dir, src_dir );
+					initiate_async_write_for_direction( dest_dir, src_dir );
 				}
 			}
 		}

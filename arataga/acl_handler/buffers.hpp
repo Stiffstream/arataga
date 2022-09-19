@@ -85,13 +85,6 @@ class in_external_buffer_t
 	//! Max capacity of the external buffer.
 	const std::size_t m_capacity;
 
-	//! The index of the first actual byte in the external buffer.
-	/*!
-	 * This value will be used in rewind_read_position() and reset()
-	 * methods.
-	 */
-	const std::size_t m_first_byte_index{ 0u };
-
 	//! Total number of bytes in the external buffer.
 	std::size_t m_size{ 0u };
 

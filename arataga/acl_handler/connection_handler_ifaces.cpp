@@ -67,15 +67,19 @@ connection_handler_t::~connection_handler_t()
 void
 connection_handler_t::on_start()
 {
+	// ATTENTION: it's very important for protection from deletion
+	// during replace_connection_handler or remove_connection_handler.
 	auto self = shared_from_this();
-	on_start_impl( details::delete_protector_maker_t{ self }.make() );
+	wrap_action_and_handle_exceptions( [this]() { on_start_impl(); } );
 }
 
 void
 connection_handler_t::on_timer()
 {
+	// ATTENTION: it's very important for protection from deletion
+	// during replace_connection_handler or remove_connection_handler.
 	auto self = shared_from_this();
-	on_timer_impl( details::delete_protector_maker_t{ self }.make() );
+	wrap_action_and_handle_exceptions( [this]() { on_timer_impl(); } );
 }
 
 void

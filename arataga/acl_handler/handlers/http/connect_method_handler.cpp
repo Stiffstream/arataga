@@ -85,72 +85,57 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
-		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw ) {
-				::arataga::logging::proxy_mode::info(
-						[this, can_throw]( auto level )
-						{
-							log_message_for_connection(
-									can_throw,
-									level,
-									"serving-request=CONNECT " + m_connection_target );
-						} );
+		::arataga::logging::proxy_mode::info(
+				[this]( auto level )
+				{
+					log_message_for_connection(
+							level,
+							"serving-request=CONNECT " + m_connection_target );
+				} );
 
-				// Have to send positive response to the user.
-				write_whole( can_throw,
-						m_connection,
-						m_positive_response,
-						[this]( delete_protector_t delete_protector,
-							can_throw_t can_throw )
-						{
-							// The response is sent. Now we can switch
-							// to data-transfer-handler.
-							replace_handler(
-									delete_protector,
-									can_throw,
-									[this]( can_throw_t )
-									{
-										return make_data_transfer_handler(
-												std::move(m_ctx),
-												m_id,
-												std::move(m_connection),
-												std::move(m_first_chunk_data),
-												std::move(m_out_connection),
-												std::move(m_traffic_limiter) );
-									} );
-						} );
-			} );
+		// Have to send positive response to the user.
+		write_whole(
+				m_connection,
+				m_positive_response,
+				[this]()
+				{
+					// The response is sent. Now we can switch
+					// to data-transfer-handler.
+					replace_handler(
+							[this]()
+							{
+								return make_data_transfer_handler(
+										std::move(m_ctx),
+										m_id,
+										std::move(m_connection),
+										std::move(m_first_chunk_data),
+										std::move(m_out_connection),
+										std::move(m_traffic_limiter) );
+							} );
+				} );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
-		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
-			{
-				// Will use idle_connection_timeout as the timeout duration.
-				const auto now = std::chrono::steady_clock::now();
-				if( m_created_at +
-						context().config().idle_connection_timeout() < now )
-				{
-					connection_remover_t remover{
-							*this,
-							delete_protector,
-							remove_reason_t::no_activity_for_too_long
-					};
+		// Will use idle_connection_timeout as the timeout duration.
+		const auto now = std::chrono::steady_clock::now();
+		if( m_created_at +
+				context().config().idle_connection_timeout() < now )
+		{
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::no_activity_for_too_long
+			};
 
-					using namespace arataga::utils::string_literals;
-					return easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"timeout writing positive response to "
-									"CONNECT method"_static_str );
-				}
-			} );
+			using namespace arataga::utils::string_literals;
+			return easy_log_for_connection(
+					spdlog::level::warn,
+					"timeout writing positive response to "
+							"CONNECT method"_static_str );
+		}
 	}
 
 public:

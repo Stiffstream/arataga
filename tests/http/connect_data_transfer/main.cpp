@@ -11,6 +11,8 @@
 
 #include <asio.hpp>
 
+#include <thread>
+
 using namespace std::string_view_literals;
 using namespace std::chrono_literals;
 

@@ -120,127 +120,103 @@ public:
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
-		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t delete_protector, can_throw_t can_throw )
-			{
-				// If username/password are set, they have to be extracted.
-				auto username_password_extraction_result =
-						try_extract_username_and_password( can_throw );
-				// There is no sense to continue in the case of an error.
-				if( auto * err = std::get_if<username_password_extraction_failure_t>(
-						&username_password_extraction_result); err )
-				{
-					::arataga::logging::proxy_mode::err(
-							[this, can_throw, err]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										fmt::format(
-												"username/password extraction failure: {}",
-												err->m_description ) );
-							} );
+		// If username/password are set, they have to be extracted.
+		auto username_password_extraction_result =
+				try_extract_username_and_password();
+		// There is no sense to continue in the case of an error.
+		if( auto * err = std::get_if<username_password_extraction_failure_t>(
+				&username_password_extraction_result); err )
+		{
+			::arataga::logging::proxy_mode::err(
+					[this, err]( auto level )
+					{
+						log_message_for_connection(
+								level,
+								fmt::format(
+										"username/password extraction failure: {}",
+										err->m_description ) );
+					} );
 
-					send_negative_response_then_close_connection(
-							delete_protector,
-							can_throw,
-							remove_reason_t::protocol_error,
-							response_bad_request_auth_params_extraction_failure );
+			send_negative_response_then_close_connection(
+					remove_reason_t::protocol_error,
+					response_bad_request_auth_params_extraction_failure );
 
-					return;
-				}
+			return;
+		}
 
-				// Detect the target host and port.
-				auto target_host_and_port_extraction_result =
-						try_extract_target_host_and_port( can_throw );
-				if( auto * err = std::get_if<target_host_and_port_extraction_failure_t>(
-						&target_host_and_port_extraction_result); err )
-				{
-					::arataga::logging::proxy_mode::err(
-							[this, can_throw, err]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										fmt::format(
-												"target-host+port extraction failure: {}",
-												err->m_description ) );
-							} );
+		// Detect the target host and port.
+		auto target_host_and_port_extraction_result =
+				try_extract_target_host_and_port();
+		if( auto * err = std::get_if<target_host_and_port_extraction_failure_t>(
+				&target_host_and_port_extraction_result); err )
+		{
+			::arataga::logging::proxy_mode::err(
+					[this, err]( auto level )
+					{
+						log_message_for_connection(
+								level,
+								fmt::format(
+										"target-host+port extraction failure: {}",
+										err->m_description ) );
+					} );
 
-					send_negative_response_then_close_connection(
-							delete_protector,
-							can_throw,
-							remove_reason_t::protocol_error,
-							response_bad_request_target_host_extraction_failure );
+			send_negative_response_then_close_connection(
+					remove_reason_t::protocol_error,
+					response_bad_request_target_host_extraction_failure );
 
-					return;
-				}
+			return;
+		}
 
-				// If request-target is in absolute-form it should be
-				// transformed into origin-form.
-				auto update_request_target_result =
-						try_update_request_target( can_throw );
-				if( auto * err = std::get_if<update_request_target_failure_t>(
-						&update_request_target_result); err )
-				{
-					::arataga::logging::proxy_mode::err(
-							[this, can_throw, err]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										fmt::format(
-												"update request-target failure: {}",
-												err->m_description ) );
-							} );
+		// If request-target is in absolute-form it should be
+		// transformed into origin-form.
+		auto update_request_target_result =
+				try_update_request_target();
+		if( auto * err = std::get_if<update_request_target_failure_t>(
+				&update_request_target_result); err )
+		{
+			::arataga::logging::proxy_mode::err(
+					[this, err]( auto level )
+					{
+						log_message_for_connection(
+								level,
+								fmt::format(
+										"update request-target failure: {}",
+										err->m_description ) );
+					} );
 
-					send_negative_response_then_close_connection(
-							delete_protector,
-							can_throw,
-							remove_reason_t::protocol_error,
-							response_bad_request_invalid_request_target );
+			send_negative_response_then_close_connection(
+					remove_reason_t::protocol_error,
+					response_bad_request_invalid_request_target );
 
-					return;
-				}
+			return;
+		}
 
-
-				// Now we can initiate the authentification.
-				initiate_authentification(
-						can_throw,
-						username_password_extraction_result,
-						target_host_and_port_extraction_result );
-			} );
+		// Now we can initiate the authentification.
+		initiate_authentification(
+				username_password_extraction_result,
+				target_host_and_port_extraction_result );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().authentification_timeout() )
 		{
-			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this]( delete_protector_t delete_protector, can_throw_t can_throw )
-				{
-					::arataga::logging::proxy_mode::warn(
-							[this, can_throw]( auto level )
-							{
-								log_message_for_connection(
-										can_throw,
-										level,
-										"authentification timed out" );
-							} );
+			::arataga::logging::proxy_mode::warn(
+					[this]( auto level )
+					{
+						log_message_for_connection(
+								level,
+								"authentification timed out" );
+					} );
 
-					// We can only send the response and close the connection.
-					send_negative_response_then_close_connection(
-							delete_protector,
-							can_throw,
-							remove_reason_t::current_operation_timed_out,
-							response_proxy_auth_required_auth_timeout );
-				} );
+			// We can only send the response and close the connection.
+			send_negative_response_then_close_connection(
+					remove_reason_t::current_operation_timed_out,
+					response_proxy_auth_required_auth_timeout );
 		}
 	}
 
@@ -255,8 +231,7 @@ public:
 private:
 	[[nodiscard]]
 	username_password_extraction_result_t
-	try_extract_username_and_password(
-		can_throw_t /*can_throw*/ )
+	try_extract_username_and_password()
 	{
 		auto opt_proxy_auth_value = m_request_info.m_headers.opt_value_of(
 				restinio::http_field_t::proxy_authorization );
@@ -302,16 +277,16 @@ private:
 
 	[[nodiscard]]
 	target_host_and_port_extraction_result_t
-	try_extract_target_host_and_port( can_throw_t can_throw )
+	try_extract_target_host_and_port()
 	{
 		auto extraction_result =
-				try_extract_target_host_and_port_from_request_target( can_throw );
+				try_extract_target_host_and_port_from_request_target();
 
 		if( std::holds_alternative<target_host_and_port_extraction_failure_t>(
 				extraction_result ) )
 		{
 			extraction_result =
-					try_extract_target_host_and_port_from_host_field( can_throw );
+					try_extract_target_host_and_port_from_host_field();
 		}
 
 		// The Host header field should be removed after the extraction.
@@ -322,8 +297,7 @@ private:
 
 	[[nodiscard]]
 	target_host_and_port_extraction_result_t
-	try_extract_target_host_and_port_from_request_target(
-		can_throw_t /*can_throw*/ )
+	try_extract_target_host_and_port_from_request_target()
 	{
 		// Try to deconstruct the URL.
 		http_parser_url parser_url;
@@ -404,8 +378,7 @@ private:
 
 	[[nodiscard]]
 	target_host_and_port_extraction_result_t
-	try_extract_target_host_and_port_from_host_field(
-		can_throw_t /*can_throw*/ )
+	try_extract_target_host_and_port_from_host_field()
 	{
 		// If there are more than one Host header fields then the request
 		// should be rejected. So count the fields.
@@ -474,8 +447,7 @@ private:
 
 	[[nodiscard]]
 	update_request_target_result_t
-	try_update_request_target(
-		can_throw_t /*can_throw*/ )
+	try_update_request_target()
 	{
 		// The value of request-target should be borrowed into 
 		// a separate object because we need a reference to that value
@@ -548,7 +520,6 @@ private:
 
 	void
 	initiate_authentification(
-		can_throw_t /*can_throw*/,
 		username_password_extraction_result_t & username_password_info,
 		target_host_and_port_extraction_result_t & target_host_and_port_info )
 	{
@@ -582,30 +553,22 @@ private:
 					m_request_info.m_target_port
 				},
 				with<authentification::result_t>().make_handler(
-					[this](
-						delete_protector_t delete_protector,
-						can_throw_t can_throw,
-						authentification::result_t result )
+					[this]( authentification::result_t result )
 					{
-						on_authentification_result(
-								delete_protector, can_throw, result );
+						on_authentification_result( result );
 					} )
 			);
 	}
 
 	void
 	on_authentification_result(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw,
 		authentification::result_t & result )
 	{
 		std::visit( ::arataga::utils::overloaded{
 				[&]( authentification::success_t & info )
 				{
 					replace_handler(
-							delete_protector,
-							can_throw,
-							[this, &info]( can_throw_t )
+							[this, &info]()
 							{
 								return make_dns_lookup_handler(
 										std::move(m_ctx),
@@ -619,10 +582,9 @@ private:
 				[&]( const authentification::failure_t & info )
 				{
 					::arataga::logging::proxy_mode::warn(
-							[this, can_throw, &info]( auto level )
+							[this, &info]( auto level )
 							{
 								log_message_for_connection(
-										can_throw,
 										level,
 										fmt::format(
 												"user is not authentificated, reason: {}",
@@ -631,8 +593,6 @@ private:
 							} );
 
 					send_negative_response_then_close_connection(
-							delete_protector,
-							can_throw,
 							remove_reason_t::access_denied,
 							response_proxy_auth_required_not_authorized );
 				}

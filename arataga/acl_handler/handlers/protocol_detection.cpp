@@ -42,51 +42,36 @@ public :
 
 protected:
 	void
-	on_start_impl( delete_protector_t delete_protector ) override
+	on_start_impl() override
 	{
-		wrap_action_and_handle_exceptions(
-			delete_protector,
-			[this]( delete_protector_t, can_throw_t can_throw ) {
-				// A new connection has to be reflected in the stats.
-				context().stats_inc_connection_count( connection_type_t::generic );
+		// A new connection has to be reflected in the stats.
+		context().stats_inc_connection_count( connection_type_t::generic );
 
-				// The first part of data has to be read and analyzed.
-				read_some(
-						can_throw,
-						m_connection,
-						m_in_buffer,
-						[this]( delete_protector_t delete_protector,
-							can_throw_t can_throw )
-						{
-							analyze_data_read( delete_protector, can_throw );
-						} );
-			} );
+		// The first part of data has to be read and analyzed.
+		read_some(
+				m_connection,
+				m_in_buffer,
+				[this]()
+				{
+					analyze_data_read();
+				} );
 	}
 
 	void
-	on_timer_impl( delete_protector_t delete_protector ) override
+	on_timer_impl() override
 	{
 		if( std::chrono::steady_clock::now() >= m_created_at +
 				context().config().protocol_detection_timeout() )
 		{
-			wrap_action_and_handle_exceptions(
-				delete_protector,
-				[this](
-					delete_protector_t delete_protector,
-					can_throw_t can_throw )
-				{
-					connection_remover_t remover{
-							*this,
-							delete_protector,
-							remove_reason_t::current_operation_timed_out
-					};
+			connection_remover_t remover{
+					*this,
+					remove_reason_t::current_operation_timed_out
+			};
 
-					using namespace arataga::utils::string_literals;
-					easy_log_for_connection(
-							can_throw,
-							spdlog::level::warn,
-							"protocol-detection timed out"_static_str );
-				} );
+			using namespace arataga::utils::string_literals;
+			easy_log_for_connection(
+					spdlog::level::warn,
+					"protocol-detection timed out"_static_str );
 		}
 	}
 
@@ -117,9 +102,7 @@ private:
 		>;
 
 	void
-	analyze_data_read(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw )
+	analyze_data_read()
 	{
 		detection_result_t detection_result{ unknown_protocol_t{} };
 
@@ -127,24 +110,24 @@ private:
 		const auto acl_protocol = context().config().acl_protocol();
 		if( acl_protocol_t::autodetect == acl_protocol )
 		{
-			detection_result = try_accept_socks_connection( can_throw );
+			detection_result = try_accept_socks_connection();
 			if( std::holds_alternative< unknown_protocol_t >( detection_result ) )
 			{
-				detection_result = try_accept_http_connection( can_throw );
+				detection_result = try_accept_http_connection();
 			}
 		}
 		else if( acl_protocol_t::socks == acl_protocol )
 		{
-			detection_result = try_accept_socks_connection( can_throw );
+			detection_result = try_accept_socks_connection();
 		}
 		else if( acl_protocol_t::http == acl_protocol )
 		{
-			detection_result = try_accept_http_connection( can_throw );
+			detection_result = try_accept_http_connection();
 		}
 
 		// Analyze the result of acception attempt.
 		std::visit( ::arataga::utils::overloaded{
-				[this, delete_protector, can_throw]
+				[this]
 				( connection_accepted_t & accepted )
 				{
 					// Update the stats. It should be done now because
@@ -158,25 +141,18 @@ private:
 							accepted.m_connection_type );
 
 					// The handler can be changed now.
-					replace_handler(
-							delete_protector,
-							can_throw,
-							[&]( can_throw_t ) {
-								return std::move(accepted.m_handler);
-							} );
+					replace_handler( [&]() { return std::move(accepted.m_handler); } );
 				},
-				[this, delete_protector, can_throw]
+				[this]
 				( const unknown_protocol_t & info )
 				{
 					// We don't know the protocol, the connection has to be closed.
 					connection_remover_t remover{
 							*this,
-							delete_protector,
 							remove_reason_t::unsupported_protocol
 					};
 
 					easy_log_for_connection(
-							can_throw,
 							spdlog::level::warn,
 							format_string{
 									"unsupported protocol in the connection "
@@ -189,7 +165,7 @@ private:
 	}
 
 	detection_result_t
-	try_accept_socks_connection( can_throw_t /*can_throw*/ )
+	try_accept_socks_connection()
 	{
 		constexpr std::byte socks5_protocol_first_byte{ 5u };
 
@@ -220,10 +196,8 @@ private:
 	}
 
 	detection_result_t
-	try_accept_http_connection( can_throw_t can_throw )
+	try_accept_http_connection()
 	{
-		(void)can_throw;
-
 		// Assume that this is HTTP if the first byte is a capital
 		// latin letter (it is because methods in HTTP are identified
 		// by capital letters).

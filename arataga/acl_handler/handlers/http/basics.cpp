@@ -17,15 +17,11 @@ namespace handlers::http
 //
 void
 basic_http_handler_t::send_negative_response_then_close_connection(
-	delete_protector_t delete_protector,
-	can_throw_t can_throw,
 	remove_reason_t reason,
 	arataga::utils::string_literal_t whole_response )
 {
 	replace_handler(
-			delete_protector,
-			can_throw,
-			[&]( can_throw_t )
+			[&]()
 			{
 				return make_negative_response_sender(
 					std::move(m_ctx),

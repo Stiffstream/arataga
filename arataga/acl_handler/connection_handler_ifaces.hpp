@@ -7,7 +7,6 @@
 
 #include <arataga/acl_handler/sequence_number.hpp>
 
-#include <arataga/utils/can_throw.hpp>
 #include <arataga/utils/string_literal.hpp>
 
 #include <arataga/config.hpp>
@@ -437,72 +436,6 @@ enum class connection_type_t
 	http
 };
 
-namespace details {
-
-class delete_protector_maker_t;
-
-} /* namespace details */
-
-//
-// delete_protector_t
-//
-/*!
- * @brief A special marker that tells that connection_handler is
- * protected from the deletion and it's safe to replace the current
- * handler by a new one.
- *
- * An instance of delete_protector does nothing. But it presence
- * tells that there is an instance of
- * details::delete_protector_maker_t somewhere at the stack. And
- * that delete_protector_maker_t defends the connection_handler
- * from early deletion.
- *
- * The necessity of that class goes from the fact that connection_handler calls
- * remove_connection_handler and replace_connection_handler from inside of own
- * methods. As result of remove_connection_handler and
- * replace_connection_handler the current handler can be deleted and this
- * invalidates the `this` value. This can lead to use-after-free errors (for
- * example if some non-static method will be acidentially called after the
- * return from remove_connection_handler/replace_connection_handler).
- *
- * For protection from use-after-free error a scheme with additional
- * connection_handler_shptr_t is used. This additional instance is created on
- * the stack and only then methods like
- * remove_connection_handler/replace_connection_handler are called.  This
- * additional instance protects the current handler from the deletion.
- */
-class delete_protector_t
-{
-	friend class delete_protector_maker_t;
-
-	delete_protector_t() noexcept = default;
-
-public:
-	~delete_protector_t() noexcept = default;
-
-	delete_protector_t( const delete_protector_t & ) noexcept = default;
-	delete_protector_t( delete_protector_t && ) noexcept = default;
-
-	delete_protector_t &
-	operator=( const delete_protector_t & ) noexcept = default;
-	delete_protector_t &
-	operator=( delete_protector_t && ) noexcept = default;
-};
-
-namespace details {
-
-class delete_protector_maker_t
-{
-public:
-	delete_protector_maker_t( connection_handler_shptr_t & ) {}
-
-	[[nodiscard]]
-	delete_protector_t
-	make() const noexcept { return {}; }
-};
-
-} /* namespace details */
-
 //
 // handler_context_t
 //
@@ -520,13 +453,11 @@ public:
 
 	virtual void
 	replace_connection_handler(
-		delete_protector_t,
 		connection_id_t id,
 		connection_handler_shptr_t handler ) = 0;
 
 	virtual void
 	remove_connection_handler(
-		delete_protector_t,
 		connection_id_t id,
 		remove_reason_t reason ) noexcept = 0;
 
@@ -620,12 +551,11 @@ class connection_handler_t;
  * if( some_error_condition )
  * {
  * 	connection_remover_t remover{
- * 			*this, delete_protector, remover_reason_t::protocol_error
+ * 			*this, remover_reason_t::protocol_error
  * 	};
  *
  * 	// Connection will be closed even if easy_log_for_connection throws.
  * 	easy_log_for_connection(
- * 			can_throw,
  * 			spdlog::level::warn,
  * 			format_string{ "unexpected message: {}" },
  * 			message_type );
@@ -637,13 +567,11 @@ class connection_handler_t;
 class connection_remover_t
 {
 	connection_handler_t & m_handler;
-	const delete_protector_t m_delete_protector;
 	const remove_reason_t m_reason;
 
 public:
 	connection_remover_t(
 		connection_handler_t & handler,
-		delete_protector_t delete_protector,
 		remove_reason_t remove_reason ) noexcept;
 	~connection_remover_t() noexcept;
 
@@ -693,28 +621,14 @@ private:
 	 */
 	void
 	remove_handler(
-		delete_protector_t delete_protector,
 		remove_reason_t remove_reason ) noexcept
 	{
 		NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
-			context().remove_connection_handler(
-					delete_protector, m_id, remove_reason )
+			context().remove_connection_handler( m_id, remove_reason )
 		);
 	}
 
 protected:
-	/*!
-	 * @brief A special indicator that tells that exceptions can go out.
-	 *
-	 * This indicator tells a method/lambda that it's invoked inside
-	 * try/catch block and throwing of an exception is permited.
-	 *
-	 * An instance is created inside wrap_action_and_handle_exceptions()
-	 * and passed as a parameter to lambda-argument of
-	 * wrap_action_and_handle_exceptions().
-	 */
-	using can_throw_t = ::arataga::utils::can_throw_t;
-
 	//! Context for connection handler.
 	handler_context_holder_t m_ctx;
 
@@ -735,10 +649,10 @@ protected:
 	 * @{
 	 */
 	virtual void
-	on_start_impl( delete_protector_t ) = 0;
+	on_start_impl() = 0;
 
 	virtual void
-	on_timer_impl( delete_protector_t ) = 0;
+	on_timer_impl() = 0;
 	/*!
 	 * @}
 	 */
@@ -753,8 +667,6 @@ protected:
 	template< typename New_Handler_Factory >
 	void
 	replace_handler(
-		delete_protector_t delete_protector,
-		can_throw_t can_throw,
 		New_Handler_Factory && new_handler_factory )
 	{
 		// If there will be an exception we'll have no choice except
@@ -777,11 +689,9 @@ protected:
 			handler_context_holder_t ctx_holder{ m_ctx };
 			try
 			{
-				connection_handler_shptr_t new_handler = new_handler_factory(
-						can_throw );
+				connection_handler_shptr_t new_handler = new_handler_factory();
 
 				ctx_holder.ctx().replace_connection_handler(
-						delete_protector,
 						m_id,
 						std::move(new_handler) );
 			}
@@ -803,7 +713,6 @@ protected:
 
 				NOEXCEPT_CTCHECK_ENSURE_NOEXCEPT_STATEMENT(
 						ctx_holder.ctx().remove_connection_handler(
-								delete_protector,
 								m_id,
 								remove_reason_t::unexpected_and_unsupported_case )
 				);
@@ -814,7 +723,6 @@ protected:
 	// NOTE: this method should be called from inside logging::wrap_logging.
 	void
 	log_message_for_connection(
-		can_throw_t /*can_throw*/,
 		::arataga::logging::processed_log_level_t level,
 		std::string_view message )
 	{
@@ -824,26 +732,21 @@ protected:
 	// Simple logging for the case when log message is a string literal.
 	void
 	easy_log_for_connection(
-		can_throw_t can_throw,
 		spdlog::level::level_enum level,
 		arataga::utils::string_literal_t description )
 	{
 		::arataga::logging::wrap_logging(
 				proxy_logging_mode,
 				level,
-				[this, can_throw, description]( auto level )
+				[this, description]( auto level )
 				{
-					log_message_for_connection(
-							can_throw,
-							level,
-							description );
+					log_message_for_connection( level, description );
 				} );
 	}
 
 	// Helper data structure to be used like strong typedef in case like that:
 	//
 	// easy_log_for_connection(
-	// 	can_throw,
 	// 	spdlog::level::warn,
 	// 	format_string{ "unexpected result: {}" },
 	// 	result );
@@ -859,7 +762,6 @@ protected:
 	template< typename... Args >
 	void
 	easy_log_for_connection(
-		can_throw_t can_throw,
 		spdlog::level::level_enum level,
 		format_string format,
 		Args && ...format_args )
@@ -870,17 +772,15 @@ protected:
 				[&]( auto actual_level )
 				{
 					log_message_for_connection(
-							can_throw,
 							actual_level,
 							fmt::format(
-									format.m_format_str,
+									fmt::runtime( format.m_format_str ),
 									std::forward<Args>(format_args)... ) );
 				} );
 	}
 
 	void
 	log_on_io_error(
-		can_throw_t can_throw,
 		const asio::error_code & ec,
 		std::string_view operation_description )
 	{
@@ -889,7 +789,6 @@ protected:
 		if( asio::error::operation_aborted != ec )
 		{
 			easy_log_for_connection(
-					can_throw,
 					spdlog::level::warn,
 					format_string{ "IO-error on {}: {}" },
 					operation_description, ec.message() );
@@ -899,14 +798,11 @@ protected:
 	template< typename Action >
 	void
 	wrap_action_and_handle_exceptions(
-		delete_protector_t delete_protector,
 		Action && action )
 	{
 		try
 		{
-			::arataga::utils::exception_handling_context_t ctx;
-
-			action( delete_protector, ctx.make_can_throw_marker() );
+			action();
 		}
 		catch( const std::exception & x )
 		{
@@ -916,14 +812,10 @@ protected:
 
 				connection_remover_t remover{
 						*this,
-						delete_protector,
 						remove_reason_t::unhandled_exception
 				};
 
-				::arataga::utils::exception_handling_context_t ctx;
-
 				easy_log_for_connection(
-						ctx.make_can_throw_marker(),
 						spdlog::level::err,
 						format_string{ "exception caught: {}" },
 						x.what() );
@@ -938,15 +830,11 @@ protected:
 
 				connection_remover_t remover{
 						*this,
-						delete_protector,
 						remove_reason_t::unhandled_exception
 				};
 
-				::arataga::utils::exception_handling_context_t ctx;
-
 				using namespace arataga::utils::string_literals;
 				easy_log_for_connection(
-						ctx.make_can_throw_marker(),
 						spdlog::level::err,
 						"unknown exception caught"_static_str );
 			ARATAGA_NOTHROW_BLOCK_END(LOG_THEN_IGNORE);
@@ -992,11 +880,6 @@ protected:
 	 * gets an actual completion-handler lambda as an argument and
 	 * returns a proper wrapper.
 	 *
-	 * @attention
-	 * This first parameter for user-provided completion-handler will be
-	 * a value of delete_protector_t type. Then there will be a value
-	 * of type can_throw_t. Then there will be parameters of types @a Args.
-	 *
 	 * @note
 	 * Initialy a wrapper, created inside make_handler() method, doesn't
 	 * catch exceptions. But then wrap_action_and_handle_exceptions() was
@@ -1025,17 +908,10 @@ protected:
 				{
 					if( status_t::active == handler->m_status )
 					{
-						details::delete_protector_maker_t protector{ handler };
 						handler->wrap_action_and_handle_exceptions(
-								protector.make(),
-								[&](
-									delete_protector_t delete_protector,
-									can_throw_t can_throw )
+								[&]()
 								{
-									completion_func(
-											delete_protector,
-											can_throw,
-											std::forward<Args>(args)... );
+									completion_func( std::forward<Args>(args)... );
 								} );
 					}
 				};
@@ -1047,8 +923,7 @@ protected:
 	 * Usage example:
 	 * @code
 	 * with<const asio::error_code &, std::size_t>().make_handler(
-	 * 	[this]( delete_protector_t delete_protector,
-	 * 		can_throw_t can_throw,
+	 * 	[this](
 	 * 		const asio::error_code & ec,
 	 * 		std::size_t bytes_transferred )
 	 * 	{
@@ -1077,26 +952,21 @@ protected:
 				// There is no sense to call shared_from_this because
 				// it's already done by make_io_completion_handler.
 				[this, op_name, completion_func = std::move(completion)](
-				delete_protector_t delete_protector,
-				can_throw_t can_throw,
-				const asio::error_code & ec,
-				std::size_t bytes_transferred ) mutable
+					const asio::error_code & ec,
+					std::size_t bytes_transferred ) mutable
 				{
 					if( ec )
 					{
 						// Connection has to be removed.
 						connection_remover_t remover{
 								*this,
-								delete_protector,
 								remove_reason_t::io_error
 						};
 
-						log_on_io_error( can_throw, ec, op_name );
+						log_on_io_error( ec, op_name );
 					}
 					else
-						completion_func(
-								delete_protector,
-								can_throw, bytes_transferred );
+						completion_func( bytes_transferred );
 				} );
 	}
 
@@ -1105,7 +975,6 @@ protected:
 		typename Completion >
 	void
 	read_some(
-		can_throw_t /*can_throw*/,
 		asio::ip::tcp::socket & connection,
 		Buffer & buffer,
 		Completion && completion )
@@ -1117,12 +986,10 @@ protected:
 				make_read_write_completion_handler(
 					"read"_static_str,
 					[completion_func = std::move(completion), &buffer](
-						delete_protector_t delete_protector,
-						can_throw_t can_throw,
 						std::size_t bytes_transferred )
 					{
 						buffer.increment_bytes_read( bytes_transferred );
-						completion_func( delete_protector, can_throw );
+						completion_func();
 					} )
 		);
 	}
@@ -1132,7 +999,6 @@ protected:
 		typename Completion >
 	void
 	write_whole(
-		can_throw_t /*can_throw*/,
 		asio::ip::tcp::socket & connection,
 		Buffer & buffer,
 		Completion && completion )
@@ -1145,12 +1011,10 @@ protected:
 				make_read_write_completion_handler(
 					"write"_static_str,
 					[&buffer, completion_func = std::move(completion)](
-						delete_protector_t delete_protector,
-						can_throw_t can_throw,
 						std::size_t bytes_transferred ) mutable
 					{
 						buffer.increment_bytes_written( bytes_transferred );
-						completion_func( delete_protector, can_throw );
+						completion_func();
 					} )
 		);
 	}
@@ -1185,17 +1049,15 @@ public:
 inline
 connection_remover_t::connection_remover_t(
 	connection_handler_t & handler,
-	delete_protector_t delete_protector,
 	remove_reason_t remove_reason ) noexcept
 	:	m_handler{ handler }
-	,	m_delete_protector{ delete_protector }
 	,	m_reason{ remove_reason }
 {}
 
 inline
 connection_remover_t::~connection_remover_t() noexcept
 {
-	m_handler.remove_handler( m_delete_protector, m_reason );
+	m_handler.remove_handler( m_reason );
 }
 
 } /* namespace arataga::acl_handler */

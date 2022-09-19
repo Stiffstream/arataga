@@ -167,13 +167,11 @@ public:
 
 	void
 	replace_connection_handler(
-		delete_protector_t,
 		connection_id_t id,
 		connection_handler_shptr_t handler ) override;
 
 	void
 	remove_connection_handler(
-		delete_protector_t,
 		connection_id_t id,
 		remove_reason_t reason ) noexcept override;
 

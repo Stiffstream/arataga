@@ -18,7 +18,7 @@ MxxRu::arch_externals :spdlog do |e|
 end
 
 MxxRu::arch_externals :fmt do |e|
-  e.url 'https://github.com/fmtlib/fmt/archive/9.0.0.tar.gz'
+  e.url 'https://github.com/fmtlib/fmt/archive/9.1.0.tar.gz'
 
   e.map_dir 'include' => 'fmt'
   e.map_dir 'src' => 'fmt'
@@ -29,7 +29,7 @@ MxxRu::arch_externals :fmt do |e|
 end
 
 MxxRu::arch_externals :so5 do |e|
-  e.url 'https://github.com/Stiffstream/sobjectizer/archive/v.5.7.4.1.tar.gz'
+  e.url 'https://github.com/Stiffstream/sobjectizer/archive/v.5.7.4.2.tar.gz'
   e.map_dir 'dev/so_5' => './'
 end
 
@@ -45,7 +45,7 @@ MxxRu::arch_externals :noexcept_ctcheck do |e|
 end
 
 MxxRu::arch_externals :restinio do |e|
-  e.url 'https://github.com/Stiffstream/restinio/archive/v.0.6.16.tar.gz'
+  e.url 'https://github.com/Stiffstream/restinio/archive/v.0.6.17.tar.gz'
 
   e.map_dir 'dev/restinio' => './'
 end
@@ -70,7 +70,7 @@ MxxRu::arch_externals :doctest do |e|
 end
 
 MxxRu::arch_externals :oess_2 do |e|
-  e.url 'https://sourceforge.net/projects/sobjectizer/files/oess/oess-2/oess-2.2.3-full.tar.bz2'
+  e.url 'https://sourceforge.net/projects/sobjectizer/files/oess/oess-2/oess-2.2.3.1-full.tar.bz2'
 
   e.map_dir 'dev/cpp_util_2' => './'
   e.map_dir 'dev/oess_2' => './'
