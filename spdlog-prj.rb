@@ -15,7 +15,7 @@ MxxRu::Cpp::lib_target {
 		cpp_source 'src/color_sinks.cpp'
 		cpp_source 'src/file_sinks.cpp'
 		cpp_source 'src/async.cpp'
-		cpp_source 'src/fmt.cpp'
+#		cpp_source 'src/fmt.cpp'
 	}
 }
 

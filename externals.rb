@@ -5,13 +5,13 @@ MxxRu::arch_externals :args do |e|
 end
 
 MxxRu::arch_externals :asio do |e|
-  e.url 'https://github.com/chriskohlhoff/asio/archive/asio-1-22-1.tar.gz'
+  e.url 'https://github.com/chriskohlhoff/asio/archive/asio-1-28-0.tar.gz'
 
   e.map_dir 'asio/include' => 'asio'
 end
 
 MxxRu::arch_externals :spdlog do |e|
-  e.url 'https://github.com/gabime/spdlog/archive/v1.10.0.tar.gz'
+  e.url 'https://github.com/gabime/spdlog/archive/v1.11.0.tar.gz'
 
   e.map_dir 'include/spdlog' => 'spdlog/include'
   e.map_dir 'src' => 'spdlog'
@@ -29,12 +29,12 @@ MxxRu::arch_externals :fmt do |e|
 end
 
 MxxRu::arch_externals :so5 do |e|
-  e.url 'https://github.com/Stiffstream/sobjectizer/archive/v.5.7.4.2.tar.gz'
+  e.url 'https://github.com/Stiffstream/sobjectizer/archive/v.5.8.0.tar.gz'
   e.map_dir 'dev/so_5' => './'
 end
 
 MxxRu::arch_externals :so5extra do |e|
-  e.url 'https://github.com/Stiffstream/so5extra/archive/v.1.5.2.tar.gz'
+  e.url 'https://github.com/Stiffstream/so5extra/archive/v.1.6.0.tar.gz'
   e.map_dir 'dev/so_5_extra' => './'
 end
 
@@ -64,7 +64,7 @@ MxxRu::arch_externals :nodejs_http_parser_mxxru do |e|
 end
 
 MxxRu::arch_externals :doctest do |e|
-  e.url 'https://github.com/onqtam/doctest/archive/2.4.4.tar.gz'
+  e.url 'https://github.com/doctest/doctest/archive/refs/tags/v2.4.11.tar.gz'
 
   e.map_file 'doctest/doctest.h' => 'doctest/*'
 end
