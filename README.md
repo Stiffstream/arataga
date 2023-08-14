@@ -250,7 +250,7 @@ If, however, in addition to deleting old ACLs during reconfiguration, new ACLs a
 
 While arataga is running, a new user list can be passed to it via the admin HTTP-entry. This allows user lists to be updated without restarting arataga.
 
-If in the updated user list for any of the users the allowed limits have changed (for example, the limit has been reduced from 10MiB/s to 5MiB/s), the new limits will be applied immediately for both existing and new connections of this client.
+If a user's limits have been changed in the updated user list (for example, the limit has been reduced from 10MiB/s to 5MiB/s), the new limits will be applied to existing and new connections only when a client makes a new connection to the arataga. If the limits have been changed for a client, but the client hasn't made any new connections, then existing connections will be served with the limits. This is a defect of the current implementation that will need to be fixed if development of the project will be resumed.
 
 In the current version of arataga, when the user list is changed, connections made by users who are not on the new list are not forced to terminate in the current version of arataga. This means that if a user created a long-lived connection to arataga and then that user was dropped from the list, his connection will continue to live and will be serviced by arataga. 
 
