@@ -3,6 +3,8 @@
 #include <arataga/acl_handler/connection_handler_ifaces.hpp>
 #include <arataga/acl_handler/handler_factories.hpp>
 
+#include <arataga/utils/string_literal_fmt.hpp>
+
 #include <so_5_extra/disp/asio_one_thread/pub.hpp>
 
 #include <so_5_extra/sync/pub.hpp>

@@ -5,7 +5,7 @@ MxxRu::arch_externals :args do |e|
 end
 
 MxxRu::arch_externals :asio do |e|
-  e.url 'https://github.com/chriskohlhoff/asio/archive/asio-1-28-0.tar.gz'
+  e.url 'https://github.com/chriskohlhoff/asio/archive/asio-1-28-1.tar.gz'
 
   e.map_dir 'asio/include' => 'asio'
 end
