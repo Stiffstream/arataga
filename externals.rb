@@ -11,14 +11,14 @@ MxxRu::arch_externals :asio do |e|
 end
 
 MxxRu::arch_externals :spdlog do |e|
-  e.url 'https://github.com/gabime/spdlog/archive/v1.11.0.tar.gz'
+  e.url 'https://github.com/gabime/spdlog/archive/v1.12.0.tar.gz'
 
   e.map_dir 'include/spdlog' => 'spdlog/include'
   e.map_dir 'src' => 'spdlog'
 end
 
 MxxRu::arch_externals :fmt do |e|
-  e.url 'https://github.com/fmtlib/fmt/archive/9.1.0.tar.gz'
+  e.url 'https://github.com/fmtlib/fmt/archive/10.1.0.tar.gz'
 
   e.map_dir 'include' => 'fmt'
   e.map_dir 'src' => 'fmt'
@@ -29,7 +29,7 @@ MxxRu::arch_externals :fmt do |e|
 end
 
 MxxRu::arch_externals :so5 do |e|
-  e.url 'https://github.com/Stiffstream/sobjectizer/archive/v.5.8.0.tar.gz'
+  e.url 'https://github.com/Stiffstream/sobjectizer/archive/v.5.8.0.1.tar.gz'
   e.map_dir 'dev/so_5' => './'
 end
 

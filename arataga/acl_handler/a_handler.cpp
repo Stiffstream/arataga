@@ -10,6 +10,7 @@
 #include <arataga/acl_handler/exception.hpp>
 
 #include <arataga/utils/overloaded.hpp>
+#include <arataga/utils/string_literal_fmt.hpp>
 
 #include <arataga/logging/wrap_logging.hpp>
 

@@ -8,6 +8,7 @@
 #include <arataga/acl_handler/buffers.hpp>
 
 #include <arataga/utils/overloaded.hpp>
+#include <arataga/utils/string_literal_fmt.hpp>
 
 #include <noexcept_ctcheck/pub.hpp>
 

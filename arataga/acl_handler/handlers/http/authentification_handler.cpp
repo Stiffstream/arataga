@@ -9,6 +9,7 @@
 #include <arataga/acl_handler/handlers/http/responses.hpp>
 
 #include <arataga/utils/overloaded.hpp>
+#include <arataga/utils/string_literal_fmt.hpp>
 
 #include <restinio/helpers/http_field_parsers/authorization.hpp>
 #include <restinio/helpers/http_field_parsers/basic_auth.hpp>

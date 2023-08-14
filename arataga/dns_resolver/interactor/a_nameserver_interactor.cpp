@@ -7,6 +7,8 @@
 
 #include <arataga/logging/wrap_logging.hpp>
 
+#include <arataga/utils/string_literal_fmt.hpp>
+
 #include <arataga/nothrow_block/macros.hpp>
 
 #include <noexcept_ctcheck/pub.hpp>

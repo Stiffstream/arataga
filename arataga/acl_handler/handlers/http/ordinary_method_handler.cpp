@@ -12,6 +12,7 @@
 #include <arataga/acl_handler/out_data_piece.hpp>
 
 #include <arataga/utils/subview_of.hpp>
+#include <arataga/utils/string_literal_fmt.hpp>
 
 #include <restinio/helpers/http_field_parsers/connection.hpp>
 
