@@ -18,7 +18,7 @@ MxxRu::arch_externals :spdlog do |e|
 end
 
 MxxRu::arch_externals :fmt do |e|
-  e.url 'https://github.com/fmtlib/fmt/archive/10.1.0.tar.gz'
+  e.url 'https://github.com/fmtlib/fmt/archive/10.1.1.tar.gz'
 
   e.map_dir 'include' => 'fmt'
   e.map_dir 'src' => 'fmt'
@@ -29,12 +29,12 @@ MxxRu::arch_externals :fmt do |e|
 end
 
 MxxRu::arch_externals :so5 do |e|
-  e.url 'https://github.com/Stiffstream/sobjectizer/archive/v.5.8.0.1.tar.gz'
+  e.url 'https://github.com/Stiffstream/sobjectizer/archive/v.5.8.1.tar.gz'
   e.map_dir 'dev/so_5' => './'
 end
 
 MxxRu::arch_externals :so5extra do |e|
-  e.url 'https://github.com/Stiffstream/so5extra/archive/v.1.6.0.tar.gz'
+  e.url 'https://github.com/Stiffstream/so5extra/archive/v.1.6.1.tar.gz'
   e.map_dir 'dev/so_5_extra' => './'
 end
 
